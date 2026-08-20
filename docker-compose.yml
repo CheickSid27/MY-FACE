@@ -1,0 +1,119 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-myface}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-myface}
+      POSTGRES_DB: ${POSTGRES_DB:-myface}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./backend/docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myface}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    # Version epinglee (pas "latest") : une release recente (2025-09) avait un
+    # bug de validation des URLs presignees (SignatureDoesNotMatch meme pour
+    # une URL generee par le client officiel mc contre son propre serveur).
+    image: minio/minio:RELEASE.2024-10-13T13-34-11Z
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-myface}:${POSTGRES_PASSWORD:-myface}@db:5432/${POSTGRES_DB:-myface}
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - insightface-models:/root/.insightface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+
+  nginx:
+    build:
+      context: ./nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+
+  # Tunnel "quick" Cloudflare (aucun compte requis) : expose l'app (nginx)
+  # sur une URL publique https://xxxx.trycloudflare.com. Solution retenue
+  # pour le blocage "pas d'acces public" tant qu'on utilise le GPU local
+  # (voir discussion) plutot qu'un serveur cloud payant. URL ephemere,
+  # change a chaque redemarrage : voir `docker compose logs -f tunnel-app`.
+  tunnel-app:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://nginx:80
+    depends_on:
+      - nginx
+
+  # Tunnel separe pour MinIO : les URLs presignees des photos doivent etre
+  # directement joignables par le navigateur du visiteur (pas seulement par
+  # le backend), et la signature SigV4 est liee a l'hote exact utilise a la
+  # signature (voir services/storage.py) donc ce host public doit etre
+  # configure dans S3_PUBLIC_URL.
+  tunnel-storage:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://minio:9000
+    depends_on:
+      - minio
+
+volumes:
+  postgres-data:
+  minio-data:
+  insightface-models:

@@ -1,0 +1,51 @@
+import enum
+import uuid
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import DateTime, Enum, ForeignKey, String, func
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.core.database import Base
+
+if TYPE_CHECKING:
+    from app.models.event import Event
+    from app.models.face_embedding import FaceEmbedding
+
+
+class IndexingStatus(str, enum.Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    DONE = "done"
+    FAILED = "failed"
+
+
+class Photo(Base):
+    __tablename__ = "photos"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    event_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # Cles de stockage uniquement : le bucket est prive, les URLs de lecture
+    # sont toujours generees a la demande (presignees, expiration courte) via
+    # `app.services.photo_urls`, jamais stockees en base (voir storage.py).
+    original_key: Mapped[str] = mapped_column(String(512), nullable=False)
+    thumbnail_key: Mapped[str] = mapped_column(String(512), nullable=False)
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    indexing_status: Mapped[IndexingStatus] = mapped_column(
+        Enum(
+            IndexingStatus,
+            name="indexing_status",
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+        ),
+        nullable=False,
+        default=IndexingStatus.PENDING,
+    )
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    event: Mapped["Event"] = relationship("Event", back_populates="photos")
+    face_embeddings: Mapped[list["FaceEmbedding"]] = relationship(
+        "FaceEmbedding", back_populates="photo", cascade="all, delete-orphan"
+    )
