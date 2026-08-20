@@ -89,30 +89,6 @@ services:
     ports:
       - "80:80"
 
-  # Tunnel "quick" Cloudflare (aucun compte requis) : expose l'app (nginx)
-  # sur une URL publique https://xxxx.trycloudflare.com. Solution retenue
-  # pour le blocage "pas d'acces public" tant qu'on utilise le GPU local
-  # (voir discussion) plutot qu'un serveur cloud payant. URL ephemere,
-  # change a chaque redemarrage : voir `docker compose logs -f tunnel-app`.
-  tunnel-app:
-    image: cloudflare/cloudflared:latest
-    restart: unless-stopped
-    command: tunnel --no-autoupdate --url http://nginx:80
-    depends_on:
-      - nginx
-
-  # Tunnel separe pour MinIO : les URLs presignees des photos doivent etre
-  # directement joignables par le navigateur du visiteur (pas seulement par
-  # le backend), et la signature SigV4 est liee a l'hote exact utilise a la
-  # signature (voir services/storage.py) donc ce host public doit etre
-  # configure dans S3_PUBLIC_URL.
-  tunnel-storage:
-    image: cloudflare/cloudflared:latest
-    restart: unless-stopped
-    command: tunnel --no-autoupdate --url http://minio:9000
-    depends_on:
-      - minio
-
 volumes:
   postgres-data:
   minio-data:
