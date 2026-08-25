@@ -11,6 +11,7 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "MYFACE",
   description: "Retrouvez, achetez et telechargez vos photos d'evenement",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

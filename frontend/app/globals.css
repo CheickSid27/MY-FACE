@@ -113,21 +113,54 @@ body {
   animation: cell-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
-/* Rebond de l'icone panier quand une photo "atterrit" dedans. */
+/* Rebond discret de l'icone panier quand une photo est ajoutee : feedback
+   leger, pas cense attirer l'oeil de force. */
 @keyframes cart-bump {
   0% {
     transform: scale(1);
   }
-  35% {
-    transform: scale(1.32);
-  }
-  60% {
-    transform: scale(0.92);
+  50% {
+    transform: scale(1.1);
   }
   100% {
     transform: scale(1);
   }
 }
 .animate-cart-bump {
-  animation: cart-bump 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: cart-bump 0.3s ease-out;
+}
+
+/* Ligne laser qui balaie l'apercu camera / l'ecran d'analyse, effet
+   "scanner futuriste" pendant la capture et la recherche faciale. */
+@keyframes scan-line {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+.animate-scan-line {
+  animation: scan-line 2.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes scan-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.animate-scan-pulse {
+  animation: scan-pulse 1.6s ease-in-out infinite;
 }

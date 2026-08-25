@@ -1,12 +1,23 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
-from app.routers import admin, auth, cart, download, events, faces, payments, photos
+from app.routers import admin, auth, cart, download, events, faces, notifications, payments, photos
+from app.services.folder_watcher import folder_watcher
 
 settings = get_settings()
 
-app = FastAPI(title="MYFACE API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    folder_watcher.start()
+    yield
+    await folder_watcher.stop()
+
+
+app = FastAPI(title="MYFACE API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -24,6 +35,7 @@ app.include_router(cart.router)
 app.include_router(payments.router)
 app.include_router(download.router)
 app.include_router(admin.router)
+app.include_router(notifications.router)
 
 
 @app.get("/health")

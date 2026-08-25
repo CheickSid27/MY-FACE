@@ -54,6 +54,7 @@ export interface Photo {
   id: string;
   event_id: string;
   thumbnail_url: string;
+  preview_url: string;
   original_filename: string;
   indexing_status: IndexingStatus;
   uploaded_at: string;
@@ -96,6 +97,7 @@ export interface FaceCluster {
   cluster_id: number;
   photo_count: number;
   representative_photo: Photo;
+  representative_face_url: string;
   photo_ids: string[];
 }
 
@@ -183,6 +185,7 @@ export interface DownloadPhoto {
 
 export interface DownloadResponse {
   order_id: string;
+  event_id: string;
   photos: DownloadPhoto[];
   expires_in: number;
 }
@@ -191,6 +194,17 @@ export interface DailySales {
   date: string;
   revenue: number;
   order_count: number;
+}
+
+export interface WatchedFileRead {
+  filename: string;
+  status: "pending_write" | "ingested" | "error";
+  detail: string | null;
+}
+
+export interface WatchedFolderRead {
+  folder_path: string;
+  files: WatchedFileRead[];
 }
 
 export interface EventStats {

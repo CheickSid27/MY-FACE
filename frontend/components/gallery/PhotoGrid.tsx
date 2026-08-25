@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { FixedSizeGrid as Grid } from "react-window";
 import { CheckIcon, ImageIcon } from "@/components/icons";
 import { flyToCart } from "@/lib/fly-to-cart";
@@ -17,6 +17,7 @@ interface PhotoGridProps {
 
 const GAP = 10;
 const MIN_COLUMN_WIDTH = 160;
+const RESIZE_DEBOUNCE_MS = 200;
 
 export default function PhotoGrid({
   photos,
@@ -29,15 +30,34 @@ export default function PhotoGrid({
   const [size, setSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
     function updateSize() {
-      setSize({
-        width: window.innerWidth,
-        height: window.innerHeight - bottomOffset,
+      setSize((prev) => {
+        const next = { width: window.innerWidth, height: window.innerHeight - bottomOffset };
+        // Sur mobile, taper un bouton peut declencher un micro-resize (barre
+        // d'adresse qui se replie/deplie) : on ignore les variations
+        // negligeables pour ne pas relayouter toute la grille virtualisee a
+        // chaque tap, ce qui donnait l'impression que toutes les photos
+        // "rechargeaient".
+        if (Math.abs(next.width - prev.width) < 4 && Math.abs(next.height - prev.height) < 4) {
+          return prev;
+        }
+        return next;
       });
     }
+
+    function debouncedUpdateSize() {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(updateSize, RESIZE_DEBOUNCE_MS);
+    }
+
     updateSize();
-    window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
+    window.addEventListener("resize", debouncedUpdateSize);
+    return () => {
+      window.removeEventListener("resize", debouncedUpdateSize);
+      if (timer) clearTimeout(timer);
+    };
   }, [bottomOffset]);
 
   if (size.width === 0) return null;
@@ -73,7 +93,6 @@ export default function PhotoGrid({
 
         const isSelected = selectedPhotoIds?.has(photo.id) ?? false;
         const isAdding = addingPhotoId === photo.id;
-        const staggerDelay = ((rowIndex + columnIndex) % 6) * 45;
 
         return (
           <div style={style} className="p-1.5">
@@ -82,7 +101,6 @@ export default function PhotoGrid({
               index={index}
               isSelected={isSelected}
               isAdding={isAdding}
-              staggerDelay={staggerDelay}
               onPhotoOpen={onPhotoOpen}
               onToggleSelect={onToggleSelect}
             />
@@ -93,78 +111,77 @@ export default function PhotoGrid({
   );
 }
 
-function PhotoCell({
-  photo,
-  index,
-  isSelected,
-  isAdding,
-  staggerDelay,
-  onPhotoOpen,
-  onToggleSelect,
-}: {
-  photo: Photo;
-  index: number;
-  isSelected: boolean;
-  isAdding: boolean;
-  staggerDelay: number;
-  onPhotoOpen?: (index: number) => void;
-  onToggleSelect?: (photo: Photo) => void;
-}) {
-  const cellRef = useRef<HTMLDivElement>(null);
+const PhotoCell = memo(
+  function PhotoCell({
+    photo,
+    index,
+    isSelected,
+    isAdding,
+    onPhotoOpen,
+    onToggleSelect,
+  }: {
+    photo: Photo;
+    index: number;
+    isSelected: boolean;
+    isAdding: boolean;
+    onPhotoOpen?: (index: number) => void;
+    onToggleSelect?: (photo: Photo) => void;
+  }) {
+    const cellRef = useRef<HTMLDivElement>(null);
 
-  function handleToggle(e: React.MouseEvent) {
-    e.stopPropagation();
-    if (!isSelected) flyToCart(cellRef.current);
-    onToggleSelect?.(photo);
-  }
+    function handleToggle(e: React.MouseEvent) {
+      e.stopPropagation();
+      if (!isSelected) flyToCart(cellRef.current);
+      onToggleSelect?.(photo);
+    }
 
-  return (
-    <div
-      ref={cellRef}
-      className={`group relative h-full w-full overflow-hidden rounded-xl bg-surface-alt shadow-soft transition-all duration-200 animate-cell-in ${
-        isSelected ? "ring-2 ring-brand-accent ring-offset-2 ring-offset-surface" : "hover:shadow-card"
-      }`}
-      style={{ animationDelay: `${staggerDelay}ms` }}
-    >
-      <button
-        type="button"
-        onClick={() => onPhotoOpen?.(index)}
-        className="block h-full w-full"
-        aria-label={`Agrandir ${photo.original_filename}`}
+    return (
+      <div
+        ref={cellRef}
+        className={`group relative h-full w-full overflow-hidden rounded-xl bg-surface-alt shadow-soft ${
+          isSelected ? "ring-2 ring-brand-accent ring-offset-2 ring-offset-surface" : ""
+        }`}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={photo.thumbnail_url}
-          alt={photo.original_filename}
-          loading="lazy"
-          className={`h-full w-full object-cover transition-transform duration-300 ${
-            isSelected ? "scale-105" : "group-hover:scale-105"
-          }`}
-        />
-        <div
-          className={`pointer-events-none absolute inset-0 bg-brand/0 transition-colors duration-200 ${
-            isSelected ? "bg-brand/10" : "group-hover:bg-brand/10"
-          }`}
-        />
-      </button>
-
-      {onToggleSelect && (
         <button
           type="button"
-          disabled={isAdding}
-          onClick={handleToggle}
-          aria-label={isSelected ? "Retirer du panier" : "Ajouter au panier"}
-          className={`glass-pill absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center text-xs font-bold shadow transition-all duration-200 active:scale-90 disabled:opacity-60 ${
-            isSelected ? "!bg-brand-accent !text-brand" : "text-white"
-          }`}
+          onClick={() => onPhotoOpen?.(index)}
+          className="block h-full w-full"
+          aria-label={`Agrandir ${photo.original_filename}`}
         >
-          {isAdding ? (
-            <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          ) : isSelected ? (
-            <CheckIcon />
-          ) : null}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photo.thumbnail_url}
+            alt={photo.original_filename}
+            loading="lazy"
+            className={`h-full w-full object-cover ${isSelected ? "scale-105" : ""}`}
+          />
         </button>
-      )}
-    </div>
-  );
-}
+
+        {onToggleSelect && (
+          <button
+            type="button"
+            disabled={isAdding}
+            onClick={handleToggle}
+            aria-label={isSelected ? "Retirer du panier" : "Ajouter au panier"}
+            className={`glass-pill absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center text-xs font-bold shadow active:scale-90 disabled:opacity-60 ${
+              isSelected ? "!bg-brand-accent !text-brand" : "text-white"
+            }`}
+          >
+            {isAdding ? (
+              <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : isSelected ? (
+              <CheckIcon />
+            ) : null}
+          </button>
+        )}
+      </div>
+    );
+  },
+  (prev, next) =>
+    prev.photo.id === next.photo.id &&
+    prev.index === next.index &&
+    prev.isSelected === next.isSelected &&
+    prev.isAdding === next.isAdding &&
+    prev.onPhotoOpen === next.onPhotoOpen &&
+    prev.onToggleSelect === next.onToggleSelect
+);

@@ -21,6 +21,11 @@ backend/.pytest_cache/
 minio-data/
 postgres-data/
 
+# Dossier surveille (ingestion auto, contenu local a chaque poste — voir
+# services/folder_watcher.py) et scratch de dev
+watched-photos/
+.scratch/
+
 # OS
 .DS_Store
 Thumbs.db

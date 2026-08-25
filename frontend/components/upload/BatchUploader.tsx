@@ -9,7 +9,13 @@ interface BatchUploaderProps {
   onUploaded: () => void;
 }
 
-const CHUNK_SIZE = 20;
+// Plus petit que par le passe (20) : chaque photo peut peser jusqu'a 25 Mo
+// (pas de compression, qualite originale preservee), un lot de 20 pouvait
+// donc friser la limite nginx et prendre plusieurs dizaines de secondes a
+// traiter (thumbnail + preview + 3 uploads R2 par photo, en synchrone). Des
+// lots plus petits = retour visuel plus frequent et marge de securite sur
+// les timeouts.
+const CHUNK_SIZE = 10;
 
 export default function BatchUploader({ eventId, onUploaded }: BatchUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);

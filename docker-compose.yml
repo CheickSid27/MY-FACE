@@ -44,8 +44,10 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-myface}:${POSTGRES_PASSWORD:-myface}@db:5432/${POSTGRES_DB:-myface}
+    # DATABASE_URL et les identifiants S3 viennent maintenant de .env (Neon +
+    # R2 en prod) ; db/minio locaux restent disponibles pour la suite de
+    # tests (TEST_DATABASE_URL) et comme filet de secours, mais ne sont plus
+    # forces via une variable d'environnement en dur ici.
     depends_on:
       db:
         condition: service_healthy
@@ -56,6 +58,12 @@ services:
     volumes:
       - ./backend:/app
       - insightface-models:/root/.insightface
+      # Dossier surveille (ingestion auto) : ./watched-photos/<event_id>/ sur
+      # le PC hote = /watched/<event_id>/ dans le conteneur. Copier les photos
+      # de la carte SD de l'appareil dedans (a la main ou via un logiciel de
+      # transfert automatique) les fait apparaitre dans l'evenement sans
+      # passer par l'upload manuel. Voir services/folder_watcher.py.
+      - ./watched-photos:/watched
     deploy:
       resources:
         reservations:
@@ -88,6 +96,20 @@ services:
       - frontend
     ports:
       - "80:80"
+
+  # Tunnel "quick" Cloudflare (aucun compte requis) : expose l'app (nginx)
+  # sur une URL publique https://xxxx.trycloudflare.com. Solution retenue
+  # pour le blocage "pas d'acces public" tant qu'on utilise le GPU local
+  # (voir discussion) plutot qu'un serveur cloud payant. URL ephemere,
+  # change a chaque redemarrage : voir `docker compose logs -f tunnel-app`.
+  # A remplacer par un tunnel nomme (URL stable) des qu'un nom de domaine
+  # est ajoute au compte Cloudflare.
+  tunnel-app:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://nginx:80
+    depends_on:
+      - nginx
 
 volumes:
   postgres-data:

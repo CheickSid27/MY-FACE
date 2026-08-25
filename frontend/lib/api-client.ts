@@ -25,6 +25,7 @@ import type {
   TokenResponse,
   User,
   UserCreate,
+  WatchedFolderRead,
 } from "@/types/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -150,6 +151,28 @@ export const api = {
     });
   },
 
+  deletePhoto(photoId: string): Promise<void> {
+    return request<void>(`/photos/${photoId}`, { method: "DELETE" });
+  },
+
+  getVapidPublicKey(): Promise<{ public_key: string }> {
+    return request<{ public_key: string }>(`/notifications/vapid-public-key`);
+  },
+
+  subscribeToPush(subscription: PushSubscriptionJSON): Promise<void> {
+    return request<void>(`/notifications/subscribe`, {
+      method: "POST",
+      body: JSON.stringify(subscription),
+    });
+  },
+
+  unsubscribeFromPush(endpoint: string): Promise<void> {
+    return request<void>(`/notifications/unsubscribe`, {
+      method: "POST",
+      body: JSON.stringify({ endpoint }),
+    });
+  },
+
   scanFace(eventId: string, selfie: Blob, consent: boolean): Promise<FaceScanResponse> {
     const formData = new FormData();
     formData.append("consent", String(consent));
@@ -166,6 +189,10 @@ export const api = {
 
   getClustersPublic(eventId: string): Promise<ClusterListResponse> {
     return request<ClusterListResponse>(`/events/${eventId}/clusters/public`);
+  },
+
+  getWatchedFolder(eventId: string): Promise<WatchedFolderRead> {
+    return request<WatchedFolderRead>(`/events/${eventId}/watched-folder`);
   },
 
   getPaymentMethods(eventId: string): Promise<EventPaymentMethodRead[]> {
@@ -223,13 +250,6 @@ export const api = {
 
   getPaymentStatus(orderId: string): Promise<PaymentStatusResponse> {
     return request<PaymentStatusResponse>(`/payments/status/${orderId}`);
-  },
-
-  simulatePayment(orderId: string, status: "success" | "failed"): Promise<void> {
-    return request<void>(`/payments/${orderId}/simulate`, {
-      method: "POST",
-      body: JSON.stringify({ status }),
-    });
   },
 
   markPaid(orderId: string): Promise<PaymentStatusResponse> {

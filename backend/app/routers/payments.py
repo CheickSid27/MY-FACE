@@ -16,11 +16,11 @@ from app.models.order import Order, OrderItem, OrderStatus, PaymentMethod
 from app.schemas.payment import (
     PaymentInitRequest,
     PaymentInitResponse,
-    PaymentSimulateRequest,
     PaymentStatusResponse,
 )
 from app.services.payments import PaymentProvider, get_payment_provider
 from app.services.pricing import calculate_total
+from app.services.push_notifications import send_push_to_user
 from app.services.sms import get_sms_service
 from app.services.storage import StorageService, get_storage_service
 
@@ -191,6 +191,16 @@ async def mark_paid(
     await db.commit()
     await db.refresh(order)
 
+    event = await db.get(Event, order.event_id)
+    if event is not None:
+        await send_push_to_user(
+            event.organizer_id,
+            db,
+            title="Nouvelle commande a confirmer",
+            body=f"{order.total_amount:.0f} {order.currency} — {order.contact_phone}",
+            url=f"{settings.app_base_url}/admin/events/{event.id}/payments",
+        )
+
     return await _build_status_response(order, db, storage)
 
 
@@ -243,32 +253,4 @@ async def payment_webhook(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payload webhook invalide")
 
     await _apply_webhook_result(reference, OrderStatus(status_value), db)
-    return {"status": "ok"}
-
-
-@router.post("/{order_id}/simulate", status_code=status.HTTP_200_OK)
-async def simulate_payment(
-    order_id: uuid.UUID,
-    payload: PaymentSimulateRequest,
-    db: AsyncSession = Depends(get_db),
-) -> dict[str, str]:
-    """Confirme/echoue une commande SANS passer par un vrai operateur.
-
-    Reserve au mode PAYMENT_PROVIDER=manual (dev/test) : refuse (403) des que
-    l'app est configuree avec un vrai operateur, pour qu'il soit impossible
-    d'utiliser ce raccourci comme substitut a un vrai paiement en production.
-    """
-    if settings.payment_provider != "manual":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Simulation disponible uniquement en PAYMENT_PROVIDER=manual",
-        )
-    if payload.status not in (OrderStatus.SUCCESS, OrderStatus.FAILED):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="status doit etre success ou failed")
-
-    order = await db.get(Order, order_id)
-    if order is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Commande introuvable")
-
-    await _apply_webhook_result(order.payment_reference, payload.status, db)
     return {"status": "ok"}

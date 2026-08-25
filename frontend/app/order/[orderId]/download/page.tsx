@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { CheckIcon, ImageIcon } from "@/components/icons";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { CheckIcon } from "@/components/icons";
 import { api, ApiError } from "@/lib/api-client";
 import type { DownloadResponse } from "@/types/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const INACTIVITY_TIMEOUT_MS = 90_000;
 
 export default function DownloadPage() {
   const { orderId } = useParams<{ orderId: string }>();
+  const router = useRouter();
   const [data, setData] = useState<DownloadResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,6 +27,33 @@ export default function DownloadPage() {
         )
       );
   }, [orderId]);
+
+  // Retour automatique a la galerie si le client reste inactif : evite
+  // qu'une borne/tablette partagee reste bloquee sur la page de telechargement
+  // d'un client precedent.
+  const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const goToGallery = useCallback(() => {
+    if (data) router.push(`/event/${data.event_id}/gallery`);
+  }, [data, router]);
+
+  useEffect(() => {
+    if (!data) return;
+
+    function resetTimer() {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = setTimeout(goToGallery, INACTIVITY_TIMEOUT_MS);
+    }
+
+    const events = ["pointerdown", "keydown", "scroll", "touchstart"];
+    events.forEach((evt) => window.addEventListener(evt, resetTimer));
+    resetTimer();
+
+    return () => {
+      events.forEach((evt) => window.removeEventListener(evt, resetTimer));
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    };
+  }, [data, goToGallery]);
 
   if (error) {
     return (
@@ -55,6 +84,13 @@ export default function DownloadPage() {
         </p>
       </div>
 
+      <a
+        href={`${API_URL}/download/${orderId}/zip`}
+        className="btn-accent w-full max-w-sm !py-4 text-center text-base"
+      >
+        Telecharger toutes mes photos ({data.photos.length})
+      </a>
+
       <div className="glass flex flex-col items-center gap-3 rounded-2xl p-5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -67,21 +103,22 @@ export default function DownloadPage() {
         </p>
       </div>
 
-      <div className="grid w-full max-w-2xl grid-cols-2 gap-4 sm:grid-cols-3">
+      <div className="grid w-full max-w-2xl grid-cols-3 gap-3 sm:grid-cols-4">
         {data.photos.map((photo) => (
-          <a
-            key={photo.photo_id}
-            href={photo.url}
-            target="_blank"
-            rel="noreferrer"
-            className="glass group flex flex-col items-center gap-2 rounded-2xl p-4 text-center transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card"
-          >
-            <ImageIcon className="text-3xl text-ink-500 transition-transform duration-200 group-hover:scale-110" />
-            <span className="w-full truncate text-xs text-ink-500">{photo.filename}</span>
-            <span className="text-xs font-semibold text-brand">Telecharger</span>
-          </a>
+          <div key={photo.photo_id} className="glass overflow-hidden rounded-xl">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={photo.url}
+              alt={photo.filename}
+              className="aspect-square w-full object-cover"
+            />
+          </div>
         ))}
       </div>
+
+      <button type="button" onClick={goToGallery} className="btn-ghost w-full max-w-sm">
+        Retour a la galerie
+      </button>
     </main>
   );
 }

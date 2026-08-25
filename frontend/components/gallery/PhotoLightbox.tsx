@@ -47,6 +47,13 @@ export default function PhotoLightbox({
   const pinchRef = useRef<{ startDist: number; startScale: number } | null>(null);
   const [isZoomed, setIsZoomed] = useState(false);
 
+  // Chargement progressif : la miniature (deja en cache depuis la grille)
+  // s'affiche immediatement, sans aucune attente visible. La version
+  // "preview" (plus grande, plus nette) charge silencieusement par-dessus
+  // en arriere-plan et prend le relais en fondu des qu'elle est prete —
+  // aucun spinner, aucune latence percue, juste une nettete qui s'ameliore.
+  const [previewLoaded, setPreviewLoaded] = useState(false);
+
   const resetZoom = useCallback(() => {
     scale.set(1);
     panX.set(0);
@@ -69,6 +76,19 @@ export default function PhotoLightbox({
       onNavigate(index + 1);
     }
   }, [hasNext, index, onNavigate, resetZoom]);
+
+  useEffect(() => {
+    setPreviewLoaded(false);
+    if (!photo || photo.preview_url === photo.thumbnail_url) return;
+    const img = new window.Image();
+    img.src = photo.preview_url;
+    if (img.complete) {
+      setPreviewLoaded(true);
+      return;
+    }
+    img.onload = () => setPreviewLoaded(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photo?.id]);
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -190,15 +210,30 @@ export default function PhotoLightbox({
             onDragEnd={handleDragEnd}
             className="flex max-h-[70vh] max-w-full items-center justify-center"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <motion.img
-              src={photo.thumbnail_url}
-              alt={photo.original_filename}
+            <motion.div
               onDoubleClick={resetZoom}
               style={{ scale, x: panX, y: panY }}
-              className="max-h-[70vh] max-w-full select-none rounded-2xl object-contain shadow-elevated"
-              draggable={false}
-            />
+              className="relative flex max-h-[70vh] max-w-full items-center justify-center"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={photo.thumbnail_url}
+                alt={photo.original_filename}
+                className="max-h-[70vh] max-w-full select-none rounded-2xl object-contain shadow-elevated"
+                draggable={false}
+              />
+              {photo.preview_url !== photo.thumbnail_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photo.preview_url}
+                  alt={photo.original_filename}
+                  className={`absolute inset-0 h-full w-full select-none rounded-2xl object-contain shadow-elevated transition-opacity duration-300 ${
+                    previewLoaded ? "opacity-100" : "opacity-0"
+                  }`}
+                  draggable={false}
+                />
+              )}
+            </motion.div>
           </motion.div>
         </AnimatePresence>
 

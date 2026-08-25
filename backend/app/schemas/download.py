@@ -11,5 +11,6 @@ class DownloadPhoto(BaseModel):
 
 class DownloadResponse(BaseModel):
     order_id: uuid.UUID
+    event_id: uuid.UUID
     photos: list[DownloadPhoto]
     expires_in: int

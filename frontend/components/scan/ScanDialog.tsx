@@ -7,7 +7,7 @@ import { AlertIcon, CameraIcon, CheckIcon, SearchIcon } from "@/components/icons
 import { api, ApiError } from "@/lib/api-client";
 import { getCartSessionId, setCartSessionId } from "@/lib/cart";
 import { flyToCart } from "@/lib/fly-to-cart";
-import type { FaceScanMatch, Photo } from "@/types/api";
+import type { CartRead, FaceScanMatch, Photo } from "@/types/api";
 
 type Step = "consent" | "camera" | "scanning" | "results" | "error";
 
@@ -24,9 +24,10 @@ export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) 
   const [error, setError] = useState<string | null>(null);
   const [matches, setMatches] = useState<FaceScanMatch[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [itemIdByPhoto, setItemIdByPhoto] = useState<Record<string, string>>({});
   const [cartCount, setCartCount] = useState(0);
-  const [addingPhotoId, setAddingPhotoId] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [videoReady, setVideoReady] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -48,16 +49,53 @@ export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) 
 
   useEffect(() => stopCamera, [stopCamera]);
 
+  // Le <video> n'existe dans le DOM qu'une fois step==="camera" rendu par
+  // React ; l'assigner juste apres setStep("camera") (avant le prochain
+  // rendu) lit un videoRef encore null et le flux ne s'affiche jamais
+  // (boite figee vide, meme si la camera est bien active). On attend donc
+  // que le rendu ait reellement eu lieu via cet effet.
+  useEffect(() => {
+    if (step !== "camera" || !videoRef.current || !streamRef.current) return;
+    const video = videoRef.current;
+    setVideoReady(false);
+    video.srcObject = streamRef.current;
+
+    // videoWidth/videoHeight peuvent devenir non-nuls (metadonnees chargees)
+    // avant qu'une vraie image decodee soit disponible : capturer a ce
+    // moment-la donne une frame noire/vide, d'ou un selfie sans visage
+    // detectable malgre un vrai visage devant la camera. "loadeddata"
+    // garantit qu'au moins une frame reelle est decodee.
+    function handleLoadedData() {
+      setVideoReady(true);
+    }
+    video.addEventListener("loadeddata", handleLoadedData);
+
+    video.play().catch(() => {
+      // certains navigateurs bloquent l'autoplay tant que l'utilisateur n'a
+      // pas interagi ; le flux reste correctement attache, play() sera
+      // relance naturellement au premier tap si besoin.
+    });
+
+    return () => video.removeEventListener("loadeddata", handleLoadedData);
+  }, [step]);
+
+  function syncCart(cart: CartRead) {
+    setSelectedIds(new Set(cart.items.map((item) => item.photo.id)));
+    setCartCount(cart.items.length);
+    const map: Record<string, string> = {};
+    cart.items.forEach((item) => {
+      map[item.photo.id] = item.id;
+    });
+    setItemIdByPhoto(map);
+  }
+
   useEffect(() => {
     if (!open) return;
     const sessionId = getCartSessionId(eventId);
     if (!sessionId) return;
     api
       .getCart(sessionId)
-      .then((cart) => {
-        setSelectedIds(new Set(cart.items.map((item) => item.photo.id)));
-        setCartCount(cart.items.length);
-      })
+      .then(syncCart)
       .catch(() => {
         // panier expire ou introuvable
       });
@@ -65,16 +103,37 @@ export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) 
 
   async function startCamera() {
     setError(null);
+
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      setError(
+        "L'acces a la camera necessite une connexion securisee (https://). Ouvrez ce lien en HTTPS, pas en http://."
+      );
+      setStep("error");
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("Votre navigateur ne supporte pas l'acces a la camera. Essayez avec Chrome ou Safari a jour.");
+      setStep("error");
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
       streamRef.current = stream;
       setStep("camera");
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+    } catch (err) {
+      const name = err instanceof DOMException ? err.name : "";
+      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+        setError(
+          "Acces a la camera refuse. Autorisez la camera pour ce site dans les reglages de votre navigateur, puis reessayez."
+        );
+      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+        setError("Aucune camera detectee sur cet appareil.");
+      } else if (name === "NotReadableError") {
+        setError("La camera est deja utilisee par une autre application. Fermez-la et reessayez.");
+      } else {
+        setError("Impossible d'acceder a la camera. Verifiez les autorisations de votre navigateur.");
       }
-    } catch {
-      setError("Impossible d'acceder a la camera. Verifiez les autorisations de votre navigateur.");
       setStep("error");
     }
   }
@@ -83,6 +142,15 @@ export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) 
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
+
+    if (!videoReady || !video.videoWidth || !video.videoHeight) {
+      // Capturer avant qu'une vraie frame soit decodee (meme si les
+      // dimensions existent deja) donne une image noire/vide -> "aucun
+      // visage detecte" alors qu'un visage est pourtant bien devant la
+      // camera. On bloque plutot que d'echouer silencieusement.
+      setError("La camera n'est pas encore prete, patientez une seconde puis reessayez.");
+      return;
+    }
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -106,20 +174,53 @@ export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) 
     }
   }
 
-  async function handlePhotoClick(photo: Photo) {
-    if (selectedIds.has(photo.id) || addingPhotoId) return;
-    setAddingPhotoId(photo.id);
-    try {
-      const sessionId = getCartSessionId(eventId);
-      const cart = await api.addToCart(eventId, photo.id, sessionId);
-      setCartSessionId(eventId, cart.session_id);
-      setSelectedIds(new Set(cart.items.map((item) => item.photo.id)));
-      setCartCount(cart.items.length);
-    } catch {
-      setError("Impossible d'ajouter la photo au panier.");
-    } finally {
-      setAddingPhotoId(null);
-    }
+  // Meme principe que la galerie : mise a jour optimiste immediate (aucune
+  // attente reseau visible) + file d'attente serialisee pour que la premiere
+  // requete cree la session panier avant que les suivantes la reutilisent.
+  const cartQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const itemIdByPhotoRef = useRef<Record<string, string>>({});
+  itemIdByPhotoRef.current = itemIdByPhoto;
+
+  function handlePhotoClick(photo: Photo) {
+    const wasSelected = selectedIds.has(photo.id);
+
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (wasSelected) next.delete(photo.id);
+      else next.add(photo.id);
+      return next;
+    });
+    setCartCount((c) => Math.max(0, c + (wasSelected ? -1 : 1)));
+
+    cartQueueRef.current = cartQueueRef.current.then(async () => {
+      try {
+        if (wasSelected) {
+          const itemId = itemIdByPhotoRef.current[photo.id];
+          if (itemId) {
+            await api.removeCartItem(itemId);
+            setItemIdByPhoto((prev) => {
+              const next = { ...prev };
+              delete next[photo.id];
+              return next;
+            });
+          }
+        } else {
+          const sessionId = getCartSessionId(eventId);
+          const cart = await api.addToCart(eventId, photo.id, sessionId);
+          setCartSessionId(eventId, cart.session_id);
+          syncCart(cart);
+        }
+      } catch {
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          if (wasSelected) next.add(photo.id);
+          else next.delete(photo.id);
+          return next;
+        });
+        setCartCount((c) => Math.max(0, c + (wasSelected ? 1 : -1)));
+        setError("Impossible de mettre a jour le panier, reessayez.");
+      }
+    });
   }
 
   if (!open) return null;
@@ -172,28 +273,51 @@ export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) 
 
         {step === "camera" && (
           <div className="flex flex-col items-center gap-5 bg-gradient-to-br from-black to-brand p-6">
-            <div className="glass-dark w-full overflow-hidden rounded-xl p-1.5">
-              <video
-                ref={videoRef}
-                playsInline
-                muted
-                className="max-h-[60vh] w-full rounded-lg object-cover"
-              />
+            <div className="glass-dark relative w-full overflow-hidden rounded-xl p-1.5">
+              <div className="relative overflow-hidden rounded-lg">
+                <video
+                  ref={videoRef}
+                  playsInline
+                  muted
+                  className="max-h-[60vh] w-full -scale-x-100 rounded-lg object-cover"
+                />
+                {/* Reticule + balayage laser façon scanner futuriste, purement
+                    visuel : la frame capturee (ctx.drawImage) reste la vraie
+                    orientation camera, non retournee, pour la reconnaissance. */}
+                {videoReady && (
+                  <div className="pointer-events-none absolute inset-0">
+                    <div className="absolute inset-6 rounded-lg border border-brand-accent/30" />
+                    <span className="absolute left-4 top-4 h-6 w-6 border-l-2 border-t-2 border-brand-accent animate-scan-pulse" />
+                    <span className="absolute right-4 top-4 h-6 w-6 border-r-2 border-t-2 border-brand-accent animate-scan-pulse" />
+                    <span className="absolute bottom-4 left-4 h-6 w-6 border-b-2 border-l-2 border-brand-accent animate-scan-pulse" />
+                    <span className="absolute bottom-4 right-4 h-6 w-6 border-b-2 border-r-2 border-brand-accent animate-scan-pulse" />
+                    <div className="absolute left-0 right-0 h-0.5 bg-brand-accent shadow-[0_0_12px_2px_rgba(255,255,255,0.7)] animate-scan-line" />
+                  </div>
+                )}
+              </div>
             </div>
             <canvas ref={canvasRef} className="hidden" />
-            <button type="button" onClick={capture} className="btn-accent w-full max-w-xs">
-              Prendre la photo
+            <button
+              type="button"
+              onClick={capture}
+              disabled={!videoReady}
+              className="btn-accent w-full max-w-xs disabled:cursor-wait disabled:opacity-60"
+            >
+              {videoReady ? "Prendre la photo" : "Camera en cours de demarrage..."}
             </button>
           </div>
         )}
 
         {step === "scanning" && (
-          <div className="flex flex-col items-center gap-4 bg-gradient-to-br from-brand to-brand-light p-16 text-white">
+          <div className="relative flex flex-col items-center gap-4 overflow-hidden bg-gradient-to-br from-brand to-brand-light p-16 text-white">
+            <div className="pointer-events-none absolute inset-0">
+              <div className="absolute left-0 right-0 h-0.5 bg-brand-accent/80 shadow-[0_0_16px_3px_rgba(255,255,255,0.5)] animate-scan-line" />
+            </div>
             <div className="glass-pill relative flex h-16 w-16 items-center justify-center">
               <span className="absolute inset-0 rounded-full border-2 border-brand-accent animate-pulse-ring" />
               <SearchIcon className="text-2xl" />
             </div>
-            <p className="font-medium">Recherche de vos photos...</p>
+            <p className="animate-scan-pulse font-medium tracking-wide">Analyse faciale en cours...</p>
           </div>
         )}
 
@@ -235,7 +359,6 @@ export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) 
               <div className="grid flex-1 grid-cols-3 gap-2 overflow-y-auto p-4 sm:grid-cols-4">
                 {matches.map(({ photo }, i) => {
                   const isSelected = selectedIds.has(photo.id);
-                  const isAdding = addingPhotoId === photo.id;
                   return (
                     <div key={photo.id} className="group relative aspect-square overflow-hidden rounded-xl bg-surface-alt">
                       <button
@@ -252,21 +375,16 @@ export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) 
                       </button>
                       <button
                         type="button"
-                        disabled={isAdding}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (!isSelected) flyToCart(e.currentTarget.closest(".group"));
                           handlePhotoClick(photo);
                         }}
-                        className={`glass-pill absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center text-xs font-bold shadow transition-all duration-200 active:scale-90 disabled:opacity-60 ${
+                        className={`glass-pill absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center text-xs font-bold shadow transition-all duration-200 active:scale-90 ${
                           isSelected ? "!bg-brand-accent !text-brand" : "text-white"
                         }`}
                       >
-                        {isAdding ? (
-                          <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        ) : isSelected ? (
-                          <CheckIcon />
-                        ) : null}
+                        {isSelected ? <CheckIcon /> : null}
                       </button>
                     </div>
                   );
@@ -301,7 +419,6 @@ export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) 
           onNavigate={setLightboxIndex}
           selectedPhotoIds={selectedIds}
           onToggleSelect={handlePhotoClick}
-          addingPhotoId={addingPhotoId}
         />
       )}
     </div>

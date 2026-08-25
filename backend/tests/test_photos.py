@@ -97,3 +97,56 @@ async def test_list_photos_pagination(auth_client: AsyncClient):
     data = resp.json()
     assert data["total"] == 3
     assert len(data["items"]) == 2
+
+
+async def test_delete_photo(auth_client: AsyncClient):
+    event_id = await _create_event(auth_client)
+    files = [("files", ("photo1.jpg", _make_jpeg_bytes(), "image/jpeg"))]
+    upload_resp = await auth_client.post(f"/photos/upload?event_id={event_id}", files=files)
+    photo_id = upload_resp.json()["uploaded"][0]["id"]
+
+    resp = await auth_client.delete(f"/photos/{photo_id}")
+    assert resp.status_code == 204
+
+    list_resp = await auth_client.get(f"/events/{event_id}/photos")
+    assert list_resp.json()["total"] == 0
+
+
+async def test_delete_photo_requires_auth(client: AsyncClient):
+    resp = await client.delete("/photos/00000000-0000-0000-0000-000000000000")
+    assert resp.status_code in (401, 403)
+
+
+async def test_delete_photo_unknown_returns_404(auth_client: AsyncClient):
+    resp = await auth_client.delete("/photos/00000000-0000-0000-0000-000000000000")
+    assert resp.status_code == 404
+
+
+async def test_delete_photo_blocked_if_sold(
+    auth_client: AsyncClient, client: AsyncClient, storage_service, test_session_factory
+):
+    from app.models.order import Order, OrderItem, OrderStatus, PaymentMethod
+
+    event_id = await _create_event(auth_client)
+    files = [("files", ("photo1.jpg", _make_jpeg_bytes(), "image/jpeg"))]
+    upload_resp = await auth_client.post(f"/photos/upload?event_id={event_id}", files=files)
+    photo_id = upload_resp.json()["uploaded"][0]["id"]
+
+    import uuid
+
+    async with test_session_factory() as db:
+        order = Order(
+            event_id=uuid.UUID(event_id),
+            contact_phone="+2250700000000",
+            total_amount=500,
+            currency="XOF",
+            status=OrderStatus.SUCCESS,
+            payment_method=PaymentMethod.MANUAL,
+        )
+        db.add(order)
+        await db.flush()
+        db.add(OrderItem(order_id=order.id, photo_id=uuid.UUID(photo_id), unit_price=500))
+        await db.commit()
+
+    resp = await auth_client.delete(f"/photos/{photo_id}")
+    assert resp.status_code == 409

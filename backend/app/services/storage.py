@@ -44,6 +44,11 @@ class StorageService(ABC):
     async def get_presigned_url(self, key: str, expires_in: int = 3600) -> str:
         """URL signee temporaire pour lire `key` (bucket prive)."""
 
+    @abstractmethod
+    async def exists(self, key: str) -> bool:
+        """True si `key` existe deja (evite de regenerer un fichier derive,
+        ex: crop de visage, deja calcule lors d'un appel precedent)."""
+
 
 class LocalS3StorageService(StorageService):
     """Stockage S3-compatible local (MinIO), utilise par defaut en dev."""
@@ -96,6 +101,13 @@ class LocalS3StorageService(StorageService):
             ExpiresIn=expires_in,
         )
 
+    async def exists(self, key: str) -> bool:
+        try:
+            self._client.head_object(Bucket=self._bucket, Key=key)
+            return True
+        except ClientError:
+            return False
+
 
 class SupabaseStorageService(StorageService):
     """Stockage Supabase Storage. Necessite SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY."""
@@ -145,6 +157,10 @@ class SupabaseStorageService(StorageService):
         resp.raise_for_status()
         signed_path = resp.json()["signedURL"]
         return f"{self._base_url}/storage/v1{signed_path}"
+
+    async def exists(self, key: str) -> bool:
+        resp = await self._client.head(f"/storage/v1/object/{self._bucket}/{key}")
+        return resp.status_code == 200
 
 
 @lru_cache

@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     jwt_refresh_token_expire_days: int = 7
 
     database_url: str
+    # Base dediee aux tests automatises : toujours un Postgres local jetable,
+    # jamais Neon/production (latence reseau + on ne veut jamais que la suite
+    # de tests touche une base geree a distance). Si vide, tests/conftest.py
+    # retombe sur l'ancien comportement (derive de database_url).
+    test_database_url: str = ""
 
     storage_backend: str = "local"
 
@@ -74,8 +79,28 @@ class Settings(BaseSettings):
     africastalking_api_key: str = ""
     africastalking_sender_id: str = ""
 
+    # Notifications push (PWA admin) — voir services/push_notifications.py.
+    # Si vide, l'envoi est simplement ignore (pas d'erreur), meme logique que
+    # sms.py quand aucun credential n'est configure.
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = ""
+
     # Utilise pour construire les liens de telechargement/QR renvoyes a l'invite
     app_base_url: str = "http://localhost:3000"
+
+    # Dossier surveille (ingestion automatique) : chemin CONTENEUR (monte
+    # depuis un dossier reel du PC hote via docker-compose.yml) contenant un
+    # sous-dossier par evenement (watched_folder_path/<event_id>/). Tout
+    # fichier image qui y apparait (ex: copie depuis une carte SD d'appareil
+    # photo) est ingere automatiquement, voir services/folder_watcher.py.
+    watched_folder_path: str = "/watched"
+    watched_folder_poll_seconds: float = 5.0
+    # Chemin cote PC hote correspondant (purement informatif : le conteneur ne
+    # voit jamais ce chemin, seulement /watched via le bind-mount de
+    # docker-compose.yml) — affiche a l'organisateur pour qu'il sache ou
+    # deposer les photos depuis la carte SD de l'appareil.
+    watched_folder_host_display_path: str = "watched-photos"
 
     @property
     def face_recognition_providers_list(self) -> list[str]:

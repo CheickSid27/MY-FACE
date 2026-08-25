@@ -15,6 +15,7 @@ class PhotoRead(BaseModel):
     id: uuid.UUID
     event_id: uuid.UUID
     thumbnail_url: str
+    preview_url: str
     original_filename: str
     indexing_status: IndexingStatus
     uploaded_at: datetime

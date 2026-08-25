@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
+import NotificationSetup from "@/components/admin/NotificationSetup";
 import RequireAuth from "@/components/admin/RequireAuth";
 import { api } from "@/lib/api-client";
 import { useAuthStore } from "@/store/auth-store";
@@ -78,6 +79,8 @@ function AdminEventsContent() {
             </button>
           </div>
         </div>
+
+        <NotificationSetup />
 
         <button type="button" onClick={() => setShowForm((v) => !v)} className="btn-primary mb-4 !px-5 !py-2.5 text-sm">
           {showForm ? "Annuler" : "+ Nouvel evenement"}

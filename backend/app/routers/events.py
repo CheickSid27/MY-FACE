@@ -19,6 +19,9 @@ from app.models.user import User
 from app.schemas.event import EventCreate, EventListItem, EventPublicRead, EventRead, EventUpdate
 from app.schemas.face import ClusterListResponse, FaceCluster
 from app.schemas.payment_method import EventPaymentMethodRead
+from app.schemas.watched_folder import WatchedFileRead, WatchedFolderRead
+from app.services.face_crops import get_or_create_face_crop_url
+from app.services.folder_watcher import folder_watcher
 from app.services.photo_urls import to_photo_read
 from app.services.storage import StorageService, get_storage_service
 
@@ -133,7 +136,7 @@ async def _compute_face_clusters(
     event_id: uuid.UUID, db: AsyncSession, storage: StorageService
 ) -> ClusterListResponse:
     result = await db.execute(
-        select(FaceEmbedding.photo_id, FaceEmbedding.vector, FaceEmbedding.confidence, Photo)
+        select(FaceEmbedding, Photo)
         .join(Photo, Photo.id == FaceEmbedding.photo_id)
         .where(Photo.event_id == event_id)
     )
@@ -142,7 +145,7 @@ async def _compute_face_clusters(
     if not rows:
         return ClusterListResponse(clusters=[], unclustered_count=0)
 
-    vectors = np.array([row.vector for row in rows], dtype=np.float32)
+    vectors = np.array([row.FaceEmbedding.vector for row in rows], dtype=np.float32)
     # metric="cosine" : eps est alors une distance cosinus (1 - similarite),
     # coherent avec face_cluster_eps et avec le seuil utilise pour le scan
     # visiteur (face_match_similarity_threshold). Voir core/config.py.
@@ -153,29 +156,43 @@ async def _compute_face_clusters(
     ).fit_predict(vectors)
 
     clusters: dict[int, dict] = {}
-    unclustered_count = 0
+    # Un visage "bruit" pour DBSCAN (aucun voisin a moins de eps) reste une
+    # personne a part entiere, meme photographiee une seule fois : on lui
+    # cree son propre cluster a une photo plutot que de le rejeter dans
+    # unclustered_count, pour que le client puisse quand meme le retrouver
+    # dans la vue "personnes detectees".
+    next_singleton_id = -1
 
     for label, row in zip(labels, rows):
         if label == -1:
-            unclustered_count += 1
-            continue
-        cluster = clusters.setdefault(int(label), {"photos": {}, "best_confidence": -1.0, "representative": None})
+            cluster_id = next_singleton_id
+            next_singleton_id -= 1
+        else:
+            cluster_id = int(label)
+        cluster = clusters.setdefault(
+            cluster_id,
+            {"photos": {}, "best_confidence": -1.0, "representative": None, "representative_face": None},
+        )
         cluster["photos"][row.Photo.id] = row.Photo
-        if row.confidence > cluster["best_confidence"]:
-            cluster["best_confidence"] = row.confidence
+        if row.FaceEmbedding.confidence > cluster["best_confidence"]:
+            cluster["best_confidence"] = row.FaceEmbedding.confidence
             cluster["representative"] = row.Photo
+            cluster["representative_face"] = row.FaceEmbedding
 
     face_clusters = [
         FaceCluster(
             cluster_id=cluster_id,
             photo_count=len(data["photos"]),
             representative_photo=await to_photo_read(data["representative"], storage),
+            representative_face_url=await get_or_create_face_crop_url(
+                data["representative_face"], data["representative"], storage
+            ),
             photo_ids=list(data["photos"].keys()),
         )
         for cluster_id, data in sorted(clusters.items(), key=lambda kv: -len(kv[1]["photos"]))
     ]
 
-    return ClusterListResponse(clusters=face_clusters, unclustered_count=unclustered_count)
+    return ClusterListResponse(clusters=face_clusters, unclustered_count=0)
 
 
 @router.get("/{event_id}/clusters", response_model=ClusterListResponse)
@@ -205,6 +222,24 @@ async def get_event_face_clusters_public(
     if event is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
     return await _compute_face_clusters(event_id, db, storage)
+
+
+@router.get("/{event_id}/watched-folder", response_model=WatchedFolderRead)
+async def get_watched_folder(
+    event_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> WatchedFolderRead:
+    """Etat du dossier surveille pour cet evenement (voir
+    services/folder_watcher.py) : chemin a utiliser cote PC hote + statut des
+    derniers fichiers vus (en cours de copie / ingere / erreur)."""
+    await _get_owned_event(event_id, current_user, db)
+    folder_path = f"{settings.watched_folder_host_display_path}/{event_id}/"
+    files = [
+        WatchedFileRead(filename=f.filename, status=f.status, detail=f.detail)
+        for f in folder_watcher.status_for_event(event_id)
+    ]
+    return WatchedFolderRead(folder_path=folder_path, files=files)
 
 
 @router.get("/{event_id}/payment-methods", response_model=list[EventPaymentMethodRead])

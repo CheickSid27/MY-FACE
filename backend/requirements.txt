@@ -19,3 +19,4 @@ scikit-learn>=1.5.2
 numpy>=1.26.4
 qrcode>=7.4.2
 africastalking>=1.2.9
+pywebpush>=2.0.0

@@ -27,6 +27,9 @@ class FaceCluster(BaseModel):
     cluster_id: int
     photo_count: int
     representative_photo: PhotoRead
+    # Vignette recadree sur le visage (pas la photo entiere), pour identifier
+    # la personne d'un coup d'oeil dans la vue "personnes detectees".
+    representative_face_url: str
     photo_ids: list[uuid.UUID]
 
 

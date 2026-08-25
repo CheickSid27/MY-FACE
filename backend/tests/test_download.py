@@ -1,8 +1,11 @@
 import io
+import uuid
 
 import pytest
 from httpx import AsyncClient
 from PIL import Image
+
+from app.models.order import Order, OrderStatus
 
 pytestmark = pytest.mark.asyncio
 
@@ -35,7 +38,15 @@ async def _create_paid_order(auth_client, client, storage_service, test_session_
     )
     order_id = init_resp.json()["order_id"]
 
-    await client.post(f"/payments/{order_id}/simulate", json={"status": "success"})
+    # Plus d'endpoint de simulation (paiement reel = QR marchand + validation
+    # manuelle organisateur, voir routers/payments.py mark_paid + admin
+    # confirm_order) : on passe l'etat en base directement pour isoler le
+    # test du flux de telechargement de celui de confirmation du paiement.
+    async with test_session_factory() as db:
+        order = await db.get(Order, uuid.UUID(order_id))
+        order.status = OrderStatus.SUCCESS
+        await db.commit()
+
     return order_id
 
 

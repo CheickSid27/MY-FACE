@@ -2,12 +2,14 @@ import hashlib
 import hmac
 import io
 import json
+import uuid
 
 import pytest
 from httpx import AsyncClient
 from PIL import Image
 
 from app.core.config import get_settings
+from app.models.order import Order
 
 pytestmark = pytest.mark.asyncio
 
@@ -83,9 +85,18 @@ async def test_webhook_confirms_payment(auth_client, client, storage_service, te
     order_status = await client.get(f"/payments/status/{order_id}")
     assert order_status.status_code == 200
 
-    # Recupere la reference generee (pas exposee par l'API publique) via une
-    # simulation, qui suit exactement le meme chemin que le webhook.
-    resp = await client.post(f"/payments/{order_id}/simulate", json={"status": "success"})
+    # Reference generee cote serveur (pas exposee par l'API publique) :
+    # recuperee en base pour simuler un vrai webhook operateur signe, seul
+    # chemin desormais disponible pour confirmer un paiement (plus de
+    # raccourci de simulation, voir routers/payments.py).
+    async with test_session_factory() as db:
+        order = await db.get(Order, uuid.UUID(order_id))
+        reference = order.payment_reference
+
+    body = json.dumps({"reference": reference, "status": "success"}).encode()
+    resp = await client.post(
+        "/payments/webhook", content=body, headers={"X-Signature": _sign(body), "Content-Type": "application/json"}
+    )
     assert resp.status_code == 200
 
     status_resp = await client.get(f"/payments/status/{order_id}")
@@ -110,12 +121,19 @@ async def test_webhook_valid_signature_unknown_reference_404(client):
     assert resp.status_code == 404
 
 
-async def test_simulate_marks_order_failed(auth_client, client, storage_service, test_session_factory, seed_photo):
+async def test_webhook_marks_order_failed(auth_client, client, storage_service, test_session_factory, seed_photo):
     session_id = await _create_cart_with_photo(auth_client, client, storage_service, test_session_factory, seed_photo)
     init_resp = await client.post("/payments/init", json={"session_id": session_id, "contact_phone": "+2250700000000"})
     order_id = init_resp.json()["order_id"]
 
-    resp = await client.post(f"/payments/{order_id}/simulate", json={"status": "failed"})
+    async with test_session_factory() as db:
+        order = await db.get(Order, uuid.UUID(order_id))
+        reference = order.payment_reference
+
+    body = json.dumps({"reference": reference, "status": "failed"}).encode()
+    resp = await client.post(
+        "/payments/webhook", content=body, headers={"X-Signature": _sign(body), "Content-Type": "application/json"}
+    )
     assert resp.status_code == 200
 
     status_resp = await client.get(f"/payments/status/{order_id}")

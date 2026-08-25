@@ -5,6 +5,7 @@ separee type Celery/Redis) pour rester dans le stack defini au cahier des
 charges pour cette phase. A revisiter en Phase 5 si le volume l'exige.
 """
 
+import asyncio
 import logging
 import uuid
 from collections.abc import Callable
@@ -18,6 +19,16 @@ from app.services.face_recognition import ImageDecodeError, detect_faces_async
 from app.services.storage import StorageService, get_storage_service
 
 logger = logging.getLogger("myface.face_indexing")
+
+# Nombre de photos traitees en parallele par index_photos_faces. Seule la
+# vraie inference GPU est serialisee (voir _inference_lock dans
+# face_recognition.py) ; tout le reste (telechargement storage, ecritures DB)
+# peut se chevaucher entre photos. Sans ca, FastAPI BackgroundTasks execute
+# les taches une par une, strictement sequentiellement : un lot de 100+
+# photos multiplie chaque aller-retour reseau (R2, Neon) par le nombre de
+# photos au lieu de les recouvrir, observe en usage comme un ralentissement
+# tres visible de l'indexation apres upload d'un gros lot.
+INDEXING_CONCURRENCY = 4
 
 
 async def index_photo_faces(
@@ -80,3 +91,22 @@ async def index_photo_faces(
                 logger.exception("Photo %s: erreur inattendue pendant l'indexation faciale", photo_id)
     except Exception:
         logger.exception("Photo %s: echec critique du pipeline d'indexation", photo_id)
+
+
+async def index_photos_faces(
+    photo_ids: list[uuid.UUID],
+    storage: StorageService | None = None,
+    session_factory: Callable[[], AsyncSession] = AsyncSessionLocal,
+    max_concurrency: int = INDEXING_CONCURRENCY,
+) -> None:
+    """Indexe plusieurs photos avec un parallelisme borne (voir
+    INDEXING_CONCURRENCY) : a utiliser pour un lot d'upload plutot qu'un
+    background_tasks.add_task par photo, qui serialiserait tout via
+    BackgroundTasks (execution une par une, pas concurrente)."""
+    semaphore = asyncio.Semaphore(max_concurrency)
+
+    async def _bounded(photo_id: uuid.UUID) -> None:
+        async with semaphore:
+            await index_photo_faces(photo_id, storage, session_factory)
+
+    await asyncio.gather(*(_bounded(photo_id) for photo_id in photo_ids))

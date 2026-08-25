@@ -36,7 +36,3 @@ class PaymentStatusResponse(BaseModel):
     payment_method: PaymentMethod
     qr_image_url: str | None = None
     merchant_phone: str | None = None
-
-
-class PaymentSimulateRequest(BaseModel):
-    status: OrderStatus = Field(description="'success' ou 'failed' uniquement")

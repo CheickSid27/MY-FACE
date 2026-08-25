@@ -13,9 +13,12 @@ from app.services.storage import StorageService, get_storage_service
 
 settings = get_settings()
 
-# DB de test dediee : reutilise le meme serveur Postgres (docker-compose) mais
-# une base separee, pour ne jamais toucher aux donnees dev/prod.
-TEST_DATABASE_URL = settings.database_url.rsplit("/", 1)[0] + "/myface_test"
+# DB de test dediee : un Postgres local jetable (docker-compose), toujours
+# distinct de DATABASE_URL (qui peut pointer vers Neon en prod) pour ne
+# jamais faire tourner la suite de tests contre une base geree a distance.
+TEST_DATABASE_URL = settings.test_database_url or (
+    settings.database_url.rsplit("/", 1)[0] + "/myface_test"
+)
 
 # NullPool : pas de connexion persistante partagee entre tests, evite les
 # erreurs asyncpg liees au cycle de vie de l'event loop de pytest-asyncio.
@@ -40,6 +43,9 @@ class InMemoryStorageService(StorageService):
 
     async def get_presigned_url(self, key: str, expires_in: int = 3600) -> str:
         return f"http://test-storage.local/{key}?expires_in={expires_in}"
+
+    async def exists(self, key: str) -> bool:
+        return key in self.objects
 
 
 @pytest_asyncio.fixture(scope="session", autouse=True)

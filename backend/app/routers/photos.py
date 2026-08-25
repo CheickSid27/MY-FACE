@@ -7,18 +7,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db, get_session_factory
 from app.deps import get_current_user
 from app.models.event import Event
-from app.models.photo import IndexingStatus, Photo
+from app.models.face_embedding import FaceEmbedding
+from app.models.order import Order, OrderItem, OrderStatus
+from app.models.photo import Photo
 from app.models.user import User
 from app.schemas.photo import PhotoListResponse, PhotoUploadError, PhotoUploadResult
-from app.services.face_indexing import index_photo_faces
+from app.services.face_indexing import index_photos_faces
+from app.services.ingestion import InvalidImageError, ingest_photo
 from app.services.photo_urls import to_photo_reads
 from app.services.storage import StorageService, get_storage_service
-from app.services.thumbnails import InvalidImageError, generate_thumbnail
 
 router = APIRouter(tags=["photos"])
-
-ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
-MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024
 
 
 async def _get_owned_event(event_id: uuid.UUID, current_user: User, db: AsyncSession) -> Event:
@@ -51,34 +50,10 @@ async def upload_photos(
 
     for file in files:
         try:
-            if file.content_type not in ALLOWED_CONTENT_TYPES:
-                raise ValueError(f"Type de fichier non supporte: {file.content_type}")
-
             data = await file.read()
-            if len(data) > MAX_FILE_SIZE_BYTES:
-                raise ValueError("Fichier trop volumineux (max 25 Mo)")
-            if not data:
-                raise ValueError("Fichier vide")
-
-            thumbnail_bytes = generate_thumbnail(data)
-
-            photo_id = uuid.uuid4()
-            extension = (file.filename or "photo.jpg").rsplit(".", 1)[-1].lower()
-            original_key = f"events/{event_id}/originals/{photo_id}.{extension}"
-            thumbnail_key = f"events/{event_id}/thumbnails/{photo_id}.jpg"
-
-            await storage.upload(original_key, data, file.content_type)
-            await storage.upload(thumbnail_key, thumbnail_bytes, "image/jpeg")
-
-            photo = Photo(
-                id=photo_id,
-                event_id=event_id,
-                original_key=original_key,
-                thumbnail_key=thumbnail_key,
-                original_filename=file.filename or f"{photo_id}.{extension}",
-                indexing_status=IndexingStatus.PENDING,
+            photo = await ingest_photo(
+                event_id, file.filename or "photo.jpg", file.content_type or "", data, db, storage
             )
-            db.add(photo)
             uploaded.append(photo)
         except (ValueError, InvalidImageError) as exc:
             errors.append(PhotoUploadError(filename=file.filename or "unknown", error=str(exc)))
@@ -87,9 +62,58 @@ async def upload_photos(
         await db.commit()
         for photo in uploaded:
             await db.refresh(photo)
-            background_tasks.add_task(index_photo_faces, photo.id, storage, session_factory)
+        # Un seul background task pour tout le lot, avec parallelisme borne
+        # en interne (voir index_photos_faces) : BackgroundTasks execute ses
+        # taches une par une, donc en programmer une par photo serialiserait
+        # completement l'indexation d'un gros lot au lieu de recouvrir les
+        # I/O reseau (storage, DB) entre photos.
+        background_tasks.add_task(index_photos_faces, [p.id for p in uploaded], storage, session_factory)
 
     return PhotoUploadResult(uploaded=await to_photo_reads(uploaded, storage), errors=errors)
+
+
+@router.delete("/photos/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_photo(
+    photo_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    storage: StorageService = Depends(get_storage_service),
+) -> None:
+    photo = await db.get(Photo, photo_id)
+    if photo is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo introuvable")
+    await _get_owned_event(photo.event_id, current_user, db)
+
+    # Une photo deja livree dans une commande payee ne doit pas disparaitre
+    # sous les pieds d'un client qui voudrait retelecharger : on bloque la
+    # suppression plutot que de casser silencieusement son acces post-achat.
+    sold_result = await db.execute(
+        select(OrderItem.id)
+        .join(Order, Order.id == OrderItem.order_id)
+        .where(OrderItem.photo_id == photo_id, Order.status == OrderStatus.SUCCESS)
+    )
+    if sold_result.first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cette photo fait partie d'une commande deja payee, suppression impossible",
+        )
+
+    # Cles des vignettes de visage (voir services/face_crops.py) : generees a
+    # la demande, pas stockees sur FaceEmbedding, donc a reconstruire ici
+    # avant que la suppression en cascade des embeddings ne fasse perdre
+    # leurs ids.
+    embeddings_result = await db.execute(select(FaceEmbedding.id).where(FaceEmbedding.photo_id == photo_id))
+    face_crop_keys = [f"events/{photo.event_id}/face-crops/{eid}.jpg" for (eid,) in embeddings_result.all()]
+
+    for key in [photo.original_key, photo.thumbnail_key, photo.preview_key, *face_crop_keys]:
+        if key:
+            await storage.delete(key)
+
+    # order_items/cart_items/face_embeddings d'orders non payes partent en
+    # cascade DB (ON DELETE CASCADE, voir models/order.py, models/cart.py,
+    # models/face_embedding.py).
+    await db.delete(photo)
+    await db.commit()
 
 
 @router.get("/events/{event_id}/photos", response_model=PhotoListResponse)

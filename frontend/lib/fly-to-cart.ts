@@ -33,7 +33,7 @@ export function flyToCart(sourceEl: HTMLElement | null): void {
   clone.style.zIndex = "9999";
   clone.style.pointerEvents = "none";
   clone.style.boxShadow = "0 12px 30px rgba(20,23,31,0.35)";
-  clone.style.transition = "transform 0.62s cubic-bezier(0.34, 1.15, 0.4, 1), opacity 0.62s ease-in";
+  clone.style.transition = "transform 0.5s cubic-bezier(0.34, 1.15, 0.4, 1), opacity 0.5s ease-in";
   clone.style.willChange = "transform, opacity";
   if (src) {
     clone.style.backgroundImage = `url(${src})`;
@@ -50,7 +50,7 @@ export function flyToCart(sourceEl: HTMLElement | null): void {
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      clone.style.transform = `translate(${dx}px, ${dy}px) scale(0.12) rotate(8deg)`;
+      clone.style.transform = `translate(${dx}px, ${dy}px) scale(0.12)`;
       clone.style.opacity = "0.15";
     });
   });
@@ -58,5 +58,5 @@ export function flyToCart(sourceEl: HTMLElement | null): void {
   window.setTimeout(() => {
     clone.remove();
     targetEl.dispatchEvent(new CustomEvent("cart-landed"));
-  }, 640);
+  }, 520);
 }
