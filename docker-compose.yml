@@ -75,17 +75,23 @@ services:
   frontend:
     build:
       context: ./frontend
+      # Build de production (voir frontend/Dockerfile) : les NEXT_PUBLIC_*
+      # sont figees dans le bundle JS a la compilation, donc passees en build
+      # args (lues depuis .env par docker compose automatiquement), pas
+      # seulement via env_file qui n'agirait qu'au demarrage du process.
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_PAYMENT_PROVIDER: ${NEXT_PUBLIC_PAYMENT_PROVIDER}
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
     restart: unless-stopped
-    env_file:
-      - .env
     depends_on:
       - backend
     ports:
       - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
+    # Pas de bind-mount du code source ici (contrairement au backend) : ce
+    # conteneur sert le build de production compile dans l'image
+    # (.next/standalone), un bind-mount de ./frontend:/app l'ecraserait par
+    # le code source brut non compile.
 
   nginx:
     build:

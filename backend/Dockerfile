@@ -34,4 +34,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "alembic upgrade head && python3 -m scripts.seed_admin && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
+CMD ["sh", "-c", "alembic upgrade head && python3 -m scripts.seed_admin && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

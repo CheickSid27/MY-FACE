@@ -16,10 +16,13 @@ from insightface.data import get_image as ins_get_image
 from PIL import Image
 from sqlalchemy import select
 
+from app.core.config import get_settings
 from app.models.face_embedding import FaceEmbedding
 from app.models.photo import IndexingStatus, Photo
 from app.services.face_indexing import index_photo_faces
 from app.services.face_recognition import ImageDecodeError, detect_faces
+
+settings = get_settings()
 
 
 def _real_face_image_bytes() -> bytes:
@@ -83,6 +86,16 @@ def test_detect_faces_on_real_image():
         assert len(face.embedding) == 512
         assert 0.0 <= face.confidence <= 1.0
         assert len(face.bounding_box) == 4
+        assert face.sharpness >= settings.face_min_sharpness
+
+
+def test_detect_faces_rejects_blurry_face():
+    img = ins_get_image("t1")
+    blurred = cv2.GaussianBlur(img, (31, 31), 15)
+    success, buffer = cv2.imencode(".jpg", blurred)
+    assert success
+    faces = detect_faces(buffer.tobytes())
+    assert faces == []
 
 
 def test_detect_faces_on_image_without_face():
@@ -206,7 +219,7 @@ async def test_clusters_group_duplicate_faces(
     assert len(data["clusters"]) >= 1
     for cluster in data["clusters"]:
         assert cluster["photo_count"] == 2
-        assert len(cluster["photo_ids"]) == 2
+        assert len(cluster["photos"]) == 2
 
 
 async def test_clusters_requires_auth(client: AsyncClient):

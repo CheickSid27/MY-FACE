@@ -73,6 +73,7 @@ async def index_photo_faces(
                                 "y2": face.bounding_box[3],
                             },
                             confidence=face.confidence,
+                            sharpness=face.sharpness,
                         )
                     )
 

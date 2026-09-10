@@ -35,6 +35,16 @@ class PaymentMethod(str, enum.Enum):
     # Jamais utilise silencieusement : le mode doit etre choisi explicitement
     # par PAYMENT_PROVIDER dans .env.
     MANUAL = "manual"
+    # Passerelle tierce (Wave/Orange/MTN/Moov unifies via une seule API,
+    # paiement + confirmation automatiques). Chemin ISOLE en test sandbox,
+    # voir routers/geniuspay.py : ne remplace pas le flux QR + confirmation
+    # manuelle ci-dessus, coexiste avec lui.
+    GENIUSPAY = "geniuspay"
+    # Especes remises en main propre a un membre de l'equipe, a cote de la
+    # borne. Uniquement propose en mode borne (voir Event.cash_enabled et
+    # frontend/lib/kiosk.ts) : jamais sur le telephone personnel d'un client,
+    # qui n'a personne physiquement a qui remettre l'argent.
+    CASH = "cash"
 
 
 class Order(Base):
@@ -76,9 +86,15 @@ class OrderItem(Base):
         UUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True
     )
     photo_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("photos.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("photos.id", ondelete="CASCADE"), nullable=False, index=True
     )
     unit_price: Mapped[float] = mapped_column(Float, nullable=False)
+    # Tirage papier demande pour CETTE photo, et son prix au moment de l'achat
+    # (snapshot, comme unit_price : un changement de tarif ulterieur ne doit
+    # pas modifier le prix d'une commande deja passee). print_price reste
+    # NULL si print_requested est faux.
+    print_requested: Mapped[bool] = mapped_column(default=False, server_default="false", nullable=False)
+    print_price: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     order: Mapped["Order"] = relationship("Order", back_populates="items")
     photo: Mapped["Photo"] = relationship("Photo")

@@ -12,6 +12,8 @@ export const METHOD_LABELS: Record<PaymentMethod, string> = {
   mtn_money: "MTN Money",
   moov_money: "Moov Money",
   manual: "Test",
+  cash: "Especes",
+  geniuspay: "GeniusPay",
 };
 
 interface MethodIconProps {
@@ -22,13 +24,18 @@ interface MethodIconProps {
 
 export default function MethodIcon({ method, size = 22, className = "" }: MethodIconProps) {
   const src = LOGO_SRC[method];
+  // Filet de securite : si le backend renvoie un jour une valeur de
+  // PaymentMethod pas encore ajoutee ici (derive de type), on affiche un
+  // monogramme generique au lieu de planter tout l'ecran de paiement
+  // (deja arrive en pratique avec "geniuspay" avant cet ajout).
+  const label = METHOD_LABELS[method] ?? method;
 
   if (src) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={src}
-        alt={METHOD_LABELS[method]}
+        alt={label}
         width={size}
         height={size}
         className={`inline-block shrink-0 rounded-md object-contain ${className}`}
@@ -43,7 +50,7 @@ export default function MethodIcon({ method, size = 22, className = "" }: Method
       style={{ width: size, height: size }}
       className={`inline-flex shrink-0 items-center justify-center rounded-md bg-ink-900/10 text-[0.6em] font-bold text-ink-700 ${className}`}
     >
-      {METHOD_LABELS[method].slice(0, 2).toUpperCase()}
+      {label.slice(0, 2).toUpperCase()}
     </span>
   );
 }

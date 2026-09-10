@@ -4,8 +4,11 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CartIcon } from "@/components/icons";
 import MethodIcon, { METHOD_LABELS } from "@/components/payments/MethodIcon";
+import PaymentProgressOverlay from "@/components/payments/PaymentProgressOverlay";
 import { api, ApiError } from "@/lib/api-client";
 import { getCartSessionId } from "@/lib/cart";
+import { isKioskMode } from "@/lib/kiosk";
+import { useKioskInactivityReset } from "@/lib/kiosk-inactivity-reset";
 import type { CartRead, EventPaymentMethodRead, PaymentMethod } from "@/types/api";
 
 export default function CartPage() {
@@ -17,9 +20,17 @@ export default function CartPage() {
   const [error, setError] = useState<string | null>(null);
   const [phone, setPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [paymentReady, setPaymentReady] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [togglingPrintId, setTogglingPrintId] = useState<string | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<EventPaymentMethodRead[]>([]);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
+  // Impression et especes n'ont de sens que physiquement sur la borne
+  // (quelqu'un pour recevoir l'argent, une imprimante branchee a cote) :
+  // jamais propose sur le telephone personnel d'un invite. Voir lib/kiosk.ts.
+  const [kiosk, setKiosk] = useState(false);
+  const [printUnitPrice, setPrintUnitPrice] = useState<number | null>(null);
+  const [cashEnabled, setCashEnabled] = useState(false);
 
   const loadCart = useCallback(async () => {
     const sessionId = getCartSessionId(eventId);
@@ -42,6 +53,16 @@ export default function CartPage() {
   }, [loadCart]);
 
   useEffect(() => {
+    setKiosk(isKioskMode(eventId));
+  }, [eventId]);
+
+  // Desactive pendant un paiement en cours (submitting) : le serveur peut
+  // prendre plusieurs secondes a repondre sans aucune interaction utilisateur
+  // entre-temps, on ne veut surtout pas renvoyer le client a l'accueil au
+  // milieu de son propre paiement.
+  useKioskInactivityReset(eventId, kiosk && !submitting);
+
+  useEffect(() => {
     api
       .getPaymentMethods(eventId)
       .then((methods) => {
@@ -50,6 +71,15 @@ export default function CartPage() {
       })
       .catch(() => {
         // pas de moyen de paiement configure : on garde le flux de test existant
+      });
+    api
+      .getEventPublic(eventId)
+      .then((event) => {
+        setPrintUnitPrice(event.pricing.print_unit_price ?? null);
+        setCashEnabled(event.cash_enabled);
+      })
+      .catch(() => {
+        // impression/especes resteront simplement indisponibles
       });
   }, [eventId]);
 
@@ -65,21 +95,40 @@ export default function CartPage() {
     }
   }
 
+  async function handleTogglePrint(itemId: string, printRequested: boolean) {
+    setTogglingPrintId(itemId);
+    try {
+      const updated = await api.setCartItemPrint(itemId, printRequested);
+      setCart(updated);
+    } catch {
+      setError("Impossible de mettre a jour l'impression.");
+    } finally {
+      setTogglingPrintId(null);
+    }
+  }
+
+  const showCashOption = kiosk && cashEnabled;
+  const hasMethodChoice = paymentMethods.length > 0 || showCashOption;
+
   async function handleCheckout(e: FormEvent) {
     e.preventDefault();
     if (!cart) return;
-    if (paymentMethods.length > 0 && !selectedMethod) {
+    if (hasMethodChoice && !selectedMethod) {
       setError("Choisissez un moyen de paiement.");
       return;
     }
     setSubmitting(true);
+    setPaymentReady(false);
     setError(null);
     try {
       const result = await api.initPayment(cart.session_id, phone, selectedMethod ?? undefined);
+      setPaymentReady(true);
+      // Laisse la barre de progression atteindre 100% a l'ecran avant de
+      // quitter la page, sinon le saut a 100% n'est jamais visible.
+      await new Promise((resolve) => setTimeout(resolve, 300));
       router.push(`/event/${eventId}/pay/${result.order_id}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Erreur lors de l'initialisation du paiement.");
-    } finally {
       setSubmitting(false);
     }
   }
@@ -140,6 +189,21 @@ export default function CartPage() {
               >
                 &times;
               </button>
+              {/* Impression papier : uniquement propose sur la borne (une
+                  imprimante physique n'existe pas sur le telephone d'un
+                  invite), et seulement si l'organisateur a fixe un prix. */}
+              {kiosk && printUnitPrice != null && printUnitPrice > 0 && (
+                <button
+                  type="button"
+                  disabled={togglingPrintId === item.id}
+                  onClick={() => handleTogglePrint(item.id, !item.print_requested)}
+                  className={`glass-pill absolute inset-x-1.5 bottom-1.5 flex items-center justify-center gap-1 rounded-lg px-1.5 py-1 text-[11px] font-semibold transition-all duration-150 disabled:opacity-50 ${
+                    item.print_requested ? "!bg-brand-accent !text-brand" : "text-white"
+                  }`}
+                >
+                  {item.print_requested ? "✓ Imprimer" : `+ Imprimer (+${printUnitPrice.toLocaleString("fr-FR")})`}
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -159,6 +223,14 @@ export default function CartPage() {
               </span>
             </div>
           )}
+          {cart.pricing.print_count > 0 && (
+            <div className="mt-1 flex justify-between text-sm text-ink-500">
+              <span>Impression ({cart.pricing.print_count} photo(s))</span>
+              <span>
+                +{cart.pricing.print_total.toLocaleString("fr-FR")} {cart.pricing.currency}
+              </span>
+            </div>
+          )}
           <div className="mt-3 flex items-baseline justify-between border-t border-ink-900/5 pt-3">
             <span className="font-semibold text-ink-900">Total</span>
             <span className="text-2xl font-bold text-brand">
@@ -169,7 +241,7 @@ export default function CartPage() {
         </div>
 
         <form onSubmit={handleCheckout} className="glass mt-6 rounded-2xl p-5">
-          {paymentMethods.length > 0 && (
+          {hasMethodChoice && (
             <div className="mb-4">
               <label className="mb-1.5 block text-sm font-medium text-ink-700">Moyen de paiement</label>
               <div className="grid grid-cols-2 gap-2">
@@ -190,6 +262,22 @@ export default function CartPage() {
                     </button>
                   );
                 })}
+                {/* Especes : uniquement sur la borne, jamais propose sur le
+                    telephone personnel d'un invite (personne physiquement la
+                    pour recevoir l'argent) — voir Event.cash_enabled. */}
+                {showCashOption && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMethod("cash")}
+                    className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-sm font-semibold transition-all duration-150 ${
+                      selectedMethod === "cash"
+                        ? "border-brand-accent bg-brand-accent/10 text-brand"
+                        : "border-ink-900/10 bg-white/60 text-ink-700 hover:border-ink-900/20"
+                    }`}
+                  >
+                    <MethodIcon method="cash" size={22} /> {METHOD_LABELS.cash}
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -212,6 +300,8 @@ export default function CartPage() {
           </button>
         </form>
       </div>
+
+      {submitting && <PaymentProgressOverlay done={paymentReady} />}
     </main>
   );
 }

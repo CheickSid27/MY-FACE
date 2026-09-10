@@ -174,12 +174,52 @@ export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) 
     }
   }
 
-  // Meme principe que la galerie : mise a jour optimiste immediate (aucune
-  // attente reseau visible) + file d'attente serialisee pour que la premiere
-  // requete cree la session panier avant que les suivantes la reutilisent.
-  const cartQueueRef = useRef<Promise<void>>(Promise.resolve());
   const itemIdByPhotoRef = useRef<Record<string, string>>({});
   itemIdByPhotoRef.current = itemIdByPhoto;
+
+  // Meme principe complet (et meme explication) que
+  // app/event/[eventId]/gallery/page.tsx : ajouts groupes en un seul appel
+  // /cart/add-bulk apres un court debounce (ou immediatement au moment
+  // d'aller au panier) plutot qu'une requete reseau sequentielle par photo
+  // selectionnee.
+  const FLUSH_DEBOUNCE_MS = 500;
+  const pendingAddIdsRef = useRef<Set<string>>(new Set());
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushChainRef = useRef<Promise<void>>(Promise.resolve());
+  const pendingRemovesRef = useRef<Promise<void>[]>([]);
+
+  const flushPendingAdds = useCallback((): Promise<void> => {
+    if (flushTimerRef.current) {
+      clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = null;
+    }
+    if (pendingAddIdsRef.current.size === 0) return flushChainRef.current;
+
+    const ids = Array.from(pendingAddIdsRef.current);
+    pendingAddIdsRef.current = new Set();
+
+    flushChainRef.current = flushChainRef.current.then(async () => {
+      try {
+        const sessionId = getCartSessionId(eventId);
+        const cart = await api.addToCartBulk(eventId, ids, sessionId);
+        setCartSessionId(eventId, cart.session_id);
+        const newMap: Record<string, string> = {};
+        cart.items.forEach((item) => {
+          newMap[item.photo.id] = item.id;
+        });
+        setItemIdByPhoto((prev) => ({ ...prev, ...newMap }));
+      } catch {
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          ids.forEach((id) => next.delete(id));
+          return next;
+        });
+        setCartCount((c) => Math.max(0, c - ids.length));
+        setError("Impossible de mettre a jour le panier, reessayez.");
+      }
+    });
+    return flushChainRef.current;
+  }, [eventId]);
 
   function handlePhotoClick(photo: Photo) {
     const wasSelected = selectedIds.has(photo.id);
@@ -192,35 +232,55 @@ export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) 
     });
     setCartCount((c) => Math.max(0, c + (wasSelected ? -1 : 1)));
 
-    cartQueueRef.current = cartQueueRef.current.then(async () => {
+    if (!wasSelected) {
+      pendingAddIdsRef.current.add(photo.id);
+      if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = setTimeout(flushPendingAdds, FLUSH_DEBOUNCE_MS);
+      return;
+    }
+
+    if (pendingAddIdsRef.current.has(photo.id)) {
+      pendingAddIdsRef.current.delete(photo.id);
+      return;
+    }
+
+    const itemId = itemIdByPhotoRef.current[photo.id];
+    const removePromise = (async () => {
       try {
-        if (wasSelected) {
-          const itemId = itemIdByPhotoRef.current[photo.id];
-          if (itemId) {
-            await api.removeCartItem(itemId);
-            setItemIdByPhoto((prev) => {
-              const next = { ...prev };
-              delete next[photo.id];
-              return next;
-            });
-          }
+        if (itemId) {
+          await api.removeCartItem(itemId);
         } else {
-          const sessionId = getCartSessionId(eventId);
-          const cart = await api.addToCart(eventId, photo.id, sessionId);
-          setCartSessionId(eventId, cart.session_id);
-          syncCart(cart);
+          await flushChainRef.current;
+          const resolvedId = itemIdByPhotoRef.current[photo.id];
+          if (resolvedId) await api.removeCartItem(resolvedId);
         }
-      } catch {
-        setSelectedIds((prev) => {
-          const next = new Set(prev);
-          if (wasSelected) next.add(photo.id);
-          else next.delete(photo.id);
+        setItemIdByPhoto((prev) => {
+          const next = { ...prev };
+          delete next[photo.id];
           return next;
         });
-        setCartCount((c) => Math.max(0, c + (wasSelected ? 1 : -1)));
+      } catch {
+        setSelectedIds((prev) => new Set(prev).add(photo.id));
+        setCartCount((c) => c + 1);
         setError("Impossible de mettre a jour le panier, reessayez.");
       }
-    });
+    })();
+    pendingRemovesRef.current.push(removePromise);
+  }
+
+  // Voir le meme correctif (et son explication complete) dans
+  // app/event/[eventId]/gallery/page.tsx : naviguer vers le panier avant que
+  // le lot en attente et les suppressions en cours n'aient ete confirmes
+  // faisait atterrir sur un panier incomplet.
+  const [goingToCart, setGoingToCart] = useState(false);
+  async function goToCart() {
+    setGoingToCart(true);
+    try {
+      await Promise.all([flushPendingAdds(), ...pendingRemovesRef.current]);
+    } finally {
+      onClose();
+      router.push(`/event/${eventId}/cart`);
+    }
   }
 
   if (!open) return null;
@@ -396,14 +456,14 @@ export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) 
               <div className="border-t border-ink-900/5 p-4">
                 <button
                   type="button"
-                  onClick={() => {
-                    onClose();
-                    router.push(`/event/${eventId}/cart`);
-                  }}
-                  className="btn-primary w-full justify-between px-5"
+                  disabled={goingToCart}
+                  onClick={goToCart}
+                  className="btn-primary w-full justify-between px-5 disabled:opacity-70"
                 >
                   <span>{cartCount} photo(s) selectionnee(s)</span>
-                  <span className="text-brand-accent-light">Voir le panier &rarr;</span>
+                  <span className="text-brand-accent-light">
+                    {goingToCart ? "Enregistrement..." : "Voir le panier →"}
+                  </span>
                 </button>
               </div>
             )}

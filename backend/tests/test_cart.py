@@ -78,6 +78,73 @@ async def test_add_unknown_photo_returns_404(client):
     assert resp.status_code == 404
 
 
+async def test_add_bulk_creates_session_with_all_photos(
+    auth_client, client, storage_service, test_session_factory, seed_photo
+):
+    event_id = await _create_event(auth_client)
+    photo_ids = [
+        await seed_photo(event_id, storage_service, test_session_factory, f"p{i}.jpg", _jpeg_bytes((i, i, i)))
+        for i in range(1, 6)
+    ]
+
+    resp = await client.post("/cart/add-bulk", json={"event_id": event_id, "photo_ids": photo_ids})
+    assert resp.status_code == 201
+    data = resp.json()
+    assert len(data["items"]) == 5
+    assert data["pricing"]["photo_count"] == 5
+    assert data["pricing"]["total"] == 5000
+
+
+async def test_add_bulk_reuses_session_and_is_idempotent(
+    auth_client, client, storage_service, test_session_factory, seed_photo
+):
+    event_id = await _create_event(auth_client)
+    photo1 = await seed_photo(event_id, storage_service, test_session_factory, "p1.jpg", _jpeg_bytes((1, 1, 1)))
+    photo2 = await seed_photo(event_id, storage_service, test_session_factory, "p2.jpg", _jpeg_bytes((2, 2, 2)))
+
+    first = await client.post("/cart/add", json={"event_id": event_id, "photo_id": photo1})
+    session_id = first.json()["session_id"]
+
+    resp = await client.post(
+        "/cart/add-bulk",
+        json={"session_id": session_id, "event_id": event_id, "photo_ids": [photo1, photo2]},
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["session_id"] == session_id
+    # photo1 deja present : pas de doublon, seul photo2 est reellement ajoute
+    assert len(data["items"]) == 2
+
+
+async def test_add_bulk_ignores_photos_from_other_event(
+    auth_client, client, storage_service, test_session_factory, seed_photo
+):
+    event_id = await _create_event(auth_client)
+    other_event_id = await _create_event(auth_client)
+    photo_id = await seed_photo(event_id, storage_service, test_session_factory, "p1.jpg", _jpeg_bytes())
+    other_photo_id = await seed_photo(
+        other_event_id, storage_service, test_session_factory, "p2.jpg", _jpeg_bytes((2, 2, 2))
+    )
+
+    resp = await client.post(
+        "/cart/add-bulk", json={"event_id": event_id, "photo_ids": [photo_id, other_photo_id]}
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert len(data["items"]) == 1
+    assert data["items"][0]["photo"]["id"] == photo_id
+
+
+async def test_add_bulk_all_invalid_photos_returns_400(auth_client, client):
+    import uuid
+
+    event_id = await _create_event(auth_client)
+    resp = await client.post(
+        "/cart/add-bulk", json={"event_id": event_id, "photo_ids": [str(uuid.uuid4())]}
+    )
+    assert resp.status_code == 400
+
+
 async def test_get_cart(auth_client, client, storage_service, test_session_factory, seed_photo):
     event_id = await _create_event(auth_client)
     photo_id = await seed_photo(event_id, storage_service, test_session_factory, "p1.jpg", _jpeg_bytes())
@@ -129,3 +196,46 @@ async def test_pack_pricing_reflected_in_cart(auth_client, client, storage_servi
     add2 = await client.post("/cart/add", json={"session_id": session_id, "event_id": event_id, "photo_id": photo2})
 
     assert add2.json()["pricing"]["total"] == 1500
+
+
+async def test_toggle_print_updates_pricing(auth_client, client, storage_service, test_session_factory, seed_photo):
+    resp = await auth_client.post(
+        "/events",
+        json={
+            "name": "Gala Print",
+            "date": "2026-12-06T10:00:00Z",
+            "location": "Abidjan",
+            "pricing": {"unit_price": 1000, "print_unit_price": 150},
+        },
+    )
+    event_id = resp.json()["id"]
+    photo1 = await seed_photo(event_id, storage_service, test_session_factory, "p1.jpg", _jpeg_bytes((1, 1, 1)))
+    photo2 = await seed_photo(event_id, storage_service, test_session_factory, "p2.jpg", _jpeg_bytes((2, 2, 2)))
+
+    add1 = await client.post("/cart/add", json={"event_id": event_id, "photo_id": photo1})
+    session_id = add1.json()["session_id"]
+    add2 = await client.post("/cart/add", json={"session_id": session_id, "event_id": event_id, "photo_id": photo2})
+    item1_id = add2.json()["items"][0]["id"]
+
+    # Seule la 1ere photo est marquee pour impression : le prix ne doit
+    # augmenter que de 150, pas de 300 (l'autre photo n'est pas cochee).
+    patch_resp = await client.patch(f"/cart/{item1_id}", json={"print_requested": True})
+    assert patch_resp.status_code == 200
+    data = patch_resp.json()
+    assert data["pricing"]["print_count"] == 1
+    assert data["pricing"]["print_total"] == 150
+    assert data["pricing"]["total"] == 2150  # 2 x 1000 digital + 150 impression
+    item1 = next(i for i in data["items"] if i["id"] == item1_id)
+    assert item1["print_requested"] is True
+
+    # Decocher revient au prix digital seul.
+    unpatch_resp = await client.patch(f"/cart/{item1_id}", json={"print_requested": False})
+    assert unpatch_resp.json()["pricing"]["total"] == 2000
+    assert unpatch_resp.json()["pricing"]["print_count"] == 0
+
+
+async def test_toggle_print_unknown_item_404(client):
+    import uuid
+
+    resp = await client.patch(f"/cart/{uuid.uuid4()}", json={"print_requested": True})
+    assert resp.status_code == 404

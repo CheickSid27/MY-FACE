@@ -4,6 +4,7 @@ import { AnimatePresence, motion, PanInfo, useMotionValue } from "framer-motion"
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckIcon } from "@/components/icons";
 import { flyToCart } from "@/lib/fly-to-cart";
+import FramedPhoto from "@/components/photo/FramedPhoto";
 import type { Photo } from "@/types/api";
 
 interface PhotoLightboxProps {
@@ -15,6 +16,8 @@ interface PhotoLightboxProps {
   onToggleSelect: (photo: Photo) => void;
   addingPhotoId?: string | null;
   showCartAction?: boolean;
+  /** Voir Event.frame_caption : absent/vide = pas de cadre decoratif. */
+  frameCaption?: string | null;
 }
 
 const SWIPE_THRESHOLD = 60;
@@ -34,6 +37,7 @@ export default function PhotoLightbox({
   onToggleSelect,
   addingPhotoId,
   showCartAction = true,
+  frameCaption,
 }: PhotoLightboxProps) {
   const photo = photos[index];
   const hasPrev = index > 0;
@@ -215,24 +219,26 @@ export default function PhotoLightbox({
               style={{ scale, x: panX, y: panY }}
               className="relative flex max-h-[70vh] max-w-full items-center justify-center"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={photo.thumbnail_url}
-                alt={photo.original_filename}
-                className="max-h-[70vh] max-w-full select-none rounded-2xl object-contain shadow-elevated"
-                draggable={false}
-              />
-              {photo.preview_url !== photo.thumbnail_url && (
-                // eslint-disable-next-line @next/next/no-img-element
+              <FramedPhoto caption={frameCaption}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={photo.preview_url}
+                  src={photo.thumbnail_url}
                   alt={photo.original_filename}
-                  className={`absolute inset-0 h-full w-full select-none rounded-2xl object-contain shadow-elevated transition-opacity duration-300 ${
-                    previewLoaded ? "opacity-100" : "opacity-0"
-                  }`}
+                  className={`max-h-[70vh] max-w-full select-none object-contain ${frameCaption ? "" : "rounded-2xl shadow-elevated"}`}
                   draggable={false}
                 />
-              )}
+                {photo.preview_url !== photo.thumbnail_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={photo.preview_url}
+                    alt={photo.original_filename}
+                    className={`absolute inset-0 h-full w-full select-none object-contain transition-opacity duration-300 ${frameCaption ? "" : "rounded-2xl shadow-elevated"} ${
+                      previewLoaded ? "opacity-100" : "opacity-0"
+                    }`}
+                    draggable={false}
+                  />
+                )}
+              </FramedPhoto>
             </motion.div>
           </motion.div>
         </AnimatePresence>

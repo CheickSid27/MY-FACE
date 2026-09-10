@@ -2,7 +2,7 @@ import secrets
 import uuid
 
 import numpy as np
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sklearn.cluster import DBSCAN
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,7 +22,7 @@ from app.schemas.payment_method import EventPaymentMethodRead
 from app.schemas.watched_folder import WatchedFileRead, WatchedFolderRead
 from app.services.face_crops import get_or_create_face_crop_url
 from app.services.folder_watcher import folder_watcher
-from app.services.photo_urls import to_photo_read
+from app.services.photo_urls import to_photo_read, to_photo_reads
 from app.services.storage import StorageService, get_storage_service
 
 settings = get_settings()
@@ -48,6 +48,7 @@ async def create_event(
         date=payload.date,
         location=payload.location,
         pricing=payload.pricing.model_dump(),
+        frame_caption=payload.frame_caption,
         organizer_id=current_user.id,
         kiosk_token=_generate_kiosk_token(),
     )
@@ -102,13 +103,29 @@ async def get_event(
 @router.get("/{event_id}/public", response_model=EventPublicRead)
 async def get_event_public(
     event_id: uuid.UUID,
+    kiosk_token: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
-) -> Event:
-    """Vue publique pour l'ecran Accueil borne/invite : pas d'authentification."""
+) -> EventPublicRead:
+    """Vue publique pour l'ecran Accueil borne/invite : pas d'authentification.
+
+    `kiosk_token` (optionnel) est compare cote serveur au token reel de
+    l'evenement pour determiner `is_kiosk` — jamais le vrai token n'est
+    renvoye ici (voir EventPublicRead), donc un client ne peut pas le
+    deviner en inspectant les reponses reseau. Sans ce param ou avec un token
+    invalide, `is_kiosk` vaut simplement False (comportement invite normal)."""
     event = await db.get(Event, event_id)
     if event is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
-    return event
+    return EventPublicRead(
+        id=event.id,
+        name=event.name,
+        date=event.date,
+        location=event.location,
+        pricing=event.pricing,
+        frame_caption=event.frame_caption,
+        cash_enabled=event.cash_enabled,
+        is_kiosk=bool(kiosk_token) and kiosk_token == event.kiosk_token,
+    )
 
 
 @router.patch("/{event_id}", response_model=EventRead)
@@ -187,7 +204,7 @@ async def _compute_face_clusters(
             representative_face_url=await get_or_create_face_crop_url(
                 data["representative_face"], data["representative"], storage
             ),
-            photo_ids=list(data["photos"].keys()),
+            photos=await to_photo_reads(list(data["photos"].values()), storage),
         )
         for cluster_id, data in sorted(clusters.items(), key=lambda kv: -len(kv[1]["photos"]))
     ]

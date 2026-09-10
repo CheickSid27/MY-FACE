@@ -11,7 +11,14 @@ from app.core.database import get_db
 from app.models.cart import CartItem, CartSession
 from app.models.event import Event
 from app.models.photo import Photo
-from app.schemas.cart import CartAddRequest, CartItemRead, CartRead, PricingBreakdownRead
+from app.schemas.cart import (
+    CartAddBulkRequest,
+    CartAddRequest,
+    CartItemRead,
+    CartItemUpdateRequest,
+    CartRead,
+    PricingBreakdownRead,
+)
 from app.services.photo_urls import to_photo_read
 from app.services.pricing import calculate_total
 from app.services.storage import StorageService, get_storage_service
@@ -38,10 +45,15 @@ async def _build_cart_read(cart: CartSession, db: AsyncSession, storage: Storage
     photos_by_id = {photo.id: photo for photo in result.scalars().all()}
 
     event = await db.get(Event, cart.event_id)
-    pricing = calculate_total(event.pricing, len(cart.items))
+    print_count = sum(1 for item in cart.items if item.print_requested)
+    pricing = calculate_total(event.pricing, len(cart.items), print_count)
 
     items = [
-        CartItemRead(id=item.id, photo=await to_photo_read(photos_by_id[item.photo_id], storage))
+        CartItemRead(
+            id=item.id,
+            photo=await to_photo_read(photos_by_id[item.photo_id], storage),
+            print_requested=item.print_requested,
+        )
         for item in cart.items
         if item.photo_id in photos_by_id
     ]
@@ -53,6 +65,35 @@ async def _build_cart_read(cart: CartSession, db: AsyncSession, storage: Storage
         pricing=PricingBreakdownRead(**pricing.__dict__),
         expires_at=cart.expires_at,
     )
+
+
+async def _resolve_cart_session(session_id: uuid.UUID | None, event_id: uuid.UUID, db: AsyncSession) -> CartSession:
+    """Retrouve le panier existant (s'il est encore valide) ou en cree un
+    nouveau. Factorise entre l'ajout simple et l'ajout en masse : meme regle
+    partout pour decider quand un nouveau panier doit demarrer."""
+    cart: CartSession | None = None
+    if session_id is not None:
+        result = await db.execute(
+            select(CartSession).where(CartSession.id == session_id).options(selectinload(CartSession.items))
+        )
+        cart = result.scalar_one_or_none()
+        if cart is not None and cart.expires_at < datetime.now(timezone.utc):
+            cart = None
+
+    if cart is None:
+        cart = CartSession(
+            event_id=event_id,
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=settings.cart_session_ttl_hours),
+        )
+        db.add(cart)
+        await db.flush()
+    elif cart.event_id != event_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ce panier appartient a un autre evenement",
+        )
+
+    return cart
 
 
 @router.post("/add", response_model=CartRead, status_code=status.HTTP_201_CREATED)
@@ -69,30 +110,7 @@ async def add_to_cart(
     if photo is None or photo.event_id != payload.event_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo introuvable pour cet evenement")
 
-    cart: CartSession | None = None
-    if payload.session_id is not None:
-        result = await db.execute(
-            select(CartSession)
-            .where(CartSession.id == payload.session_id)
-            .options(selectinload(CartSession.items))
-        )
-        cart = result.scalar_one_or_none()
-        if cart is not None and cart.expires_at < datetime.now(timezone.utc):
-            cart = None
-
-    if cart is None:
-        cart = CartSession(
-            event_id=payload.event_id,
-            expires_at=datetime.now(timezone.utc) + timedelta(hours=settings.cart_session_ttl_hours),
-        )
-        db.add(cart)
-        await db.flush()
-    elif cart.event_id != payload.event_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ce panier appartient a un autre evenement",
-        )
-
+    cart = await _resolve_cart_session(payload.session_id, payload.event_id, db)
     cart_id = cart.id
 
     existing = await db.execute(
@@ -114,6 +132,59 @@ async def add_to_cart(
     return await _build_cart_read(cart, db, storage)
 
 
+@router.post("/add-bulk", response_model=CartRead, status_code=status.HTTP_201_CREATED)
+async def add_to_cart_bulk(
+    payload: CartAddBulkRequest,
+    db: AsyncSession = Depends(get_db),
+    storage: StorageService = Depends(get_storage_service),
+) -> CartRead:
+    """Ajoute plusieurs photos au panier en UNE requete : utilise pour une
+    selection rapide de plusieurs photos et pour "tout selectionner" sur un
+    cluster de visages/des resultats de scan. Les photo_ids qui n'existent
+    pas ou n'appartiennent pas a cet evenement sont ignores silencieusement
+    plutot que de faire echouer tout le lot (ex: une photo supprimee entre
+    l'affichage cote client et le clic)."""
+    event = await db.get(Event, payload.event_id)
+    if event is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
+
+    valid_photo_ids = set(
+        (
+            await db.execute(
+                select(Photo.id).where(Photo.id.in_(payload.photo_ids), Photo.event_id == payload.event_id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if not valid_photo_ids:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Aucune photo valide pour cet evenement")
+
+    cart = await _resolve_cart_session(payload.session_id, payload.event_id, db)
+    cart_id = cart.id
+
+    already_in_cart = set(
+        (
+            await db.execute(
+                select(CartItem.photo_id).where(
+                    CartItem.cart_session_id == cart_id, CartItem.photo_id.in_(valid_photo_ids)
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    for photo_id in valid_photo_ids - already_in_cart:
+        db.add(CartItem(cart_session_id=cart_id, photo_id=photo_id))
+
+    await db.commit()
+    db.expire_all()
+
+    cart = await _get_cart_or_404(cart_id, db)
+    return await _build_cart_read(cart, db, storage)
+
+
 @router.get("/{session_id}", response_model=CartRead)
 async def get_cart(
     session_id: uuid.UUID,
@@ -121,6 +192,31 @@ async def get_cart(
     storage: StorageService = Depends(get_storage_service),
 ) -> CartRead:
     cart = await _get_cart_or_404(session_id, db)
+    return await _build_cart_read(cart, db, storage)
+
+
+@router.patch("/{item_id}", response_model=CartRead)
+async def update_cart_item(
+    item_id: uuid.UUID,
+    payload: CartItemUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    storage: StorageService = Depends(get_storage_service),
+) -> CartRead:
+    """Bascule le tirage papier pour UNE photo du panier (voir
+    CartItem.print_requested) — utilise par la case a cocher "+ Imprimer" du
+    panier, visible uniquement en mode borne cote frontend."""
+    item = await db.get(CartItem, item_id)
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article introuvable")
+
+    cart_session_id = item.cart_session_id
+    item.print_requested = payload.print_requested
+    await db.commit()
+    # Meme piege que add_to_cart : sans expire, la relation `items` du panier
+    # rechargee juste apres pourrait encore refleter l'ancienne valeur.
+    db.expire_all()
+
+    cart = await _get_cart_or_404(cart_session_id, db)
     return await _build_cart_read(cart, db, storage)
 
 

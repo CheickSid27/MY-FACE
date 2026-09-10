@@ -124,6 +124,27 @@ export default function PaymentStatusPage() {
 
   // En attente de verification manuelle par l'organisateur
   if (data.status === "awaiting_confirmation") {
+    // Especes : le client n'a rien scanne, il doit se rendre au comptoir de la
+    // borne avec le montant en liquide (voir backend payments.py, branche CASH).
+    if (data.payment_method === "cash") {
+      return (
+        <main className="flex min-h-screen flex-col items-center justify-center gap-5 bg-gradient-to-br from-brand to-brand-light px-6 text-center text-white">
+          <div className="glass-pill flex items-center gap-2 px-4 py-2">
+            <MethodIcon method="cash" size={24} />
+          </div>
+          <h1 className="text-xl font-bold">
+            Rendez-vous au comptoir avec {data.total_amount.toLocaleString("fr-FR")} {data.currency}
+          </h1>
+          <p className="max-w-sm text-sm text-ink-300">
+            Un membre de l&apos;equipe va recevoir votre paiement en especes et valider votre
+            commande. Ne fermez pas cette page : vous serez redirige automatiquement des
+            confirmation.
+          </p>
+          {error && <p className="text-sm text-red-300">{error}</p>}
+        </main>
+      );
+    }
+
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-5 bg-gradient-to-br from-brand to-brand-light px-6 text-center text-white">
         <div className="glass-pill relative flex h-16 w-16 items-center justify-center">

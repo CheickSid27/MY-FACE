@@ -49,7 +49,69 @@ async def init_payment(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Panier vide")
 
     event = await db.get(Event, cart.event_id)
-    breakdown = calculate_total(event.pricing, len(cart.items))
+    print_count = sum(1 for item in cart.items if item.print_requested)
+    breakdown = calculate_total(event.pricing, len(cart.items), print_count)
+    print_unit_price = float(event.pricing.get("print_unit_price") or 0)
+
+    if payload.payment_method == PaymentMethod.CASH:
+        # Especes remises en main propre au staff a cote de la borne : pas de
+        # QR/numero a configurer, et pas d'etape "j'ai paye" cote client
+        # (c'est le staff qui sait en temps reel que l'argent a ete recu) —
+        # la commande part directement en attente de confirmation, comme
+        # apres un mark-paid QR classique.
+        if not event.cash_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Le paiement en especes n'est pas active pour cet evenement",
+            )
+
+        order = Order(
+            event_id=cart.event_id,
+            contact_phone=payload.contact_phone,
+            total_amount=breakdown.total,
+            currency=breakdown.currency,
+            status=OrderStatus.AWAITING_CONFIRMATION,
+            payment_method=PaymentMethod.CASH,
+            payment_reference=f"CASH-{secrets.token_hex(8)}",
+        )
+        db.add(order)
+        await db.flush()
+
+        unit_price = float(event.pricing["unit_price"])
+        for item in cart.items:
+            db.add(
+                OrderItem(
+                    order_id=order.id,
+                    photo_id=item.photo_id,
+                    unit_price=unit_price,
+                    print_requested=item.print_requested,
+                    print_price=print_unit_price if item.print_requested else None,
+                )
+            )
+
+        await db.commit()
+        await db.refresh(order)
+
+        if event is not None:
+            await send_push_to_user(
+                event.organizer_id,
+                db,
+                title="Nouvelle commande a confirmer (especes)",
+                body=f"{order.total_amount:.0f} {order.currency} — {order.contact_phone}",
+                url=f"{settings.app_base_url}/admin/events/{event.id}/payments",
+            )
+
+        return PaymentInitResponse(
+            order_id=order.id,
+            status=order.status,
+            payment_method=order.payment_method,
+            total_amount=order.total_amount,
+            currency=order.currency,
+            instructions=(
+                "Rendez-vous au comptoir avec le montant en especes. "
+                "Un membre de l'equipe va valider votre commande."
+            ),
+        )
 
     if payload.payment_method is not None:
         # Flux QR + confirmation manuelle organisateur (aucune API operateur
@@ -82,7 +144,15 @@ async def init_payment(
 
         unit_price = float(event.pricing["unit_price"])
         for item in cart.items:
-            db.add(OrderItem(order_id=order.id, photo_id=item.photo_id, unit_price=unit_price))
+            db.add(
+                OrderItem(
+                    order_id=order.id,
+                    photo_id=item.photo_id,
+                    unit_price=unit_price,
+                    print_requested=item.print_requested,
+                    print_price=print_unit_price if item.print_requested else None,
+                )
+            )
 
         await db.commit()
         await db.refresh(order)
@@ -119,7 +189,15 @@ async def init_payment(
 
     unit_price = float(event.pricing["unit_price"])
     for item in cart.items:
-        db.add(OrderItem(order_id=order.id, photo_id=item.photo_id, unit_price=unit_price))
+        db.add(
+            OrderItem(
+                order_id=order.id,
+                photo_id=item.photo_id,
+                unit_price=unit_price,
+                print_requested=item.print_requested,
+                print_price=print_unit_price if item.print_requested else None,
+            )
+        )
 
     try:
         init_result = await provider.init_payment(order)

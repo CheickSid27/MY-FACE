@@ -42,8 +42,13 @@ class CartItem(Base):
         UUID(as_uuid=True), ForeignKey("cart_sessions.id", ondelete="CASCADE"), nullable=False, index=True
     )
     photo_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("photos.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("photos.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    # Tirage papier en plus de l'acces numerique, choisi par photo (pas
+    # globalement sur tout le panier) : un client peut acheter 20 photos et
+    # n'en imprimer que 3. Prix additionnel calcule via
+    # Event.pricing["print_unit_price"], voir services/pricing.py.
+    print_requested: Mapped[bool] = mapped_column(default=False, server_default="false", nullable=False)
     added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     cart_session: Mapped["CartSession"] = relationship("CartSession", back_populates="items")

@@ -6,37 +6,34 @@ import RequireAuth from "@/components/admin/RequireAuth";
 import PhotoLightbox from "@/components/gallery/PhotoLightbox";
 import { UsersIcon } from "@/components/icons";
 import { api } from "@/lib/api-client";
-import type { FaceCluster, Photo } from "@/types/api";
+import type { FaceCluster } from "@/types/api";
 
 function ClustersContent() {
   const { eventId } = useParams<{ eventId: string }>();
   const router = useRouter();
   const [clusters, setClusters] = useState<FaceCluster[]>([]);
   const [unclusteredCount, setUnclusteredCount] = useState(0);
-  const [photosById, setPhotosById] = useState<Record<string, Photo>>({});
   const [selectedCluster, setSelectedCluster] = useState<FaceCluster | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([api.getClusters(eventId), api.listPhotos(eventId, 1, 200)])
-      .then(([clusterData, photoData]) => {
+    api
+      .getClusters(eventId)
+      .then((clusterData) => {
         setClusters(clusterData.clusters);
         setUnclusteredCount(clusterData.unclustered_count);
-        const byId: Record<string, Photo> = {};
-        photoData.items.forEach((p) => {
-          byId[p.id] = p;
-        });
-        setPhotosById(byId);
       })
       .catch(() => setError("Impossible de charger les personnes detectees."))
       .finally(() => setLoading(false));
   }, [eventId]);
 
-  const clusterPhotos = selectedCluster
-    ? selectedCluster.photo_ids.map((id) => photosById[id]).filter((p): p is Photo => Boolean(p))
-    : [];
+  // Chaque cluster embarque deja ses photos completes (voir backend
+  // schemas/face.py) : plus besoin de recouper avec une liste paginee a
+  // part, qui tronquait silencieusement les clusters au-dela des 200
+  // premieres photos de l'evenement.
+  const clusterPhotos = selectedCluster?.photos ?? [];
   const noopSelect = () => {};
 
   return (

@@ -108,6 +108,10 @@ export const api = {
     clearTokens();
   },
 
+  me(): Promise<User> {
+    return request<User>("/auth/me");
+  },
+
   listEvents(): Promise<EventListItem[]> {
     return request<EventListItem[]>("/events");
   },
@@ -116,18 +120,37 @@ export const api = {
     return request<Event>(`/events/${eventId}`);
   },
 
-  getEventPublic(eventId: string): Promise<EventPublicRead> {
-    return request<EventPublicRead>(`/events/${eventId}/public`);
+  getEventPublic(eventId: string, kioskToken?: string): Promise<EventPublicRead> {
+    const query = kioskToken ? `?kiosk_token=${encodeURIComponent(kioskToken)}` : "";
+    return request<EventPublicRead>(`/events/${eventId}/public${query}`);
   },
 
   createEvent(payload: {
     name: string;
     date: string;
     location: string;
-    pricing: { unit_price: number; currency?: string };
+    pricing: { unit_price: number; currency?: string; print_unit_price?: number | null };
+    frame_caption?: string | null;
   }): Promise<Event> {
     return request<Event>("/events", {
       method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateEvent(
+    eventId: string,
+    payload: Partial<{
+      name: string;
+      date: string;
+      location: string;
+      pricing: { unit_price: number; currency?: string; print_unit_price?: number | null };
+      frame_caption: string | null;
+      cash_enabled: boolean;
+    }>
+  ): Promise<Event> {
+    return request<Event>(`/events/${eventId}`, {
+      method: "PATCH",
       body: JSON.stringify(payload),
     });
   },
@@ -225,12 +248,30 @@ export const api = {
     });
   },
 
+  addToCartBulk(
+    eventId: string,
+    photoIds: string[],
+    sessionId: string | null
+  ): Promise<CartRead> {
+    return request<CartRead>("/cart/add-bulk", {
+      method: "POST",
+      body: JSON.stringify({ event_id: eventId, photo_ids: photoIds, session_id: sessionId }),
+    });
+  },
+
   getCart(sessionId: string): Promise<CartRead> {
     return request<CartRead>(`/cart/${sessionId}`);
   },
 
   removeCartItem(itemId: string): Promise<void> {
     return request<void>(`/cart/${itemId}`, { method: "DELETE" });
+  },
+
+  setCartItemPrint(itemId: string, printRequested: boolean): Promise<CartRead> {
+    return request<CartRead>(`/cart/${itemId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ print_requested: printRequested }),
+    });
   },
 
   initPayment(

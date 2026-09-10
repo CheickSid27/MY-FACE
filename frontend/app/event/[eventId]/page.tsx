@@ -1,26 +1,51 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import FramedPhoto from "@/components/photo/FramedPhoto";
 import ScanDialog from "@/components/scan/ScanDialog";
 import { api } from "@/lib/api-client";
-import type { EventPublicRead } from "@/types/api";
+import { setKioskMode } from "@/lib/kiosk";
+import type { EventPublicRead, Photo } from "@/types/api";
 
 export default function EventHomePage() {
   const { eventId } = useParams<{ eventId: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [event, setEvent] = useState<EventPublicRead | null>(null);
+  const [featuredPhoto, setFeaturedPhoto] = useState<Photo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [scanOpen, setScanOpen] = useState(false);
 
+  // Detection du mode borne : le lien configure sur la borne physique porte
+  // ?kiosk=<le vrai kiosk_token de l'evenement> (voir admin, page evenement).
+  // Le serveur seul decide si le token est valide (is_kiosk) ; on garde le
+  // resultat pour toute la session de navigation, voir lib/kiosk.ts.
   useEffect(() => {
+    const kioskToken = searchParams.get("kiosk") ?? undefined;
     api
-      .getEventPublic(eventId)
-      .then(setEvent)
+      .getEventPublic(eventId, kioskToken)
+      .then((data) => {
+        setEvent(data);
+        setKioskMode(eventId, data.is_kiosk);
+      })
       .catch(() => setError("Evenement introuvable."))
       .finally(() => setLoading(false));
-  }, [eventId]);
+  }, [eventId, searchParams]);
+
+  // Photo vedette pour le cadre decoratif de l'accueil (voir
+  // Event.frame_caption) : la plus recemment uploadee, pas de selection
+  // manuelle d'une "photo de couverture" pour l'instant.
+  useEffect(() => {
+    if (!event?.frame_caption) return;
+    api
+      .listPhotos(eventId, 1, 1)
+      .then((data) => setFeaturedPhoto(data.items[0] ?? null))
+      .catch(() => {
+        // pas de photo vedette disponible : le cadre ne s'affiche simplement pas
+      });
+  }, [eventId, event?.frame_caption]);
 
   if (loading) {
     return (
@@ -47,6 +72,19 @@ export default function EventHomePage() {
             "radial-gradient(circle at 20% 20%, rgba(201,161,90,0.25), transparent 45%), radial-gradient(circle at 80% 70%, rgba(201,161,90,0.15), transparent 40%)",
         }}
       />
+
+      {event.frame_caption && featuredPhoto && (
+        <div className="relative z-10 mb-8 animate-fade-in">
+          <FramedPhoto caption={event.frame_caption}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={featuredPhoto.preview_url}
+              alt={event.frame_caption}
+              className="h-[42vh] max-h-96 w-auto object-cover sm:h-[48vh]"
+            />
+          </FramedPhoto>
+        </div>
+      )}
 
       <div className="relative z-10 animate-fade-in">
         <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-brand-accent">

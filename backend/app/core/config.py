@@ -41,6 +41,15 @@ class Settings(BaseSettings):
     # Reconnaissance faciale (InsightFace / buffalo_l)
     face_recognition_providers: str = "CUDAExecutionProvider,CPUExecutionProvider"
     face_detection_min_confidence: float = 0.5
+    # Variance du Laplacien sur le crop du visage (voir face_recognition.py) :
+    # rejette les visages trop flous (photos en mode portrait/bokeh, mouvement)
+    # AVANT de creer leur embedding, meme si InsightFace les detecte avec une
+    # confidence elevee (le det_score mesure "y a-t-il un visage ici", pas sa
+    # nettete). Calibre empiriquement sur les photos reelles d'un evenement :
+    # les visages nettement flous scoraient sous ~40, la masse des visages
+    # normaux commence vers 43+. 30 reste volontairement conservateur pour
+    # ne pas rejeter a tort un vrai visage juste moyennement net.
+    face_min_sharpness: float = 30.0
     # Similarite cosinus min pour considerer deux visages comme la meme personne
     # (1.0 = identique). Seuil configurable par evenement dans une phase ulterieure.
     face_match_similarity_threshold: float = 0.45
@@ -73,6 +82,16 @@ class Settings(BaseSettings):
     mtn_money_api_key: str = ""
     mtn_money_subscription_key: str = ""
     moov_money_api_key: str = ""
+
+    # --- GeniusPay (passerelle tierce, en test sandbox — voir
+    # services/geniuspay.py et routers/geniuspay.py) : chemin de paiement
+    # ISOLE du flux QR marchand + confirmation manuelle deja en place
+    # (services/payments.py, event_payment_methods). Ne remplace rien tant
+    # que non valide ; les deux coexistent. ---
+    geniuspay_api_key: str = ""
+    geniuspay_api_secret: str = ""
+    geniuspay_webhook_secret: str = ""
+    geniuspay_base_url: str = "https://geniuspay.ci/api/v1/merchant"
 
     # SMS (Africa's Talking) — non configure par defaut, voir services/sms.py
     africastalking_username: str = ""

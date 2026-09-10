@@ -25,6 +25,14 @@ class FaceEmbedding(Base):
     vector: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM), nullable=False)
     bounding_box: Mapped[dict] = mapped_column(JSON, nullable=False)
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    # Nettete du visage (variance du Laplacien sur le crop, voir
+    # face_recognition.py) : le score de confiance de detection (confidence)
+    # ne dit rien sur le flou (un visage flou en mode portrait/bokeh peut
+    # avoir un det_score eleve) — utilise pour rejeter les visages trop flous
+    # avant meme de creer leur embedding (peu fiable pour le matching et
+    # perturbe le clustering). Nullable : NULL pour les lignes creees avant
+    # cette colonne.
+    sharpness: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     photo: Mapped["Photo"] = relationship("Photo", back_populates="face_embeddings")

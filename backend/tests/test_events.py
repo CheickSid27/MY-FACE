@@ -87,6 +87,26 @@ async def test_get_event_public_not_found(client: AsyncClient):
     assert resp.status_code == 404
 
 
+async def test_public_event_kiosk_detection(auth_client: AsyncClient, client: AsyncClient):
+    """Le vrai kiosk_token n'est jamais renvoye par /public (seulement
+    is_kiosk, calcule serveur), et un token errone/absent ne doit jamais
+    activer le mode borne."""
+    create_resp = await auth_client.post("/events", json=_event_payload())
+    event_id = create_resp.json()["id"]
+    real_token = create_resp.json()["kiosk_token"]
+
+    no_token_resp = await client.get(f"/events/{event_id}/public")
+    assert no_token_resp.json()["is_kiosk"] is False
+    assert "kiosk_token" not in no_token_resp.json()
+
+    wrong_token_resp = await client.get(f"/events/{event_id}/public", params={"kiosk_token": "wrong"})
+    assert wrong_token_resp.json()["is_kiosk"] is False
+
+    right_token_resp = await client.get(f"/events/{event_id}/public", params={"kiosk_token": real_token})
+    assert right_token_resp.json()["is_kiosk"] is True
+    assert "kiosk_token" not in right_token_resp.json()
+
+
 async def test_other_user_cannot_access_event(auth_client: AsyncClient, client: AsyncClient, create_user):
     from app.core.security import create_access_token
     from app.models.user import UserRole

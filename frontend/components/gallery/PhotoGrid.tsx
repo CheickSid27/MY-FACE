@@ -1,7 +1,7 @@
 "use client";
 
-import { memo, useEffect, useRef, useState } from "react";
-import { FixedSizeGrid as Grid } from "react-window";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { FixedSizeGrid as Grid, type GridChildComponentProps } from "react-window";
 import { CheckIcon, ImageIcon } from "@/components/icons";
 import { flyToCart } from "@/lib/fly-to-cart";
 import type { Photo } from "@/types/api";
@@ -13,6 +13,15 @@ interface PhotoGridProps {
   selectedPhotoIds?: Set<string>;
   addingPhotoId?: string | null;
   bottomOffset?: number;
+}
+
+interface CellData {
+  photos: Photo[];
+  columnCount: number;
+  selectedPhotoIds?: Set<string>;
+  addingPhotoId?: string | null;
+  onPhotoOpen?: (index: number) => void;
+  onToggleSelect?: (photo: Photo) => void;
 }
 
 const GAP = 10;
@@ -60,12 +69,33 @@ export default function PhotoGrid({
     };
   }, [bottomOffset]);
 
-  if (size.width === 0) return null;
-
+  // Deriveable a partir de `size`, mais calcule inconditionnellement (avant
+  // tout retour anticipe) : les Hooks doivent s'executer dans le meme ordre
+  // a chaque rendu. Avec size.width===0, columnCount vaut simplement 2
+  // (jamais utilise, Grid n'est pas rendue dans ce cas).
   const columnCount = Math.max(2, Math.floor(size.width / (MIN_COLUMN_WIDTH + GAP)));
-  const columnWidth = Math.floor(size.width / columnCount);
+  const columnWidth = size.width > 0 ? Math.floor(size.width / columnCount) : 0;
   const rowHeight = columnWidth;
   const rowCount = Math.ceil(photos.length / columnCount);
+
+  // IMPORTANT (bug corrige) : react-window utilise la fonction passee en
+  // `children` comme un vrai TYPE de composant React
+  // (React.createElement(children, {...})), pas comme un simple callback.
+  // Si cette fonction change de reference d'un rendu a l'autre, React voit
+  // un type different a chaque cellule et la DEMONTE/REMONTE entierement,
+  // meme avec une key stable ("rowIndex:columnIndex") — c'etait le cas ici
+  // avec une fonction inline recreee au moindre changement d'etat du parent
+  // (ex: selectionner UNE photo), rendant impossible d'en selectionner
+  // plusieurs a la suite (la grille se "reconstruisait" sous le doigt entre
+  // deux clics). Solution : un composant Cell stable au niveau module (type
+  // fixe pour toujours) qui lit ses donnees via la prop `itemData` de Grid —
+  // seule cette donnee change de reference, jamais le composant lui-meme.
+  const itemData = useMemo<CellData>(
+    () => ({ photos, columnCount, selectedPhotoIds, addingPhotoId, onPhotoOpen, onToggleSelect }),
+    [photos, columnCount, selectedPhotoIds, addingPhotoId, onPhotoOpen, onToggleSelect]
+  );
+
+  if (size.width === 0) return null;
 
   if (photos.length === 0) {
     return (
@@ -84,30 +114,38 @@ export default function PhotoGrid({
       rowHeight={rowHeight}
       width={size.width}
       height={size.height}
+      itemData={itemData}
       className="!overflow-x-hidden"
     >
-      {({ columnIndex, rowIndex, style }) => {
-        const index = rowIndex * columnCount + columnIndex;
-        const photo = photos[index];
-        if (!photo) return null;
-
-        const isSelected = selectedPhotoIds?.has(photo.id) ?? false;
-        const isAdding = addingPhotoId === photo.id;
-
-        return (
-          <div style={style} className="p-1.5">
-            <PhotoCell
-              photo={photo}
-              index={index}
-              isSelected={isSelected}
-              isAdding={isAdding}
-              onPhotoOpen={onPhotoOpen}
-              onToggleSelect={onToggleSelect}
-            />
-          </div>
-        );
-      }}
+      {GridCell}
     </Grid>
+  );
+}
+
+// Type de composant STABLE (defini une seule fois au niveau module) : c'est
+// ce qui garantit a react-window de toujours reconcilier la meme identite de
+// composant par cellule, quelle que soit la frequence de re-rendu de
+// PhotoGrid. Toutes les donnees dynamiques passent par `data` (itemData).
+function GridCell({ columnIndex, rowIndex, style, data }: GridChildComponentProps<CellData>) {
+  const { photos, columnCount, selectedPhotoIds, addingPhotoId, onPhotoOpen, onToggleSelect } = data;
+  const index = rowIndex * columnCount + columnIndex;
+  const photo = photos[index];
+  if (!photo) return null;
+
+  const isSelected = selectedPhotoIds?.has(photo.id) ?? false;
+  const isAdding = addingPhotoId === photo.id;
+
+  return (
+    <div style={style} className="p-1.5">
+      <PhotoCell
+        photo={photo}
+        index={index}
+        isSelected={isSelected}
+        isAdding={isAdding}
+        onPhotoOpen={onPhotoOpen}
+        onToggleSelect={onToggleSelect}
+      />
+    </div>
   );
 }
 

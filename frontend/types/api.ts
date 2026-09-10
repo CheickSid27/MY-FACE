@@ -18,6 +18,7 @@ export interface PricingConfig {
   currency: string;
   packs: Record<string, unknown>[];
   discounts: Record<string, unknown>[];
+  print_unit_price: number | null;
 }
 
 export interface Event {
@@ -27,6 +28,8 @@ export interface Event {
   location: string;
   kiosk_token: string;
   pricing: PricingConfig;
+  frame_caption: string | null;
+  cash_enabled: boolean;
   organizer_id: string;
   created_at: string;
   updated_at: string;
@@ -38,6 +41,9 @@ export interface EventPublicRead {
   date: string;
   location: string;
   pricing: PricingConfig;
+  frame_caption: string | null;
+  cash_enabled: boolean;
+  is_kiosk: boolean;
 }
 
 export interface EventListItem {
@@ -98,7 +104,7 @@ export interface FaceCluster {
   photo_count: number;
   representative_photo: Photo;
   representative_face_url: string;
-  photo_ids: string[];
+  photos: Photo[];
 }
 
 export interface ClusterListResponse {
@@ -111,6 +117,8 @@ export interface PricingBreakdown {
   subtotal: number;
   discount_percent: number;
   discount_amount: number;
+  print_count: number;
+  print_total: number;
   total: number;
   currency: string;
 }
@@ -118,6 +126,7 @@ export interface PricingBreakdown {
 export interface CartItemRead {
   id: string;
   photo: Photo;
+  print_requested: boolean;
 }
 
 export interface CartRead {
@@ -134,7 +143,14 @@ export type OrderStatus =
   | "awaiting_confirmation"
   | "success"
   | "failed";
-export type PaymentMethod = "wave" | "orange_money" | "mtn_money" | "moov_money" | "manual";
+export type PaymentMethod =
+  | "wave"
+  | "orange_money"
+  | "mtn_money"
+  | "moov_money"
+  | "manual"
+  | "cash"
+  | "geniuspay";
 
 export interface PaymentInitResponse {
   order_id: string;
@@ -181,6 +197,7 @@ export interface DownloadPhoto {
   photo_id: string;
   filename: string;
   url: string;
+  print_requested: boolean;
 }
 
 export interface DownloadResponse {

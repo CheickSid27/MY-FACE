@@ -128,17 +128,28 @@ async def list_event_photos(
     if event is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
 
-    total_result = await db.execute(select(func.count(Photo.id)).where(Photo.event_id == event_id))
-    total = total_result.scalar_one()
-
+    # Compte total + page de resultats en UNE requete (window function) plutot
+    # que deux allers-retours separes (COUNT puis SELECT) : chaque
+    # aller-retour vers la base geree (Neon, distante) coute significativement
+    # plus cher que la complexite de la requete elle-meme, observe en usage
+    # comme une latence perceptible a chaque changement de page de galerie.
     result = await db.execute(
-        select(Photo)
+        select(Photo, func.count(Photo.id).over().label("total_count"))
         .where(Photo.event_id == event_id)
         .order_by(Photo.uploaded_at.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
-    photos = list(result.scalars().all())
+    rows = result.all()
+    photos = [row.Photo for row in rows]
+    total = rows[0].total_count if rows else 0
+
+    if total == 0 and page > 1:
+        # La window function ne compte que les lignes de CETTE page : sur une
+        # page vide (au-dela du total reel), on doit re-interroger le compte
+        # separement pour ne pas renvoyer total=0 a tort.
+        total_result = await db.execute(select(func.count(Photo.id)).where(Photo.event_id == event_id))
+        total = total_result.scalar_one()
 
     return PhotoListResponse(
         items=await to_photo_reads(photos, storage),

@@ -37,11 +37,11 @@ async def get_download_links(
         )
 
     result = await db.execute(
-        select(Photo)
+        select(Photo, OrderItem.print_requested)
         .join(OrderItem, OrderItem.photo_id == Photo.id)
         .where(OrderItem.order_id == order_id)
     )
-    photos = result.scalars().all()
+    rows = result.all()
 
     ttl = settings.download_url_ttl_seconds
     download_photos = [
@@ -49,8 +49,9 @@ async def get_download_links(
             photo_id=photo.id,
             filename=photo.original_filename,
             url=await storage.get_presigned_url(photo.original_key, expires_in=ttl),
+            print_requested=print_requested,
         )
-        for photo in photos
+        for photo, print_requested in rows
     ]
 
     return DownloadResponse(order_id=order.id, event_id=order.event_id, photos=download_photos, expires_in=ttl)

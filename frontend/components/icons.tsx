@@ -101,6 +101,16 @@ export function CardIcon(props: IconProps) {
   );
 }
 
+export function PrinterIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M6 9V4h12v5" />
+      <rect x="3.5" y="9" width="17" height="8" rx="1.5" />
+      <path d="M6 14h12v6H6z" />
+    </svg>
+  );
+}
+
 export function ClockIcon(props: IconProps) {
   return (
     <svg {...base(props)}>

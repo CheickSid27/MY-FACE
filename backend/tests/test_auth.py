@@ -60,3 +60,37 @@ async def test_me_with_valid_token(auth_client: AsyncClient, admin_user: User):
     resp = await auth_client.get("/auth/me")
     assert resp.status_code == 200
     assert resp.json()["email"] == "admin@myface-test.com"
+
+
+async def test_change_password_requires_auth(client: AsyncClient):
+    resp = await client.post(
+        "/auth/password", json={"current_password": "x", "new_password": "newpassword123"}
+    )
+    assert resp.status_code in (401, 403)
+
+
+async def test_change_password_wrong_current_rejected(auth_client: AsyncClient, admin_user: User):
+    resp = await auth_client.post(
+        "/auth/password", json={"current_password": "wrongpassword", "new_password": "newpassword123"}
+    )
+    assert resp.status_code == 401
+
+
+async def test_change_password_success_then_login_with_new_password(
+    client: AsyncClient, auth_client: AsyncClient, admin_user: User
+):
+    resp = await auth_client.post(
+        "/auth/password",
+        json={"current_password": "testpassword123", "new_password": "newpassword123"},
+    )
+    assert resp.status_code == 204
+
+    old_login = await client.post(
+        "/auth/login", json={"email": "admin@myface-test.com", "password": "testpassword123"}
+    )
+    assert old_login.status_code == 401
+
+    new_login = await client.post(
+        "/auth/login", json={"email": "admin@myface-test.com", "password": "newpassword123"}
+    )
+    assert new_login.status_code == 200

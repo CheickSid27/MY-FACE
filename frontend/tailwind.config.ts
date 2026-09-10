@@ -25,6 +25,10 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        // Serif elegant reserve au cadre decoratif photobooth (voir
+        // components/photo/FramedPhoto.tsx) : distinct de la police
+        // d'interface, pour un rendu "carton d'invitation".
+        display: ["var(--font-display)", "Georgia", "serif"],
       },
       boxShadow: {
         soft: "0 2px 12px 0 rgb(20 23 31 / 0.06)",

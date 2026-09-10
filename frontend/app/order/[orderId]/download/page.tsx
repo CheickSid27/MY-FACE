@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { CheckIcon } from "@/components/icons";
+import { CheckIcon, PrinterIcon } from "@/components/icons";
 import { api, ApiError } from "@/lib/api-client";
+import { clearCartSessionId } from "@/lib/cart";
+import { isKioskMode } from "@/lib/kiosk";
 import type { DownloadResponse } from "@/types/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -18,7 +20,13 @@ export default function DownloadPage() {
   useEffect(() => {
     api
       .getDownload(orderId)
-      .then(setData)
+      .then((result) => {
+        setData(result);
+        // La commande est terminee : on vide le panier de cet evenement pour
+        // que le client (ou le suivant sur la meme borne) reparte d'un
+        // panier vide au lieu de retrouver les articles deja payes.
+        clearCartSessionId(result.event_id);
+      })
       .catch((err) =>
         setError(
           err instanceof ApiError
@@ -27,6 +35,9 @@ export default function DownloadPage() {
         )
       );
   }, [orderId]);
+
+  const printPhotos = data?.photos.filter((p) => p.print_requested) ?? [];
+  const showPrintButton = printPhotos.length > 0 && data != null && isKioskMode(data.event_id);
 
   // Retour automatique a la galerie si le client reste inactif : evite
   // qu'une borne/tablette partagee reste bloquee sur la page de telechargement
@@ -90,6 +101,18 @@ export default function DownloadPage() {
       >
         Telecharger toutes mes photos ({data.photos.length})
       </a>
+
+      {/* Impression papier : uniquement sur la borne (imprimante physique
+          branchee a cote), jamais propose sur le telephone d'un invite. */}
+      {showPrintButton && (
+        <button
+          type="button"
+          onClick={() => router.push(`/order/${orderId}/print`)}
+          className="btn-primary flex w-full max-w-sm items-center justify-center gap-2 !py-4 text-base"
+        >
+          <PrinterIcon /> Imprimer mes photos ({printPhotos.length})
+        </button>
+      )}
 
       <div className="glass flex flex-col items-center gap-3 rounded-2xl p-5">
         {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -83,6 +83,43 @@ async def test_download_available_after_payment(auth_client, client, storage_ser
     assert data["photos"][0]["url"].startswith("http://test-storage.local/")
 
 
+async def test_download_carries_print_requested(
+    auth_client, client, storage_service, test_session_factory, seed_photo
+):
+    event_resp = await auth_client.post(
+        "/events",
+        json={
+            "name": "Gala Print",
+            "date": "2026-12-18T10:00:00Z",
+            "location": "Abidjan",
+            "pricing": {"unit_price": 1000, "print_unit_price": 150},
+        },
+    )
+    event_id = event_resp.json()["id"]
+    photo_id = await seed_photo(event_id, storage_service, test_session_factory, "p1.jpg", _jpeg_bytes())
+
+    add_resp = await client.post("/cart/add", json={"event_id": event_id, "photo_id": photo_id})
+    session_id = add_resp.json()["session_id"]
+    item_id = add_resp.json()["items"][0]["id"]
+    await client.patch(f"/cart/{item_id}", json={"print_requested": True})
+
+    init_resp = await client.post(
+        "/payments/init", json={"session_id": session_id, "contact_phone": "+2250700000000"}
+    )
+    order_id = init_resp.json()["order_id"]
+
+    async with test_session_factory() as db:
+        order = await db.get(Order, uuid.UUID(order_id))
+        order.status = OrderStatus.SUCCESS
+        await db.commit()
+
+    resp = await client.get(f"/download/{order_id}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["photos"]) == 1
+    assert data["photos"][0]["print_requested"] is True
+
+
 async def test_download_unknown_order_404(client):
     import uuid
 

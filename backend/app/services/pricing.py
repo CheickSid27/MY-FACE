@@ -22,15 +22,21 @@ class PricingBreakdown:
     subtotal: float
     discount_percent: float
     discount_amount: float
+    print_count: int
+    print_total: float
     total: float
     currency: str
 
 
-def calculate_total(pricing: dict, photo_count: int) -> PricingBreakdown:
+def calculate_total(pricing: dict, photo_count: int, print_count: int = 0) -> PricingBreakdown:
+    """`print_count` = nombre de photos, parmi `photo_count`, avec un tirage
+    papier demande en plus (voir CartItem.print_requested). Prix fixe par
+    tirage (`print_unit_price`), pas de remise de volume dessus pour
+    l'instant (a ajouter plus tard si besoin, cf. discussion produit)."""
     currency = pricing.get("currency", "XOF")
 
     if photo_count <= 0:
-        return PricingBreakdown(0, 0.0, 0.0, 0.0, 0.0, currency)
+        return PricingBreakdown(0, 0.0, 0.0, 0.0, 0, 0.0, 0.0, currency)
 
     unit_price = float(pricing["unit_price"])
     packs = sorted(
@@ -56,13 +62,19 @@ def calculate_total(pricing: dict, photo_count: int) -> PricingBreakdown:
     ]
     discount_percent = max(applicable_percents, default=0.0)
     discount_amount = subtotal * discount_percent / 100
-    total = round(subtotal - discount_amount, 2)
+
+    print_unit_price = float(pricing.get("print_unit_price") or 0)
+    print_total = round(print_count * print_unit_price, 2)
+
+    total = round(subtotal - discount_amount + print_total, 2)
 
     return PricingBreakdown(
         photo_count=photo_count,
         subtotal=round(subtotal, 2),
         discount_percent=discount_percent,
         discount_amount=round(discount_amount, 2),
+        print_count=print_count,
+        print_total=print_total,
         total=total,
         currency=currency,
     )

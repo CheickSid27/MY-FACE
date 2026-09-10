@@ -7,6 +7,7 @@ class DownloadPhoto(BaseModel):
     photo_id: uuid.UUID
     filename: str
     url: str
+    print_requested: bool = False
 
 
 class DownloadResponse(BaseModel):

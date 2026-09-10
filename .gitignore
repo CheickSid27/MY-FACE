@@ -1,6 +1,7 @@
 # Env
 .env
 .env.local
+.admin_password_new.txt
 
 # Node
 node_modules/
