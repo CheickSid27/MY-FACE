@@ -12,6 +12,9 @@ import type { CartRead, FaceScanMatch, Photo } from "@/types/api";
 
 type Step = "consent" | "camera" | "scanning" | "results" | "error";
 
+const SELFIE_MAX_SIDE = 800;
+const SELFIE_JPEG_QUALITY = 0.85;
+
 interface ScanDialogProps {
   eventId: string;
   open: boolean;
@@ -156,13 +159,22 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
       return;
     }
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Selfie reduit a SELFIE_MAX_SIDE avant envoi : la detection travaille en
+    // 640 px (InsightFace det_size) et le visage d'un selfie occupe une
+    // grande partie de l'image, donc aucune perte de precision. Via le tunnel,
+    // l'envoi passe par la connexion Internet du PC de l'evenement : un
+    // selfie pleine resolution (1080p) mettait 10 a 20 s a arriver, contre
+    // quelques secondes une fois reduit (resultats identiques, mesure).
+    const scale = Math.min(1, SELFIE_MAX_SIDE / Math.max(video.videoWidth, video.videoHeight));
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+    const blob: Blob | null = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", SELFIE_JPEG_QUALITY)
+    );
     if (!blob) return;
 
     stopCamera();

@@ -153,9 +153,11 @@ cp .env.example .env
 docker compose up --build
 ```
 
-- Frontend : http://localhost:3000
+- Application (via nginx, site + API) : http://localhost
 - Backend (docs interactives Swagger) : http://localhost:8000/docs
 - Console MinIO : http://localhost:9001
+- Acces public (telephones, camera en HTTPS) : `docker compose up -d tunnel-app`, puis voir
+  [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#3-exposition-publique--cloudflare-tunnel-quick-tunnel)
 
 Le premier demarrage applique les migrations Alembic et cree le compte admin initial
 (`INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` dans `.env`).

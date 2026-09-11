@@ -49,21 +49,32 @@ docker compose up -d tunnel-app
 docker logs -f myface-tunnel-app-1   # cherchez "Your quick Tunnel has been created"
 ```
 
-⚠️ **URL ephemere** : elle change a chaque redemarrage du conteneur `tunnel-app`. Apres chaque
-changement, mettez a jour dans `.env` :
+**Adresse de l'API cote navigateur** : gardez `NEXT_PUBLIC_API_URL=/api` (relatif). nginx sert
+le site et l'API sur la meme adresse, donc le frontend fonctionne a l'identique en local
+(`http://localhost`) et via n'importe quelle URL de tunnel, sans recompilation. Une valeur absolue
+(`http://localhost/api`) est figee dans le frontend compile : via le tunnel, le telephone d'un
+invite appellerait son propre "localhost" et la page resterait vide. (Consequence : passez par
+nginx, `http://localhost`, et non par le port 3000 du frontend seul.)
+
+⚠️ **URL ephemere** : elle change a chaque redemarrage du conteneur `tunnel-app` (y compris au
+redemarrage du PC). Apres chaque changement, seule `APP_BASE_URL` est a mettre a jour dans `.env`
+(liens des SMS, QR codes, affiche) :
 
 ```
 APP_BASE_URL=https://<nouvelle-url>.trycloudflare.com
-NEXT_PUBLIC_API_URL=https://<nouvelle-url>.trycloudflare.com/api
 ```
 
-puis recreez `backend` et `frontend` (les variables `NEXT_PUBLIC_*` sont figees au demarrage du
-process Next.js) :
+puis recreez le backend (il ne relit `.env` qu'a sa creation, pas sur un simple restart) :
 
 ```bash
-docker compose up -d backend frontend
+docker compose up -d --no-deps backend
 docker restart myface-nginx-1   # voir gotcha ci-dessous
 ```
+
+Mesure (11/09) : via le tunnel, "Trouver mon visage" repond en ~1 s et un scan facial en ~4 s ;
+tout ce qui passe par le tunnel utilise la connexion Internet du PC de l'evenement (les photos,
+elles, sont servies directement par R2). Le selfie est reduit a 800 px avant envoi pour cette
+raison (un selfie pleine resolution mettait 10 a 20 s a arriver).
 
 **Pour une URL stable** (recommande en production reelle) : achetez un nom de domaine, ajoutez-le a
 un compte Cloudflare, et remplacez le quick tunnel par un [tunnel nomme](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/create-remote-tunnel/).
