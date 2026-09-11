@@ -40,6 +40,9 @@ class Event(Base):
     )
 
     organizer: Mapped["User"] = relationship("User")
+    # passive_deletes : la base supprime deja photos/embeddings en cascade
+    # (ON DELETE CASCADE), inutile de tout charger en memoire pour supprimer
+    # un evenement de plusieurs milliers de photos.
     photos: Mapped[list["Photo"]] = relationship(
-        "Photo", back_populates="event", cascade="all, delete-orphan"
+        "Photo", back_populates="event", cascade="all, delete-orphan", passive_deletes=True
     )

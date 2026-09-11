@@ -222,6 +222,105 @@ async def test_clusters_group_duplicate_faces(
         assert len(cluster["photos"]) == 2
 
 
+async def test_reindex_does_not_duplicate_embeddings(
+    auth_client: AsyncClient, storage_service, test_session_factory, db_session
+):
+    event_id = await _create_event(auth_client)
+    photo_id = await _seed_photo(
+        event_id, storage_service, test_session_factory, "group.jpg", _real_face_image_bytes()
+    )
+
+    await index_photo_faces(photo_id, storage=storage_service, session_factory=test_session_factory)
+    first = (await db_session.execute(select(FaceEmbedding).where(FaceEmbedding.photo_id == photo_id))).scalars().all()
+
+    await index_photo_faces(photo_id, storage=storage_service, session_factory=test_session_factory)
+    db_session.expire_all()
+    second = (await db_session.execute(select(FaceEmbedding).where(FaceEmbedding.photo_id == photo_id))).scalars().all()
+
+    assert len(first) >= 1
+    assert len(second) == len(first)
+
+
+async def test_clusters_cache_invalidated_by_new_indexing(
+    auth_client: AsyncClient, storage_service, test_session_factory
+):
+    event_id = await _create_event(auth_client)
+    first_id = await _seed_photo(event_id, storage_service, test_session_factory, "g1.jpg", _real_face_image_bytes())
+    await index_photo_faces(first_id, storage=storage_service, session_factory=test_session_factory)
+
+    before = (await auth_client.get(f"/events/{event_id}/clusters")).json()
+    assert all(c["photo_count"] == 1 for c in before["clusters"])
+
+    # Deuxieme photo des memes personnes : le resultat memorise doit etre
+    # invalide par l'indexation, pas servi perime.
+    second_id = await _seed_photo(event_id, storage_service, test_session_factory, "g2.jpg", _real_face_image_bytes())
+    await index_photo_faces(second_id, storage=storage_service, session_factory=test_session_factory)
+
+    after = (await auth_client.get(f"/events/{event_id}/clusters")).json()
+    assert all(c["photo_count"] == 2 for c in after["clusters"])
+
+
+async def test_public_clusters_serve_previous_result_while_refreshing(
+    auth_client: AsyncClient, client: AsyncClient, storage_service, test_session_factory
+):
+    from app.services.face_clusters import face_cluster_cache
+
+    event_id = await _create_event(auth_client)
+    first_id = await _seed_photo(event_id, storage_service, test_session_factory, "g1.jpg", _real_face_image_bytes())
+    await index_photo_faces(first_id, storage=storage_service, session_factory=test_session_factory)
+    before = (await client.get(f"/events/{event_id}/clusters/public")).json()
+    assert all(c["photo_count"] == 1 for c in before["clusters"])
+
+    second_id = await _seed_photo(event_id, storage_service, test_session_factory, "g2.jpg", _real_face_image_bytes())
+    await index_photo_faces(second_id, storage=storage_service, session_factory=test_session_factory)
+
+    # Invite : reponse immediate avec le resultat precedent...
+    stale = (await client.get(f"/events/{event_id}/clusters/public")).json()
+    assert all(c["photo_count"] == 1 for c in stale["clusters"])
+
+    # ...pendant que le recalcul tourne en arriere-plan.
+    await face_cluster_cache._refreshing[uuid.UUID(event_id)]
+    fresh = (await client.get(f"/events/{event_id}/clusters/public")).json()
+    assert all(c["photo_count"] == 2 for c in fresh["clusters"])
+
+
+async def test_face_crop_key_memorized(auth_client: AsyncClient, storage_service, test_session_factory, db_session):
+    event_id = await _create_event(auth_client)
+    photo_id = await _seed_photo(event_id, storage_service, test_session_factory, "g.jpg", _real_face_image_bytes())
+    await index_photo_faces(photo_id, storage=storage_service, session_factory=test_session_factory)
+
+    data = (await auth_client.get(f"/events/{event_id}/clusters")).json()
+    assert all("/face-crops/" in c["representative_face_url"] for c in data["clusters"])
+
+    result = await db_session.execute(select(FaceEmbedding.crop_key).where(FaceEmbedding.photo_id == photo_id))
+    crop_keys = [key for (key,) in result.all() if key]
+    assert len(crop_keys) == len(data["clusters"])
+    assert all(key in storage_service.objects for key in crop_keys)
+
+
+async def test_public_clusters_watermark_except_kiosk(
+    auth_client: AsyncClient, client: AsyncClient, storage_service, test_session_factory
+):
+    created = (await auth_client.post(
+        "/events",
+        json={"name": "Gala Kiosk", "date": "2026-11-01T20:00:00Z", "location": "Abidjan", "pricing": {"unit_price": 800}},
+    )).json()
+    event_id, kiosk_token = created["id"], created["kiosk_token"]
+    photo_id = await _seed_photo(event_id, storage_service, test_session_factory, "g.jpg", _real_face_image_bytes())
+    async with test_session_factory() as session:
+        photo = await session.get(Photo, uuid.UUID(photo_id))
+        photo.preview_key = f"events/{event_id}/previews/{photo_id}.jpg"
+        photo.preview_watermarked_key = f"events/{event_id}/previews-wm/{photo_id}.jpg"
+        await session.commit()
+    await index_photo_faces(photo_id, storage=storage_service, session_factory=test_session_factory)
+
+    phone = (await client.get(f"/events/{event_id}/clusters/public")).json()
+    assert "/previews-wm/" in phone["clusters"][0]["photos"][0]["preview_url"]
+
+    kiosk = (await client.get(f"/events/{event_id}/clusters/public", params={"kiosk_token": kiosk_token})).json()
+    assert "/previews-wm/" not in kiosk["clusters"][0]["photos"][0]["preview_url"]
+
+
 async def test_clusters_requires_auth(client: AsyncClient):
     resp = await client.get("/events/00000000-0000-0000-0000-000000000000/clusters")
     assert resp.status_code in (401, 403)

@@ -3,7 +3,9 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import hash_password
 from app.deps import get_current_user, require_admin
@@ -11,13 +13,21 @@ from app.models.event import Event
 from app.models.order import Order, OrderItem, OrderStatus
 from app.models.photo import IndexingStatus, Photo
 from app.models.user import User
-from app.routers.events import _get_owned_event
-from app.routers.payments import _apply_webhook_result
-from app.schemas.order import OrderConfirmRequest, OrderRead
+from app.schemas.order import OrderConfirmRequest, OrderDetailRead, OrderItemRead, OrderRead
 from app.schemas.stats import DailySales, EventStats
 from app.schemas.user import UserCreate, UserRead
+from app.services.access import can_manage_event, get_manageable_event
+from app.services.orders import EXPIRABLE_STATUSES, expire_stale_orders, set_order_status
+from app.services.photo_urls import to_photo_read
+from app.services.storage import StorageService, get_storage_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+settings = get_settings()
+
+# Rejeter = le paiement annonce n'est pas arrive. Possible tant que la
+# commande n'est ni payee ni deja close.
+_REJECTABLE = (OrderStatus.AWAITING_CONFIRMATION, *EXPIRABLE_STATUSES)
 
 
 @router.get("/events/{event_id}/stats", response_model=EventStats)
@@ -26,7 +36,8 @@ async def get_event_stats(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> EventStats:
-    event = await _get_owned_event(event_id, current_user, db)
+    event = await get_manageable_event(event_id, current_user, db)
+    await expire_stale_orders(db, event_id)
 
     photo_counts = await db.execute(
         select(
@@ -87,6 +98,7 @@ async def get_event_stats(
         orders_awaiting_confirmation=counts_by_status[OrderStatus.AWAITING_CONFIRMATION],
         orders_success=counts_by_status[OrderStatus.SUCCESS],
         orders_failed=counts_by_status[OrderStatus.FAILED],
+        orders_cancelled=counts_by_status[OrderStatus.CANCELLED],
         total_revenue=total_revenue,
         currency=currency,
         photos_sold=photos_sold,
@@ -101,10 +113,15 @@ async def list_event_orders(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[OrderRead]:
-    await _get_owned_event(event_id, current_user, db)
+    await get_manageable_event(event_id, current_user, db)
+    await expire_stale_orders(db, event_id)
 
     query = (
-        select(Order, func.count(OrderItem.id).label("photo_count"))
+        select(
+            Order,
+            func.count(OrderItem.id).label("photo_count"),
+            func.count(case((OrderItem.print_requested.is_(True), 1))).label("print_count"),
+        )
         .join(OrderItem, OrderItem.order_id == Order.id)
         .where(Order.event_id == event_id)
         .group_by(Order.id)
@@ -124,9 +141,11 @@ async def list_event_orders(
             payment_method=order.payment_method,
             payment_reference=order.payment_reference,
             photo_count=photo_count,
+            print_count=print_count,
+            printed_at=order.printed_at,
             created_at=order.created_at,
         )
-        for order, photo_count in result.all()
+        for order, photo_count, print_count in result.all()
     ]
 
 
@@ -135,9 +154,67 @@ async def _get_owned_order(order_id: uuid.UUID, current_user: User, db: AsyncSes
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Commande introuvable")
     event = await db.get(Event, order.event_id)
-    if event is None or event.organizer_id != current_user.id:
+    if event is None or not can_manage_event(event, current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acces refuse")
     return order
+
+
+@router.get("/orders/{order_id}", response_model=OrderDetailRead)
+async def get_order_detail(
+    order_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    storage: StorageService = Depends(get_storage_service),
+) -> OrderDetailRead:
+    """Fiche d'une commande (sert de recu) : liste nominative des photos
+    achetees, tirages papier demandes, detail du prix et lien de
+    telechargement du client — pour savoir ce qu'on valide, quoi imprimer, et
+    repondre a un client qui revient avec un probleme."""
+    order = await _get_owned_order(order_id, current_user, db)
+    event = await db.get(Event, order.event_id)
+    result = await db.execute(
+        select(OrderItem)
+        .where(OrderItem.order_id == order.id)
+        .options(selectinload(OrderItem.photo))
+    )
+    items = sorted(result.scalars().all(), key=lambda item: item.photo.original_filename.lower())
+
+    photos_subtotal = round(sum(item.unit_price for item in items), 2)
+    prints_total = round(sum(item.print_price or 0 for item in items if item.print_requested), 2)
+    # Lots et remises ne sont pas detailles ligne par ligne a l'achat : leur
+    # effet est la difference entre le prix plein et le total effectivement du.
+    discount_amount = round(max(0.0, photos_subtotal + prints_total - order.total_amount), 2)
+
+    return OrderDetailRead(
+        id=order.id,
+        event_id=order.event_id,
+        event_name=event.name,
+        event_date=event.date,
+        contact_phone=order.contact_phone,
+        total_amount=order.total_amount,
+        currency=order.currency,
+        status=order.status,
+        payment_method=order.payment_method,
+        payment_reference=order.payment_reference,
+        photo_count=len(items),
+        print_count=sum(1 for item in items if item.print_requested),
+        printed_at=order.printed_at,
+        created_at=order.created_at,
+        updated_at=order.updated_at,
+        photos_subtotal=photos_subtotal,
+        prints_total=prints_total,
+        discount_amount=discount_amount,
+        download_url=f"{settings.app_base_url}/order/{order.id}/download",
+        items=[
+            OrderItemRead(
+                photo=await to_photo_read(item.photo, storage, clean_preview=True),
+                unit_price=item.unit_price,
+                print_requested=item.print_requested,
+                print_price=item.print_price,
+            )
+            for item in items
+        ],
+    )
 
 
 @router.post("/orders/{order_id}/confirm", status_code=status.HTTP_200_OK)
@@ -147,20 +224,47 @@ async def confirm_order(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
-    """Confirme ou rejette une commande en attente apres verification manuelle
-    par l'organisateur (paiement Mobile Money hors-app via QR, aucune API
-    reelle branchee, voir services/payments.py). Reserve au proprietaire de
-    l'evenement."""
+    """Valide ou rejette une commande apres verification manuelle par
+    l'organisateur (paiement Mobile Money hors-app via QR ou especes).
+
+    - Valider : possible depuis tout statut non paye, y compris une commande
+      expiree/annulee ou rejetee — cas reel d'un client qui a bien paye mais
+      n'a jamais clique "J'ai paye", ou trop tard. L'organisateur, qui voit
+      le transfert arriver sur son compte, doit pouvoir la valider.
+    - Rejeter : le paiement annonce n'est jamais arrive."""
     order = await _get_owned_order(order_id, current_user, db)
-    if order.status != OrderStatus.AWAITING_CONFIRMATION:
+    if payload.approved:
+        if order.status == OrderStatus.SUCCESS:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Commande deja payee")
+        new_status = OrderStatus.SUCCESS
+    else:
+        if order.status not in _REJECTABLE:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Commande au statut '{order.status.value}', rien a rejeter",
+            )
+        new_status = OrderStatus.FAILED
+
+    await set_order_status(order, new_status, db)
+    return {"status": new_status.value}
+
+
+@router.post("/orders/{order_id}/cancel", status_code=status.HTTP_200_OK)
+async def cancel_order(
+    order_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """Annule une commande jamais payee (client parti sans payer), sans
+    attendre son expiration automatique."""
+    order = await _get_owned_order(order_id, current_user, db)
+    if order.status not in EXPIRABLE_STATUSES:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Commande au statut '{order.status.value}', rien a confirmer",
+            detail=f"Commande au statut '{order.status.value}', impossible de l'annuler",
         )
-
-    new_status = OrderStatus.SUCCESS if payload.approved else OrderStatus.FAILED
-    await _apply_webhook_result(order.payment_reference, new_status, db)
-    return {"status": new_status.value}
+    await set_order_status(order, OrderStatus.CANCELLED, db)
+    return {"status": OrderStatus.CANCELLED.value}
 
 
 @router.get("/users", response_model=list[UserRead])

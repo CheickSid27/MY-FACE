@@ -9,6 +9,22 @@ from app.core.security import InvalidTokenError, TokenType, decode_token
 from app.models.user import User, UserRole
 
 bearer_scheme = HTTPBearer()
+optional_bearer_scheme = HTTPBearer(auto_error=False)
+
+
+async def get_optional_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(optional_bearer_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> User | None:
+    """Utilisateur connecte s'il y en a un, sinon None (jamais d'erreur) :
+    pour les routes accessibles soit a l'organisateur, soit a la borne."""
+    if credentials is None:
+        return None
+    try:
+        user_id = uuid.UUID(decode_token(credentials.credentials, TokenType.ACCESS))
+    except (InvalidTokenError, ValueError):
+        return None
+    return await db.get(User, user_id)
 
 
 async def get_current_user(

@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, Float, ForeignKey, JSON, func
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,6 +33,12 @@ class FaceEmbedding(Base):
     # perturbe le clustering). Nullable : NULL pour les lignes creees avant
     # cette colonne.
     sharpness: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Cle de stockage de la vignette recadree sur ce visage (voir
+    # services/face_crops.py), une fois generee. Memoriser la cle evite de
+    # redemander au stockage "ce fichier existe-t-il ?" (un aller-retour R2
+    # par groupe) a chaque affichage des personnes detectees. NULL tant
+    # qu'aucune vignette n'a ete demandee pour ce visage.
+    crop_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     photo: Mapped["Photo"] = relationship("Photo", back_populates="face_embeddings")

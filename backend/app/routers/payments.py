@@ -18,15 +18,60 @@ from app.schemas.payment import (
     PaymentInitResponse,
     PaymentStatusResponse,
 )
+from app.services.access import is_kiosk_request
+from app.services.orders import expire_order_if_stale, set_order_status
 from app.services.payments import PaymentProvider, get_payment_provider
 from app.services.pricing import calculate_total
 from app.services.push_notifications import send_push_to_user
-from app.services.sms import get_sms_service
 from app.services.storage import StorageService, get_storage_service
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 
 settings = get_settings()
+
+# Moyens qui ne passent pas par /payments/init : "manual" n'est plus qu'un
+# verificateur de signature webhook (voir services/payments.py), GeniusPay a
+# son propre parcours isole (routers/geniuspay.py).
+_NOT_INITIABLE_HERE = {
+    PaymentMethod.MANUAL: "Choisissez un moyen de paiement propose par l'organisateur",
+    PaymentMethod.GENIUSPAY: "GeniusPay se lance via /payments/geniuspay/init",
+}
+
+
+def _create_order_from_cart(
+    cart: CartSession,
+    event: Event,
+    payload: PaymentInitRequest,
+    order_status: OrderStatus,
+    payment_reference: str,
+) -> Order:
+    """Commande + snapshot des photos du panier (prix unitaire et tirage
+    papier au moment de l'achat : un changement de tarif ulterieur ne modifie
+    jamais une commande deja passee). Ajoutee a la session, non commitee."""
+    print_count = sum(1 for item in cart.items if item.print_requested)
+    breakdown = calculate_total(event.pricing, len(cart.items), print_count)
+    unit_price = float(event.pricing["unit_price"])
+    print_unit_price = float(event.pricing.get("print_unit_price") or 0)
+
+    order = Order(
+        event_id=cart.event_id,
+        contact_phone=payload.contact_phone,
+        total_amount=breakdown.total,
+        currency=breakdown.currency,
+        status=order_status,
+        payment_method=payload.payment_method,
+        payment_reference=payment_reference,
+    )
+    order.items = [
+        OrderItem(
+            photo_id=item.photo_id,
+            unit_price=unit_price,
+            print_requested=item.print_requested,
+            print_price=print_unit_price if item.print_requested else None,
+        )
+        for item in cart.items
+    ]
+    return order
 
 
 @router.post("/init", response_model=PaymentInitResponse, status_code=status.HTTP_201_CREATED)
@@ -35,6 +80,11 @@ async def init_payment(
     db: AsyncSession = Depends(get_db),
     storage: StorageService = Depends(get_storage_service),
 ) -> PaymentInitResponse:
+    if payload.payment_method in _NOT_INITIABLE_HERE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=_NOT_INITIABLE_HERE[payload.payment_method]
+        )
+
     result = await db.execute(
         select(CartSession)
         .where(CartSession.id == payload.session_id)
@@ -49,9 +99,6 @@ async def init_payment(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Panier vide")
 
     event = await db.get(Event, cart.event_id)
-    print_count = sum(1 for item in cart.items if item.print_requested)
-    breakdown = calculate_total(event.pricing, len(cart.items), print_count)
-    print_unit_price = float(event.pricing.get("print_unit_price") or 0)
 
     if payload.payment_method == PaymentMethod.CASH:
         # Especes remises en main propre au staff a cote de la borne : pas de
@@ -64,42 +111,29 @@ async def init_payment(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Le paiement en especes n'est pas active pour cet evenement",
             )
-
-        order = Order(
-            event_id=cart.event_id,
-            contact_phone=payload.contact_phone,
-            total_amount=breakdown.total,
-            currency=breakdown.currency,
-            status=OrderStatus.AWAITING_CONFIRMATION,
-            payment_method=PaymentMethod.CASH,
-            payment_reference=f"CASH-{secrets.token_hex(8)}",
-        )
-        db.add(order)
-        await db.flush()
-
-        unit_price = float(event.pricing["unit_price"])
-        for item in cart.items:
-            db.add(
-                OrderItem(
-                    order_id=order.id,
-                    photo_id=item.photo_id,
-                    unit_price=unit_price,
-                    print_requested=item.print_requested,
-                    print_price=print_unit_price if item.print_requested else None,
-                )
+        # Verifie serveur (et pas seulement masque cote frontend) : une
+        # commande "especes" creee depuis un telephone attendrait un paiement
+        # que personne ne peut recevoir, et declencherait une notification.
+        if not is_kiosk_request(event, payload.kiosk_token):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Le paiement en especes est disponible uniquement a la borne de l'evenement",
             )
 
+        order = _create_order_from_cart(
+            cart, event, payload, OrderStatus.AWAITING_CONFIRMATION, f"CASH-{secrets.token_hex(8)}"
+        )
+        db.add(order)
         await db.commit()
         await db.refresh(order)
 
-        if event is not None:
-            await send_push_to_user(
-                event.organizer_id,
-                db,
-                title="Nouvelle commande a confirmer (especes)",
-                body=f"{order.total_amount:.0f} {order.currency} — {order.contact_phone}",
-                url=f"{settings.app_base_url}/admin/events/{event.id}/payments",
-            )
+        await send_push_to_user(
+            event.organizer_id,
+            db,
+            title="Nouvelle commande a confirmer (especes)",
+            body=f"{order.total_amount:.0f} {order.currency} — {order.contact_phone}",
+            url=f"{settings.app_base_url}/admin/events/{event.id}/payments",
+        )
 
         return PaymentInitResponse(
             order_id=order.id,
@@ -113,100 +147,24 @@ async def init_payment(
             ),
         )
 
-    if payload.payment_method is not None:
-        # Flux QR + confirmation manuelle organisateur (aucune API operateur
-        # reelle branchee, voir services/payments.py) : le moyen choisi doit
-        # avoir ete configure par l'organisateur pour cet evenement.
-        pm_result = await db.execute(
-            select(EventPaymentMethod).where(
-                EventPaymentMethod.event_id == cart.event_id,
-                EventPaymentMethod.method == payload.payment_method,
-            )
+    # Flux QR + confirmation manuelle organisateur (aucune API operateur
+    # reelle branchee, voir services/payments.py) : le moyen choisi doit
+    # avoir ete configure par l'organisateur pour cet evenement.
+    pm_result = await db.execute(
+        select(EventPaymentMethod).where(
+            EventPaymentMethod.event_id == cart.event_id,
+            EventPaymentMethod.method == payload.payment_method,
         )
-        event_payment_method = pm_result.scalar_one_or_none()
-        if event_payment_method is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Ce moyen de paiement n'est pas configure pour cet evenement",
-            )
-
-        order = Order(
-            event_id=cart.event_id,
-            contact_phone=payload.contact_phone,
-            total_amount=breakdown.total,
-            currency=breakdown.currency,
-            status=OrderStatus.PENDING,
-            payment_method=payload.payment_method,
-            payment_reference=f"QR-{secrets.token_hex(8)}",
-        )
-        db.add(order)
-        await db.flush()
-
-        unit_price = float(event.pricing["unit_price"])
-        for item in cart.items:
-            db.add(
-                OrderItem(
-                    order_id=order.id,
-                    photo_id=item.photo_id,
-                    unit_price=unit_price,
-                    print_requested=item.print_requested,
-                    print_price=print_unit_price if item.print_requested else None,
-                )
-            )
-
-        await db.commit()
-        await db.refresh(order)
-
-        return PaymentInitResponse(
-            order_id=order.id,
-            status=order.status,
-            payment_method=order.payment_method,
-            total_amount=order.total_amount,
-            currency=order.currency,
-            instructions=(
-                "Scannez ce QR code dans votre application, payez le montant indique, "
-                "puis cliquez sur \"J'ai paye\"."
-            ),
-            qr_image_url=await storage.get_presigned_url(event_payment_method.qr_image_key, expires_in=3600),
-            merchant_phone=event_payment_method.phone_number,
-        )
-
-    # Ancien comportement (provider global PAYMENT_PROVIDER) : utilise par le
-    # mode test "manual" tant qu'aucun moyen de paiement n'est configure par
-    # evenement.
-    provider = get_payment_provider()
-
-    order = Order(
-        event_id=cart.event_id,
-        contact_phone=payload.contact_phone,
-        total_amount=breakdown.total,
-        currency=breakdown.currency,
-        status=OrderStatus.PENDING,
-        payment_method=PaymentMethod(settings.payment_provider),
     )
-    db.add(order)
-    await db.flush()
-
-    unit_price = float(event.pricing["unit_price"])
-    for item in cart.items:
-        db.add(
-            OrderItem(
-                order_id=order.id,
-                photo_id=item.photo_id,
-                unit_price=unit_price,
-                print_requested=item.print_requested,
-                print_price=print_unit_price if item.print_requested else None,
-            )
+    event_payment_method = pm_result.scalar_one_or_none()
+    if event_payment_method is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ce moyen de paiement n'est pas configure pour cet evenement",
         )
 
-    try:
-        init_result = await provider.init_payment(order)
-    except NotImplementedError as exc:
-        await db.rollback()
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
-
-    order.payment_reference = init_result.reference
-    order.status = OrderStatus.PROCESSING
+    order = _create_order_from_cart(cart, event, payload, OrderStatus.PENDING, f"QR-{secrets.token_hex(8)}")
+    db.add(order)
     await db.commit()
     await db.refresh(order)
 
@@ -216,8 +174,12 @@ async def init_payment(
         payment_method=order.payment_method,
         total_amount=order.total_amount,
         currency=order.currency,
-        redirect_url=init_result.redirect_url,
-        instructions=init_result.instructions,
+        instructions=(
+            "Scannez ce QR code dans votre application, payez le montant indique, "
+            "puis cliquez sur \"J'ai paye\"."
+        ),
+        qr_image_url=await storage.get_presigned_url(event_payment_method.qr_image_key, expires_in=3600),
+        merchant_phone=event_payment_method.phone_number,
     )
 
 
@@ -259,6 +221,14 @@ async def mark_paid(
     order = await db.get(Order, order_id)
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Commande introuvable")
+    if await expire_order_if_stale(order, db):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Cette commande a expire. Si vous avez deja paye, presentez-vous a "
+                "l'organisateur avec votre numero de telephone : il peut la valider."
+            ),
+        )
     if order.status != OrderStatus.PENDING:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -291,6 +261,7 @@ async def get_payment_status(
     order = await db.get(Order, order_id)
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Commande introuvable")
+    await expire_order_if_stale(order, db)
     return await _build_status_response(order, db, storage)
 
 
@@ -299,17 +270,7 @@ async def _apply_webhook_result(reference: str, new_status: OrderStatus, db: Asy
     order = result.scalar_one_or_none()
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Commande introuvable pour cette reference")
-
-    order.status = new_status
-    await db.commit()
-
-    if new_status == OrderStatus.SUCCESS:
-        sms = get_sms_service()
-        download_url = f"{settings.app_base_url}/order/{order.id}/download"
-        await sms.send_sms(
-            order.contact_phone,
-            f"MYFACE: votre paiement est confirme. Telechargez vos photos ici : {download_url}",
-        )
+    await set_order_status(order, new_status, db)
 
 
 @router.post("/webhook", status_code=status.HTTP_200_OK)

@@ -39,6 +39,13 @@ class Photo(Base):
     # agrandie. Nullable : les photos deja en base avant l'ajout de ce champ
     # retombent sur la miniature (voir services/photo_urls.py).
     preview_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    # Meme apercu que preview_key, mais avec un filigrane incruste : c'est
+    # la seule version grand format servie au telephone d'un invite (l'apercu
+    # net n'est servi qu'a la borne et a l'organisateur, voir
+    # services/photo_urls.py). Nullable : genere a l'ingestion pour les
+    # nouvelles photos, rattrape en tache de fond pour les anciennes (voir
+    # services/watermark.py, backfill_watermarks).
+    preview_watermarked_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
     original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
     indexing_status: Mapped[IndexingStatus] = mapped_column(
         Enum(
@@ -53,5 +60,5 @@ class Photo(Base):
 
     event: Mapped["Event"] = relationship("Event", back_populates="photos")
     face_embeddings: Mapped[list["FaceEmbedding"]] = relationship(
-        "FaceEmbedding", back_populates="photo", cascade="all, delete-orphan"
+        "FaceEmbedding", back_populates="photo", cascade="all, delete-orphan", passive_deletes=True
     )

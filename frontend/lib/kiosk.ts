@@ -1,38 +1,54 @@
 // Mode borne : active uniquement quand le navigateur charge la page
 // evenement avec le vrai `kiosk_token` en query param (?kiosk=...), verifie
-// cote serveur (voir backend GET /events/{id}/public). Une fois valide, on
-// le garde en sessionStorage pour toute la session de navigation sur cette
-// borne — pas besoin de repasser le token sur chaque page (galerie, panier,
-// paiement...), et il disparait a la fermeture de l'onglet.
+// cote serveur (voir backend GET /events/{id}/public). Une fois valide, le
+// JETON est garde en sessionStorage pour toute la session de navigation sur
+// cette borne, et disparait a la fermeture de l'onglet.
+//
+// On garde le jeton lui-meme (et pas un simple drapeau "borne = oui") :
+// - la page d'accueil le re-verifie aupres du serveur a chaque retour (reset
+//   d'inactivite compris) au lieu de perdre le mode borne faute de ?kiosk=
+//   dans l'URL — bug corrige : apres le premier reset, la borne redevenait
+//   un simple telephone (plus d'especes, plus d'impression, plus de reset) ;
+// - il est transmis aux appels publics (galerie, scan, visages) pour que le
+//   serveur serve les apercus nets, sans filigrane, a la borne uniquement.
 //
 // Cash et impression papier n'ont de sens que physiquement sur la borne
-// (quelqu'un pour recevoir l'argent, une imprimante branchee) : ce flag
+// (quelqu'un pour recevoir l'argent, une imprimante branchee) : ce mode
 // conditionne leur affichage partout dans l'app, jamais visible sur le
 // telephone personnel d'un invite.
 
 function storageKey(eventId: string): string {
-  return `myface_kiosk_${eventId}`;
+  return `myface_kiosk_token_${eventId}`;
 }
 
-export function setKioskMode(eventId: string, isKiosk: boolean): void {
+export function rememberKioskToken(eventId: string, token: string): void {
   if (typeof window === "undefined") return;
   try {
-    if (isKiosk) {
-      window.sessionStorage.setItem(storageKey(eventId), "1");
-    } else {
-      window.sessionStorage.removeItem(storageKey(eventId));
-    }
+    window.sessionStorage.setItem(storageKey(eventId), token);
   } catch {
     // sessionStorage indisponible (navigation privee stricte, etc.) : le
     // mode borne restera simplement desactive, comportement invite normal.
   }
 }
 
-export function isKioskMode(eventId: string): boolean {
-  if (typeof window === "undefined") return false;
+export function forgetKioskToken(eventId: string): void {
+  if (typeof window === "undefined") return;
   try {
-    return window.sessionStorage.getItem(storageKey(eventId)) === "1";
+    window.sessionStorage.removeItem(storageKey(eventId));
   } catch {
-    return false;
+    // voir rememberKioskToken
   }
+}
+
+export function getKioskToken(eventId: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.sessionStorage.getItem(storageKey(eventId));
+  } catch {
+    return null;
+  }
+}
+
+export function isKioskMode(eventId: string): boolean {
+  return getKioskToken(eventId) !== null;
 }

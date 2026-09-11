@@ -19,6 +19,7 @@ class EventStats(BaseModel):
     orders_awaiting_confirmation: int
     orders_success: int
     orders_failed: int
+    orders_cancelled: int
     total_revenue: float
     currency: str
     photos_sold: int

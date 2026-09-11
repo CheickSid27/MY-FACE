@@ -14,6 +14,10 @@ const KIOSK_INACTIVITY_MS = 90_000;
 // quelqu'un d'autre). Sans effet sur le telephone personnel d'un invite
 // (`active` = mode borne uniquement) : on ne veut surtout pas effacer le
 // panier d'un vrai client qui prend son temps sur son propre appareil.
+//
+// Le retour se fait vers l'accueil sans ?kiosk= dans l'URL : l'accueil
+// re-verifie le jeton borne memorise (lib/kiosk.ts), la borne reste donc
+// une borne pour le client suivant.
 export function useKioskInactivityReset(eventId: string, active: boolean) {
   const router = useRouter();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

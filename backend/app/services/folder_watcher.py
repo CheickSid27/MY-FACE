@@ -7,10 +7,16 @@ pas toujours fiablement les evenements filesystem au conteneur ; le polling
 est plus lent mais marche partout, sans dependance supplementaire.
 
 Structure attendue : {settings.watched_folder_path}/<event_id>/*.jpg — un
-sous-dossier par evenement (cree a la main, ou par le logiciel de transfert
-de l'appareil photo/carte SD). Chaque fichier image y apparaissant est
+sous-dossier par evenement (cree automatiquement a la creation de
+l'evenement, voir routers/events.py). Chaque fichier image y apparaissant est
 ingere automatiquement des que sa taille est stable entre deux scans
-(evite de lire un fichier encore en cours de copie)."""
+(evite de lire un fichier encore en cours de copie).
+
+Le scan periodique ne touche QUE le disque : la base n'est interrogee que
+lorsqu'un fichier nouveau (ou modifie) est pret a etre ingere. Auparavant,
+chaque scan (toutes les 5 s, en permanence) listait les evenements en base :
+Neon ne pouvait jamais se mettre en veille et consommait son quota gratuit
+meme sans aucune activite."""
 
 import asyncio
 import logging
@@ -26,14 +32,19 @@ from app.core.config import get_settings
 from app.core.database import AsyncSessionLocal
 from app.models.event import Event
 from app.models.photo import Photo
-from app.services.face_indexing import index_photo_faces
+from app.services.face_indexing import index_photos_faces
 from app.services.ingestion import InvalidImageError, ingest_photo
 from app.services.storage import StorageService, get_storage_service
 
 logger = logging.getLogger("myface.folder_watcher")
 settings = get_settings()
 
-IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+CONTENT_TYPES = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+}
 
 
 @dataclass
@@ -43,9 +54,23 @@ class WatchedFileStatus:
     detail: str | None = None
 
 
-@dataclass
-class _PendingFile:
+@dataclass(frozen=True)
+class _FileState:
     size: int
+    mtime: float
+
+
+@dataclass(frozen=True)
+class _FoundFile:
+    event_id: uuid.UUID
+    path: str
+    name: str
+    state: _FileState
+
+
+def _read_file(path: str) -> bytes:
+    with open(path, "rb") as f:
+        return f.read()
 
 
 @dataclass
@@ -54,10 +79,18 @@ class FolderWatcher:
     storage: StorageService | None = None
     poll_seconds: float = field(default_factory=lambda: settings.watched_folder_poll_seconds)
     base_path: str = field(default_factory=lambda: settings.watched_folder_path)
+    # Programme l'indexation faciale des photos ingerees. Injectable pour les
+    # tests (qui ne doivent pas lancer InsightFace en tache de fond).
+    schedule_indexing: Callable[[list[uuid.UUID], StorageService], None] | None = None
 
     _task: asyncio.Task | None = field(default=None, init=False, repr=False)
-    _pending: dict[str, _PendingFile] = field(default_factory=dict, init=False, repr=False)
+    _pending: dict[str, _FileState] = field(default_factory=dict, init=False, repr=False)
+    # Etat (taille, date) de chaque fichier deja traite, ingere OU en erreur :
+    # tant qu'il ne change pas, il n'est plus jamais re-examine. Une erreur
+    # n'est donc retentee que si le fichier est remplace/modifie.
+    _settled: dict[str, _FileState] = field(default_factory=dict, init=False, repr=False)
     _recent_status: dict[str, WatchedFileStatus] = field(default_factory=dict, init=False, repr=False)
+    _index_tasks: set[asyncio.Task] = field(default_factory=set, init=False, repr=False)
 
     def start(self) -> None:
         if self._task is None:
@@ -84,6 +117,19 @@ class FolderWatcher:
     def event_folder(self, event_id: uuid.UUID) -> str:
         return os.path.join(self.base_path, str(event_id))
 
+    def ensure_event_folder(self, event_id: uuid.UUID) -> bool:
+        """Cree le sous-dossier de l'evenement s'il manque (le chemin affiche
+        a l'organisateur doit exister pour qu'il puisse y deposer ses photos).
+        Sans effet si le dossier surveille lui-meme n'est pas monte."""
+        if not os.path.isdir(self.base_path):
+            return False
+        try:
+            os.makedirs(self.event_folder(event_id), exist_ok=True)
+            return True
+        except OSError:
+            logger.warning("Impossible de creer le dossier surveille de %s", event_id)
+            return False
+
     async def _run_loop(self) -> None:
         while True:
             try:
@@ -92,79 +138,99 @@ class FolderWatcher:
                 logger.exception("Erreur durant le scan du dossier surveille")
             await asyncio.sleep(self.poll_seconds)
 
-    async def _scan_once(self) -> None:
+    def _list_files(self) -> list[_FoundFile]:
+        """Parcours disque uniquement (execute dans un thread)."""
         if not os.path.isdir(self.base_path):
-            return
-
-        async with self.session_factory() as db:
-            result = await db.execute(select(Event.id))
-            event_ids = {row[0] for row in result.all()}
-
-        storage = self.storage or get_storage_service()
-
-        for event_id in event_ids:
-            folder = self.event_folder(event_id)
-            if not os.path.isdir(folder):
+            return []
+        found: list[_FoundFile] = []
+        for folder in os.scandir(self.base_path):
+            if not folder.is_dir():
                 continue
-
-            for entry in os.scandir(folder):
+            try:
+                event_id = uuid.UUID(folder.name)
+            except ValueError:
+                continue
+            for entry in os.scandir(folder.path):
                 if not entry.is_file():
                     continue
-                ext = os.path.splitext(entry.name)[1].lower()
-                if ext not in IMAGE_EXTENSIONS:
+                if os.path.splitext(entry.name)[1].lower() not in CONTENT_TYPES:
                     continue
+                stat = entry.stat()
+                found.append(
+                    _FoundFile(event_id, entry.path, entry.name, _FileState(stat.st_size, stat.st_mtime))
+                )
+        return found
 
-                key = f"{event_id}/{entry.name}"
-                if key in self._recent_status and self._recent_status[key].status == "ingested":
-                    continue
+    async def _scan_once(self) -> None:
+        files = await asyncio.to_thread(self._list_files)
+        storage: StorageService | None = None
+        ingested: list[uuid.UUID] = []
 
-                size = entry.stat().st_size
-                pending = self._pending.get(key)
-                if pending is None or pending.size != size:
-                    self._pending[key] = _PendingFile(size=size)
-                    self._recent_status[key] = WatchedFileStatus(entry.name, "pending_write")
-                    continue
+        for found in files:
+            key = f"{found.event_id}/{found.name}"
+            if self._settled.get(key) == found.state:
+                continue
 
-                del self._pending[key]
-                await self._ingest_file(event_id, entry.path, entry.name, key, db_storage=storage)
+            if self._pending.get(key) != found.state:
+                self._pending[key] = found.state
+                self._recent_status[key] = WatchedFileStatus(found.name, "pending_write")
+                continue
 
-    async def _ingest_file(
-        self, event_id: uuid.UUID, path: str, filename: str, key: str, db_storage: StorageService
-    ) -> None:
+            del self._pending[key]
+            storage = storage or self.storage or get_storage_service()
+            photo_id = await self._ingest_file(found, key, storage)
+            self._settled[key] = found.state
+            if photo_id is not None:
+                ingested.append(photo_id)
+
+        if ingested and storage is not None:
+            self._schedule(ingested, storage)
+
+    def _schedule(self, photo_ids: list[uuid.UUID], storage: StorageService) -> None:
+        if self.schedule_indexing is not None:
+            self.schedule_indexing(photo_ids, storage)
+            return
+        task = asyncio.create_task(index_photos_faces(photo_ids, storage, self.session_factory))
+        # Reference gardee jusqu'a la fin : une tache asyncio sans reference
+        # peut etre ramassee par le garbage collector en cours de route.
+        self._index_tasks.add(task)
+        task.add_done_callback(self._index_tasks.discard)
+
+    async def _ingest_file(self, found: _FoundFile, key: str, storage: StorageService) -> uuid.UUID | None:
+        filename = found.name
         try:
-            with open(path, "rb") as f:
-                data = f.read()
-
-            content_type = {
-                ".jpg": "image/jpeg",
-                ".jpeg": "image/jpeg",
-                ".png": "image/png",
-                ".webp": "image/webp",
-            }[os.path.splitext(filename)[1].lower()]
+            content_type = CONTENT_TYPES[os.path.splitext(filename)[1].lower()]
 
             async with self.session_factory() as db:
+                if await db.get(Event, found.event_id) is None:
+                    self._recent_status[key] = WatchedFileStatus(filename, "error", "evenement inconnu")
+                    return None
+
                 # Deja ingere lors d'un scan precedent (ex: apres un redemarrage
                 # du backend qui a perdu l'etat en memoire) : on evite le doublon
-                # en verifiant par nom de fichier original.
+                # en verifiant par nom de fichier original, AVANT de lire le
+                # fichier (jusqu'a 25 Mo) pour rien.
                 existing = await db.execute(
-                    select(Photo.id).where(Photo.event_id == event_id, Photo.original_filename == filename)
+                    select(Photo.id).where(Photo.event_id == found.event_id, Photo.original_filename == filename)
                 )
-                if existing.scalar_one_or_none() is not None:
+                if existing.first() is not None:
                     self._recent_status[key] = WatchedFileStatus(filename, "ingested", "deja present")
-                    return
+                    return None
 
-                photo = await ingest_photo(event_id, filename, content_type, data, db, db_storage)
+                data = await asyncio.to_thread(_read_file, found.path)
+                photo = await ingest_photo(found.event_id, filename, content_type, data, db, storage)
                 await db.commit()
-                await db.refresh(photo)
+                photo_id = photo.id
 
             self._recent_status[key] = WatchedFileStatus(filename, "ingested")
-            logger.info("Dossier surveille : %s ingere pour l'evenement %s", filename, event_id)
-            asyncio.create_task(index_photo_faces(photo.id, db_storage, self.session_factory))
+            logger.info("Dossier surveille : %s ingere pour l'evenement %s", filename, found.event_id)
+            return photo_id
         except (ValueError, InvalidImageError) as exc:
             self._recent_status[key] = WatchedFileStatus(filename, "error", str(exc))
         except Exception as exc:  # noqa: BLE001
             logger.exception("Echec ingestion dossier surveille : %s", filename)
             self._recent_status[key] = WatchedFileStatus(filename, "error", str(exc))
+        return None
 
 
 folder_watcher = FolderWatcher()

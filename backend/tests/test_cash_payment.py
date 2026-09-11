@@ -14,20 +14,20 @@ def _jpeg_bytes(color=(10, 10, 10)) -> bytes:
     return buf.getvalue()
 
 
-async def _create_event(auth_client: AsyncClient, cash_enabled: bool = True) -> str:
+async def _create_event(auth_client: AsyncClient, cash_enabled: bool = True, pricing: dict | None = None) -> tuple[str, str]:
     resp = await auth_client.post(
         "/events",
         json={
             "name": "Bapteme Cash",
             "date": "2026-12-15T10:00:00Z",
             "location": "Abidjan",
-            "pricing": {"unit_price": 1000},
+            "pricing": pricing or {"unit_price": 1000},
         },
     )
-    event_id = resp.json()["id"]
+    event_id, kiosk_token = resp.json()["id"], resp.json()["kiosk_token"]
     if cash_enabled:
         await auth_client.patch(f"/events/{event_id}", json={"cash_enabled": True})
-    return event_id
+    return event_id, kiosk_token
 
 
 async def _create_cart(auth_client, client, storage_service, test_session_factory, seed_photo, event_id) -> str:
@@ -36,29 +36,45 @@ async def _create_cart(auth_client, client, storage_service, test_session_factor
     return add_resp.json()["session_id"]
 
 
+def _cash_payload(session_id: str, kiosk_token: str | None) -> dict:
+    return {
+        "session_id": session_id,
+        "contact_phone": "+2250700000000",
+        "payment_method": "cash",
+        "kiosk_token": kiosk_token,
+    }
+
+
 async def test_cash_payment_requires_event_opt_in(
     auth_client, client, storage_service, test_session_factory, seed_photo
 ):
-    event_id = await _create_event(auth_client, cash_enabled=False)
+    event_id, kiosk_token = await _create_event(auth_client, cash_enabled=False)
     session_id = await _create_cart(auth_client, client, storage_service, test_session_factory, seed_photo, event_id)
 
-    resp = await client.post(
-        "/payments/init",
-        json={"session_id": session_id, "contact_phone": "+2250700000000", "payment_method": "cash"},
-    )
+    resp = await client.post("/payments/init", json=_cash_payload(session_id, kiosk_token))
     assert resp.status_code == 400
+
+
+@pytest.mark.parametrize("kiosk_token", [None, "faux-jeton"])
+async def test_cash_payment_refused_outside_kiosk(
+    auth_client, client, storage_service, test_session_factory, seed_photo, kiosk_token
+):
+    """Especes = quelqu'un recoit l'argent sur place : jamais depuis le
+    telephone d'un invite, meme en appelant l'API directement."""
+    event_id, _ = await _create_event(auth_client, cash_enabled=True)
+    session_id = await _create_cart(auth_client, client, storage_service, test_session_factory, seed_photo, event_id)
+
+    resp = await client.post("/payments/init", json=_cash_payload(session_id, kiosk_token))
+    assert resp.status_code == 403
 
 
 async def test_cash_payment_goes_straight_to_awaiting_confirmation(
     auth_client, client, storage_service, test_session_factory, seed_photo
 ):
-    event_id = await _create_event(auth_client, cash_enabled=True)
+    event_id, kiosk_token = await _create_event(auth_client, cash_enabled=True)
     session_id = await _create_cart(auth_client, client, storage_service, test_session_factory, seed_photo, event_id)
 
-    resp = await client.post(
-        "/payments/init",
-        json={"session_id": session_id, "contact_phone": "+2250700000000", "payment_method": "cash"},
-    )
+    resp = await client.post("/payments/init", json=_cash_payload(session_id, kiosk_token))
     assert resp.status_code == 201
     data = resp.json()
     assert data["status"] == "awaiting_confirmation"
@@ -76,27 +92,15 @@ async def test_cash_payment_goes_straight_to_awaiting_confirmation(
 async def test_cash_order_carries_print_selection(
     auth_client, client, storage_service, test_session_factory, seed_photo
 ):
-    resp = await auth_client.post(
-        "/events",
-        json={
-            "name": "Gala Cash Print",
-            "date": "2026-12-16T10:00:00Z",
-            "location": "Abidjan",
-            "pricing": {"unit_price": 1000, "print_unit_price": 150},
-        },
+    event_id, kiosk_token = await _create_event(
+        auth_client, cash_enabled=True, pricing={"unit_price": 1000, "print_unit_price": 150}
     )
-    event_id = resp.json()["id"]
-    await auth_client.patch(f"/events/{event_id}", json={"cash_enabled": True})
-
     photo_id = await seed_photo(event_id, storage_service, test_session_factory, "p1.jpg", _jpeg_bytes())
     add_resp = await client.post("/cart/add", json={"event_id": event_id, "photo_id": photo_id})
     session_id = add_resp.json()["session_id"]
     item_id = add_resp.json()["items"][0]["id"]
-    await client.patch(f"/cart/{item_id}", json={"print_requested": True})
+    await client.patch(f"/cart/{item_id}", json={"print_requested": True, "kiosk_token": kiosk_token})
 
-    init_resp = await client.post(
-        "/payments/init",
-        json={"session_id": session_id, "contact_phone": "+2250700000000", "payment_method": "cash"},
-    )
+    init_resp = await client.post("/payments/init", json=_cash_payload(session_id, kiosk_token))
     assert init_resp.status_code == 201
     assert init_resp.json()["total_amount"] == 1150

@@ -38,14 +38,57 @@ class InMemoryStorageService(StorageService):
     async def delete(self, key: str) -> None:
         self.objects.pop(key, None)
 
+    async def delete_prefix(self, prefix: str) -> int:
+        keys = [key for key in self.objects if key.startswith(prefix)]
+        for key in keys:
+            del self.objects[key]
+        return len(keys)
+
     async def download(self, key: str) -> bytes:
         return self.objects[key]
 
-    async def get_presigned_url(self, key: str, expires_in: int = 3600) -> str:
-        return f"http://test-storage.local/{key}?expires_in={expires_in}"
+    async def get_presigned_url(
+        self, key: str, expires_in: int = 3600, download_filename: str | None = None
+    ) -> str:
+        url = f"http://test-storage.local/{key}?expires_in={expires_in}"
+        if download_filename:
+            url += f"&download={download_filename}"
+        return url
 
     async def exists(self, key: str) -> bool:
         return key in self.objects
+
+
+class FakeSmsService:
+    """Aucun appel reseau vers Africa's Talking pendant les tests : les SMS
+    "envoyes" sont simplement memorises pour pouvoir etre verifies."""
+
+    def __init__(self) -> None:
+        self.sent: list[tuple[str, str]] = []
+
+    async def send_sms(self, phone: str, message: str) -> bool:
+        self.sent.append((phone, message))
+        return True
+
+
+@pytest_asyncio.fixture(autouse=True)
+def fake_sms(monkeypatch) -> FakeSmsService:
+    service = FakeSmsService()
+    monkeypatch.setattr("app.services.orders.get_sms_service", lambda: service)
+    return service
+
+
+@pytest_asyncio.fixture(scope="session", autouse=True)
+def isolated_watched_folder(tmp_path_factory):
+    """La creation d'un evenement cree son sous-dossier surveille : sans
+    cette redirection, chaque test ecrirait un dossier dans le vrai
+    watched-photos/ du PC hote (monte sur /watched dans le conteneur)."""
+    from app.services.folder_watcher import folder_watcher
+
+    original = folder_watcher.base_path
+    folder_watcher.base_path = str(tmp_path_factory.mktemp("watched"))
+    yield folder_watcher.base_path
+    folder_watcher.base_path = original
 
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
@@ -197,3 +240,27 @@ async def _seed_photo(event_id: str, storage_service, session_factory, filename:
 @pytest_asyncio.fixture
 def seed_photo():
     return _seed_photo
+
+
+async def _configure_payment_method(
+    auth_client: AsyncClient, event_id: str, method: str = "wave", phone_number: str = "0700000000"
+) -> None:
+    """Configure un moyen de paiement QR marchand pour l'evenement (seul
+    chemin de paiement cote invite, avec les especes a la borne)."""
+    import io
+
+    from PIL import Image
+
+    buffer = io.BytesIO()
+    Image.new("RGB", (60, 60), color=(0, 0, 0)).save(buffer, format="PNG")
+    resp = await auth_client.put(
+        f"/events/{event_id}/payment-methods/{method}",
+        data={"phone_number": phone_number},
+        files={"qr_image": ("qr.png", buffer.getvalue(), "image/png")},
+    )
+    assert resp.status_code == 200, resp.text
+
+
+@pytest_asyncio.fixture
+def configure_payment_method():
+    return _configure_payment_method

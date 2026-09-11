@@ -13,11 +13,21 @@ export interface UserCreate {
   role: UserRole;
 }
 
+export interface PricingPack {
+  count: number;
+  price: number;
+}
+
+export interface PricingDiscount {
+  min_quantity: number;
+  percent: number;
+}
+
 export interface PricingConfig {
   unit_price: number;
   currency: string;
-  packs: Record<string, unknown>[];
-  discounts: Record<string, unknown>[];
+  packs: PricingPack[];
+  discounts: PricingDiscount[];
   print_unit_price: number | null;
 }
 
@@ -33,6 +43,8 @@ export interface Event {
   organizer_id: string;
   created_at: string;
   updated_at: string;
+  guest_url: string;
+  kiosk_url: string;
 }
 
 export interface EventPublicRead {
@@ -52,6 +64,15 @@ export interface EventListItem {
   date: string;
   location: string;
   photo_count: number;
+  organizer_email: string | null;
+}
+
+export interface EventIndexingSummary {
+  pending: number;
+  processing: number;
+  done: number;
+  failed: number;
+  faces: number;
 }
 
 export type IndexingStatus = "pending" | "processing" | "done" | "failed";
@@ -142,7 +163,8 @@ export type OrderStatus =
   | "processing"
   | "awaiting_confirmation"
   | "success"
-  | "failed";
+  | "failed"
+  | "cancelled";
 export type PaymentMethod =
   | "wave"
   | "orange_money"
@@ -180,7 +202,30 @@ export interface OrderRead {
   payment_method: PaymentMethod;
   payment_reference: string | null;
   photo_count: number;
+  print_count: number;
+  /** Impression des tirages papier (null = a imprimer, s'il y en a). */
+  printed_at: string | null;
   created_at: string;
+}
+
+export interface OrderItemRead {
+  photo: Photo;
+  unit_price: number;
+  print_requested: boolean;
+  print_price: number | null;
+}
+
+/** Fiche commande / recu (admin). */
+export interface OrderDetail extends OrderRead {
+  event_id: string;
+  event_name: string;
+  event_date: string;
+  updated_at: string;
+  items: OrderItemRead[];
+  photos_subtotal: number;
+  prints_total: number;
+  discount_amount: number;
+  download_url: string;
 }
 
 export interface PaymentStatusResponse {
@@ -197,6 +242,7 @@ export interface DownloadPhoto {
   photo_id: string;
   filename: string;
   url: string;
+  thumbnail_url: string;
   print_requested: boolean;
 }
 
@@ -205,6 +251,7 @@ export interface DownloadResponse {
   event_id: string;
   photos: DownloadPhoto[];
   expires_in: number;
+  printed_at: string | null;
 }
 
 export interface DailySales {
@@ -234,8 +281,19 @@ export interface EventStats {
   orders_awaiting_confirmation: number;
   orders_success: number;
   orders_failed: number;
+  orders_cancelled: number;
   total_revenue: number;
   currency: string;
   photos_sold: number;
   sales_by_day: DailySales[];
+}
+
+export interface PhoneCountry {
+  iso: string;
+  name: string;
+  dial_code: string;
+  pattern: string;
+  example: string;
+  hint: string;
+  trunk_prefix: string | null;
 }

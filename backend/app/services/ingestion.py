@@ -2,16 +2,38 @@
 upload storage, creation de la ligne Photo), partagee entre l'upload manuel
 (routers/photos.py) et le dossier surveille (services/folder_watcher.py)."""
 
+import asyncio
 import uuid
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.photo import IndexingStatus, Photo
 from app.services.storage import StorageService
 from app.services.thumbnails import InvalidImageError, generate_preview, generate_thumbnail
+from app.services.watermark import apply_watermark, watermarked_preview_key
 
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024
+
+
+@dataclass
+class _Derivatives:
+    thumbnail: bytes
+    preview: bytes
+    preview_watermarked: bytes
+
+
+def _build_derivatives(data: bytes) -> _Derivatives:
+    # Calculs Pillow purement CPU (plusieurs centaines de ms sur un original
+    # de 25 Mo) : executes dans un thread par l'appelant, jamais dans la
+    # boucle d'evenements.
+    preview = generate_preview(data)
+    return _Derivatives(
+        thumbnail=generate_thumbnail(data),
+        preview=preview,
+        preview_watermarked=apply_watermark(preview),
+    )
 
 
 async def ingest_photo(
@@ -33,18 +55,23 @@ async def ingest_photo(
     if not data:
         raise ValueError("Fichier vide")
 
-    thumbnail_bytes = generate_thumbnail(data)
-    preview_bytes = generate_preview(data)
+    derivatives = await asyncio.to_thread(_build_derivatives, data)
 
     photo_id = uuid.uuid4()
     extension = (filename or "photo.jpg").rsplit(".", 1)[-1].lower()
     original_key = f"events/{event_id}/originals/{photo_id}.{extension}"
     thumbnail_key = f"events/{event_id}/thumbnails/{photo_id}.jpg"
     preview_key = f"events/{event_id}/previews/{photo_id}.jpg"
+    preview_wm_key = watermarked_preview_key(event_id, photo_id)
 
-    await storage.upload(original_key, data, content_type)
-    await storage.upload(thumbnail_key, thumbnail_bytes, "image/jpeg")
-    await storage.upload(preview_key, preview_bytes, "image/jpeg")
+    # Les 4 envois sont independants : en parallele, le temps d'ingestion
+    # d'une photo n'est plus la somme de 4 allers-retours vers le stockage.
+    await asyncio.gather(
+        storage.upload(original_key, data, content_type),
+        storage.upload(thumbnail_key, derivatives.thumbnail, "image/jpeg"),
+        storage.upload(preview_key, derivatives.preview, "image/jpeg"),
+        storage.upload(preview_wm_key, derivatives.preview_watermarked, "image/jpeg"),
+    )
 
     photo = Photo(
         id=photo_id,
@@ -52,6 +79,7 @@ async def ingest_photo(
         original_key=original_key,
         thumbnail_key=thumbnail_key,
         preview_key=preview_key,
+        preview_watermarked_key=preview_wm_key,
         original_filename=filename or f"{photo_id}.{extension}",
         indexing_status=IndexingStatus.PENDING,
     )

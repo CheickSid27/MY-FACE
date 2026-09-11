@@ -19,6 +19,7 @@ from app.schemas.cart import (
     CartRead,
     PricingBreakdownRead,
 )
+from app.services.access import is_kiosk_request
 from app.services.photo_urls import to_photo_read
 from app.services.pricing import calculate_total
 from app.services.storage import StorageService, get_storage_service
@@ -204,12 +205,22 @@ async def update_cart_item(
 ) -> CartRead:
     """Bascule le tirage papier pour UNE photo du panier (voir
     CartItem.print_requested) — utilise par la case a cocher "+ Imprimer" du
-    panier, visible uniquement en mode borne cote frontend."""
+    panier, uniquement a la borne : cocher un tirage exige le kiosk_token de
+    l'evenement (verifie serveur, pas seulement masque cote frontend).
+    Decocher reste toujours possible."""
     item = await db.get(CartItem, item_id)
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article introuvable")
 
     cart_session_id = item.cart_session_id
+    if payload.print_requested:
+        cart_session = await db.get(CartSession, cart_session_id)
+        event = await db.get(Event, cart_session.event_id) if cart_session is not None else None
+        if event is None or not is_kiosk_request(event, payload.kiosk_token):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Le tirage papier se commande uniquement a la borne de l'evenement",
+            )
     item.print_requested = payload.print_requested
     await db.commit()
     # Meme piege que add_to_cart : sans expire, la relation `items` du panier

@@ -14,6 +14,8 @@ function AdminEventsContent() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const logout = useAuthStore((s) => s.logout);
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === "admin";
 
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
@@ -64,11 +66,21 @@ function AdminEventsContent() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-surface-alt to-surface p-6">
       <div className="mx-auto max-w-3xl">
-        <div className="glass mb-6 flex items-center justify-between rounded-2xl px-5 py-4">
-          <h1 className="text-xl font-bold text-ink-900">Evenements</h1>
+        <div className="glass mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-5 py-4">
+          <div>
+            <h1 className="text-xl font-bold text-ink-900">Evenements</h1>
+            {user && <p className="text-xs text-ink-500">{user.email}</p>}
+          </div>
           <div className="flex items-center gap-4">
-            <Link href="/admin/users" className="text-sm font-medium text-ink-500 transition hover:text-brand">
-              Utilisateurs
+            {/* Gestion des comptes reservee aux admins (l'API renvoie 403 aux
+                photographes) : lien masque plutot que menant a une erreur. */}
+            {isAdmin && (
+              <Link href="/admin/users" className="text-sm font-medium text-ink-500 transition hover:text-brand">
+                Utilisateurs
+              </Link>
+            )}
+            <Link href="/admin/account" className="text-sm font-medium text-ink-500 transition hover:text-brand">
+              Mon compte
             </Link>
             <button
               type="button"
@@ -149,6 +161,10 @@ function AdminEventsContent() {
                     <p className="text-sm text-ink-500">
                       {new Date(event.date).toLocaleDateString("fr-FR")} &middot; {event.location}
                     </p>
+                    {/* Vue admin : tous les evenements, avec leur organisateur. */}
+                    {event.organizer_email && event.organizer_email !== user?.email && (
+                      <p className="mt-0.5 text-xs text-ink-300">Organisateur : {event.organizer_email}</p>
+                    )}
                   </div>
                   <span className="text-sm text-ink-300">{event.photo_count} photos</span>
                 </div>

@@ -122,6 +122,65 @@ async def test_delete_photo_unknown_returns_404(auth_client: AsyncClient):
     assert resp.status_code == 404
 
 
+async def test_upload_generates_watermarked_preview(auth_client: AsyncClient, storage_service):
+    event_id = await _create_event(auth_client)
+    files = [("files", ("photo1.jpg", _make_jpeg_bytes(), "image/jpeg"))]
+    photo = (await auth_client.post(f"/photos/upload?event_id={event_id}", files=files)).json()["uploaded"][0]
+
+    wm_key = f"events/{event_id}/previews-wm/{photo['id']}.jpg"
+    clean_key = f"events/{event_id}/previews/{photo['id']}.jpg"
+    assert wm_key in storage_service.objects
+    assert clean_key in storage_service.objects
+    # Meme dimensions que l'apercu net, contenu different (filigrane incruste).
+    wm = Image.open(io.BytesIO(storage_service.objects[wm_key]))
+    clean = Image.open(io.BytesIO(storage_service.objects[clean_key]))
+    assert wm.size == clean.size
+    assert storage_service.objects[wm_key] != storage_service.objects[clean_key]
+
+
+async def test_public_gallery_serves_watermark_except_on_kiosk(auth_client: AsyncClient, client: AsyncClient):
+    created = (await auth_client.post(
+        "/events",
+        json={"name": "Gala Filigrane", "date": "2026-10-01T10:00:00Z", "location": "Abidjan", "pricing": {"unit_price": 500}},
+    )).json()
+    event_id, kiosk_token = created["id"], created["kiosk_token"]
+    files = [("files", ("photo1.jpg", _make_jpeg_bytes(), "image/jpeg"))]
+    await auth_client.post(f"/photos/upload?event_id={event_id}", files=files)
+    client.headers.pop("Authorization", None)
+
+    phone = (await client.get(f"/events/{event_id}/photos")).json()["items"][0]
+    assert "/previews-wm/" in phone["preview_url"]
+
+    wrong = (await client.get(f"/events/{event_id}/photos", params={"kiosk_token": "faux"})).json()["items"][0]
+    assert "/previews-wm/" in wrong["preview_url"]
+
+    kiosk = (await client.get(f"/events/{event_id}/photos", params={"kiosk_token": kiosk_token})).json()["items"][0]
+    assert "/previews/" in kiosk["preview_url"]
+    assert "/previews-wm/" not in kiosk["preview_url"]
+
+
+async def test_photo_without_watermark_yet_falls_back_to_thumbnail(
+    auth_client: AsyncClient, client: AsyncClient, storage_service, test_session_factory, seed_photo
+):
+    """Anciennes photos pas encore rattrapees : le telephone recoit la
+    miniature, jamais l'apercu net."""
+    event_id = await _create_event(auth_client)
+    await seed_photo(event_id, storage_service, test_session_factory, "old.jpg", _make_jpeg_bytes())
+
+    item = (await client.get(f"/events/{event_id}/photos")).json()["items"][0]
+    assert "/thumbnails/" in item["preview_url"]
+
+
+async def test_delete_photo_removes_all_derivatives(auth_client: AsyncClient, storage_service):
+    event_id = await _create_event(auth_client)
+    files = [("files", ("photo1.jpg", _make_jpeg_bytes(), "image/jpeg"))]
+    photo_id = (await auth_client.post(f"/photos/upload?event_id={event_id}", files=files)).json()["uploaded"][0]["id"]
+    assert any(photo_id in key for key in storage_service.objects)
+
+    assert (await auth_client.delete(f"/photos/{photo_id}")).status_code == 204
+    assert not any(photo_id in key for key in storage_service.objects)
+
+
 async def test_delete_photo_blocked_if_sold(
     auth_client: AsyncClient, client: AsyncClient, storage_service, test_session_factory
 ):

@@ -43,7 +43,13 @@ export default function PhotoGrid({
 
     function updateSize() {
       setSize((prev) => {
-        const next = { width: window.innerWidth, height: window.innerHeight - bottomOffset };
+        // clientWidth (et non window.innerWidth, qui inclut la barre de
+        // defilement verticale) : la grille debordait sinon de la largeur de
+        // la barre, avec une barre de defilement horizontale parasite.
+        const next = {
+          width: document.documentElement.clientWidth,
+          height: window.innerHeight - bottomOffset,
+        };
         // Sur mobile, taper un bouton peut declencher un micro-resize (barre
         // d'adresse qui se replie/deplie) : on ignore les variations
         // negligeables pour ne pas relayouter toute la grille virtualisee a

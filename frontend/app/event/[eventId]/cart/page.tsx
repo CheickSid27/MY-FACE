@@ -5,9 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import { CartIcon } from "@/components/icons";
 import MethodIcon, { METHOD_LABELS } from "@/components/payments/MethodIcon";
 import PaymentProgressOverlay from "@/components/payments/PaymentProgressOverlay";
+import PhoneInput from "@/components/payments/PhoneInput";
 import { api, ApiError } from "@/lib/api-client";
 import { getCartSessionId } from "@/lib/cart";
-import { isKioskMode } from "@/lib/kiosk";
+import { getKioskToken, isKioskMode } from "@/lib/kiosk";
 import { useKioskInactivityReset } from "@/lib/kiosk-inactivity-reset";
 import type { CartRead, EventPaymentMethodRead, PaymentMethod } from "@/types/api";
 
@@ -18,12 +19,18 @@ export default function CartPage() {
   const [cart, setCart] = useState<CartRead | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [phone, setPhone] = useState("");
+  // Numero au format international (+225...), null tant que la saisie
+  // n'est pas un numero valide pour le pays choisi (voir PhoneInput).
+  const [phone, setPhone] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [paymentReady, setPaymentReady] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [togglingPrintId, setTogglingPrintId] = useState<string | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<EventPaymentMethodRead[]>([]);
+  // "error" : chargement des moyens de paiement impossible. Plus aucun repli
+  // silencieux dans ce cas (l'ancien repli "manual" creait des commandes que
+  // personne ne pouvait ni payer ni confirmer).
+  const [methodsState, setMethodsState] = useState<"loading" | "ready" | "error">("loading");
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   // Impression et especes n'ont de sens que physiquement sur la borne
   // (quelqu'un pour recevoir l'argent, une imprimante branchee a cote) :
@@ -62,26 +69,22 @@ export default function CartPage() {
   // milieu de son propre paiement.
   useKioskInactivityReset(eventId, kiosk && !submitting);
 
-  useEffect(() => {
-    api
-      .getPaymentMethods(eventId)
-      .then((methods) => {
+  const loadPaymentOptions = useCallback(() => {
+    setMethodsState("loading");
+    Promise.all([api.getPaymentMethods(eventId), api.getEventPublic(eventId)])
+      .then(([methods, event]) => {
         setPaymentMethods(methods);
-        if (methods.length === 1) setSelectedMethod(methods[0].method);
-      })
-      .catch(() => {
-        // pas de moyen de paiement configure : on garde le flux de test existant
-      });
-    api
-      .getEventPublic(eventId)
-      .then((event) => {
         setPrintUnitPrice(event.pricing.print_unit_price ?? null);
         setCashEnabled(event.cash_enabled);
+        if (methods.length === 1) setSelectedMethod(methods[0].method);
+        setMethodsState("ready");
       })
-      .catch(() => {
-        // impression/especes resteront simplement indisponibles
-      });
+      .catch(() => setMethodsState("error"));
   }, [eventId]);
+
+  useEffect(() => {
+    loadPaymentOptions();
+  }, [loadPaymentOptions]);
 
   async function handleRemove(itemId: string) {
     setRemovingId(itemId);
@@ -98,7 +101,7 @@ export default function CartPage() {
   async function handleTogglePrint(itemId: string, printRequested: boolean) {
     setTogglingPrintId(itemId);
     try {
-      const updated = await api.setCartItemPrint(itemId, printRequested);
+      const updated = await api.setCartItemPrint(itemId, printRequested, getKioskToken(eventId));
       setCart(updated);
     } catch {
       setError("Impossible de mettre a jour l'impression.");
@@ -109,19 +112,24 @@ export default function CartPage() {
 
   const showCashOption = kiosk && cashEnabled;
   const hasMethodChoice = paymentMethods.length > 0 || showCashOption;
+  const noPaymentAvailable = methodsState === "ready" && !hasMethodChoice;
 
   async function handleCheckout(e: FormEvent) {
     e.preventDefault();
     if (!cart) return;
-    if (hasMethodChoice && !selectedMethod) {
+    if (!selectedMethod) {
       setError("Choisissez un moyen de paiement.");
+      return;
+    }
+    if (!phone) {
+      setError("Saisissez un numero de telephone valide.");
       return;
     }
     setSubmitting(true);
     setPaymentReady(false);
     setError(null);
     try {
-      const result = await api.initPayment(cart.session_id, phone, selectedMethod ?? undefined);
+      const result = await api.initPayment(cart.session_id, phone, selectedMethod, getKioskToken(eventId));
       setPaymentReady(true);
       // Laisse la barre de progression atteindre 100% a l'ecran avant de
       // quitter la page, sinon le saut a 100% n'est jamais visible.
@@ -240,8 +248,26 @@ export default function CartPage() {
           </div>
         </div>
 
-        <form onSubmit={handleCheckout} className="glass mt-6 rounded-2xl p-5">
-          {hasMethodChoice && (
+        {methodsState === "error" && (
+          <div className="glass mt-6 flex flex-col items-center gap-3 rounded-2xl p-5 text-center">
+            <p className="text-sm text-ink-700">
+              Impossible de charger les moyens de paiement. Verifiez votre connexion.
+            </p>
+            <button type="button" onClick={loadPaymentOptions} className="btn-ghost !px-5 !py-2.5 text-sm">
+              Reessayer
+            </button>
+          </div>
+        )}
+
+        {noPaymentAvailable && (
+          <div className="glass mt-6 rounded-2xl p-5 text-center text-sm text-ink-700">
+            Le paiement n&apos;est pas encore disponible pour cet evenement. Rapprochez-vous de
+            l&apos;organisateur.
+          </div>
+        )}
+
+        {methodsState === "ready" && hasMethodChoice && (
+          <form onSubmit={handleCheckout} className="glass mt-6 rounded-2xl p-5">
             <div className="mb-4">
               <label className="mb-1.5 block text-sm font-medium text-ink-700">Moyen de paiement</label>
               <div className="grid grid-cols-2 gap-2">
@@ -280,25 +306,17 @@ export default function CartPage() {
                 )}
               </div>
             </div>
-          )}
-          <label className="mb-1.5 block text-sm font-medium text-ink-700">Numero de telephone</label>
-          <input
-            type="tel"
-            required
-            placeholder="+225 07 00 00 00 00"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="mb-4 w-full rounded-xl border border-ink-900/10 px-4 py-3 text-ink-900 outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
-          />
-          {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
-          <button type="submit" disabled={submitting} className="btn-accent w-full">
-            {submitting
-              ? "Initialisation..."
-              : paymentMethods.length > 0
-                ? "Continuer vers le paiement"
-                : `Payer ${cart.pricing.total.toLocaleString("fr-FR")} ${cart.pricing.currency}`}
-          </button>
-        </form>
+            <label className="mb-1.5 block text-sm font-medium text-ink-700">
+              Numero de telephone{" "}
+              <span className="font-normal text-ink-500">(pour recevoir vos photos par SMS)</span>
+            </label>
+            <PhoneInput onChange={setPhone} disabled={submitting} className="mb-4" />
+            {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+            <button type="submit" disabled={submitting || !phone || !selectedMethod} className="btn-accent w-full">
+              {submitting ? "Initialisation..." : "Continuer vers le paiement"}
+            </button>
+          </form>
+        )}
       </div>
 
       {submitting && <PaymentProgressOverlay done={paymentReady} />}

@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +10,7 @@ from app.models.event import Event
 from app.models.face_embedding import FaceEmbedding
 from app.models.photo import Photo
 from app.schemas.face import FaceScanMatch, FaceScanResponse, PhotoIndexingStatus
+from app.services.access import is_kiosk_request
 from app.services.face_recognition import ImageDecodeError, detect_faces_async
 from app.services.photo_urls import to_photo_read
 from app.services.storage import StorageService, get_storage_service
@@ -28,6 +29,7 @@ async def scan_face(
     event_id: uuid.UUID,
     consent: bool = Form(...),
     selfie: UploadFile = File(...),
+    kiosk_token: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     storage: StorageService = Depends(get_storage_service),
 ) -> FaceScanResponse:
@@ -87,8 +89,13 @@ async def scan_face(
     )
     result = await db.execute(stmt)
 
+    # Apercus filigranes sur le telephone d'un invite, nets a la borne.
+    clean_preview = is_kiosk_request(event, kiosk_token)
     matches = [
-        FaceScanMatch(photo=await to_photo_read(photo, storage), similarity=round(1 - distance, 4))
+        FaceScanMatch(
+            photo=await to_photo_read(photo, storage, clean_preview=clean_preview),
+            similarity=round(1 - distance, 4),
+        )
         for photo, distance in result.all()
     ]
 

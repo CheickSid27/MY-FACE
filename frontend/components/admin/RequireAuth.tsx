@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { isAuthenticated } from "@/lib/auth";
+import { useAuthStore } from "@/store/auth-store";
 
 export default function RequireAuth({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -16,6 +17,8 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   // n'importe quel autre appel via lib/api-client.ts) avant d'afficher quoi
   // que ce soit.
   const [status, setStatus] = useState<"checking" | "ok" | "denied">("checking");
+  const setUser = useAuthStore((s) => s.setUser);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -25,12 +28,24 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
     }
     api
       .me()
-      .then(() => setStatus("ok"))
+      .then((user) => {
+        setUser(user);
+        setStatus("ok");
+      })
       .catch(() => {
         setStatus("denied");
         router.replace("/admin/login");
       });
-  }, [router]);
+  }, [router, setUser]);
+
+  // Deconnexion depuis une page deja affichee : on quitte immediatement
+  // l'ecran admin au lieu de le laisser visible sans session.
+  useEffect(() => {
+    if (status === "ok" && !isLoggedIn) {
+      setStatus("denied");
+      router.replace("/admin/login");
+    }
+  }, [status, isLoggedIn, router]);
 
   if (status !== "ok") {
     return (

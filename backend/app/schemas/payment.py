@@ -1,19 +1,29 @@
 import uuid
-from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.models.order import OrderStatus, PaymentMethod
+from app.services.phone import normalize_phone
 
 
 class PaymentInitRequest(BaseModel):
     session_id: uuid.UUID
+    # Numero international ("+2250701020304"), valide selon le format reel
+    # du pays et stocke en E.164 (voir services/phone.py).
     contact_phone: str = Field(min_length=6, max_length=32)
-    # Moyen de paiement choisi par le client (Wave, Orange Money...). Si
-    # fourni, on utilise le flux QR + confirmation manuelle organisateur
-    # (voir routers/payments.py). Si omis, on garde l'ancien comportement
-    # (provider global PAYMENT_PROVIDER, utilise par le mode test "manual").
-    payment_method: PaymentMethod | None = None
+    # Moyen de paiement choisi par le client : QR marchand configure par
+    # l'organisateur (Wave, Orange Money...) ou especes (borne). Obligatoire :
+    # l'ancien repli sans moyen de paiement creait des commandes que
+    # personne ne pouvait ni payer ni confirmer (voir services/payments.py).
+    payment_method: PaymentMethod
+    # Jeton de la borne : obligatoire pour payer en especes (quelqu'un doit
+    # physiquement recevoir l'argent : jamais depuis le telephone d'un invite).
+    kiosk_token: str | None = None
+
+    @field_validator("contact_phone")
+    @classmethod
+    def _valid_phone(cls, value: str) -> str:
+        return normalize_phone(value)
 
 
 class PaymentInitResponse(BaseModel):

@@ -11,7 +11,7 @@ import ScanDialog from "@/components/scan/ScanDialog";
 import { api } from "@/lib/api-client";
 import { getCartSessionId, setCartSessionId } from "@/lib/cart";
 import { useKioskInactivityReset } from "@/lib/kiosk-inactivity-reset";
-import { isKioskMode } from "@/lib/kiosk";
+import { getKioskToken, isKioskMode } from "@/lib/kiosk";
 import type { CartRead, Photo, PhotoListResponse } from "@/types/api";
 
 const PAGE_SIZE = 60;
@@ -71,7 +71,9 @@ export default function GalleryPage() {
 
   const fetchAndCache = useCallback(
     async (pageToLoad: number) => {
-      const data = await api.listPhotos(eventId, pageToLoad, PAGE_SIZE);
+      // Jeton borne transmis : le serveur sert alors les apercus nets ; sur
+      // le telephone d'un invite, ils sont filigranes (voir lib/kiosk.ts).
+      const data = await api.listPhotos(eventId, pageToLoad, PAGE_SIZE, getKioskToken(eventId));
       pageCacheRef.current.set(pageToLoad, data);
       return data;
     },
@@ -115,8 +117,14 @@ export default function GalleryPage() {
   }, [page, total, fetchAndCache]);
 
   function syncCart(cart: CartRead) {
-    setSelectedIds(new Set(cart.items.map((item) => item.photo.id)));
-    setCartCount(cart.items.length);
+    // Les ajouts encore dans le lot en attente (debounce, pas encore envoyes)
+    // ne sont pas dans le panier serveur : on les conserve, sinon une
+    // resynchronisation effacerait visuellement une selection toute recente
+    // (meme cause que le "flicker" corrige le 01/09, voir handleToggleSelect).
+    const selected = new Set(cart.items.map((item) => item.photo.id));
+    pendingAddIdsRef.current.forEach((id) => selected.add(id));
+    setSelectedIds(selected);
+    setCartCount(selected.size);
     const map: Record<string, string> = {};
     cart.items.forEach((item) => {
       map[item.photo.id] = item.id;
@@ -124,7 +132,7 @@ export default function GalleryPage() {
     setItemIdByPhoto(map);
   }
 
-  useEffect(() => {
+  const reloadCart = useCallback(() => {
     const sessionId = getCartSessionId(eventId);
     if (!sessionId) return;
     api
@@ -134,6 +142,28 @@ export default function GalleryPage() {
         // panier expire ou introuvable : on repart d'un panier vide
       });
   }, [eventId]);
+
+  useEffect(() => {
+    reloadCart();
+  }, [reloadCart]);
+
+  // Le dialogue de scan gere son propre panier (ajouts/retraits depuis les
+  // resultats) : la galerie se resynchronise sur le serveur apres chacune de
+  // ses modifications, sinon le badge et les coches restaient perimes a la
+  // fermeture du dialogue. Rechargement regroupe (debounce) : une serie de
+  // clics rapides ne declenche qu'un seul aller-retour.
+  const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleCartReload = useCallback(() => {
+    if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
+    reloadTimerRef.current = setTimeout(reloadCart, 300);
+  }, [reloadCart]);
+
+  useEffect(
+    () => () => {
+      if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
+    },
+    []
+  );
 
   const itemIdByPhotoRef = useRef<Record<string, string>>({});
   itemIdByPhotoRef.current = itemIdByPhoto;
@@ -408,7 +438,15 @@ export default function GalleryPage() {
         />
       )}
 
-      <ScanDialog eventId={eventId} open={scanOpen} onClose={() => setScanOpen(false)} />
+      <ScanDialog
+        eventId={eventId}
+        open={scanOpen}
+        onClose={() => {
+          setScanOpen(false);
+          scheduleCartReload();
+        }}
+        onCartChanged={scheduleCartReload}
+      />
       <FindFacesDialog
         eventId={eventId}
         open={findFacesOpen}

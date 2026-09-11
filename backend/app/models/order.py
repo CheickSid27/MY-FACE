@@ -23,6 +23,11 @@ class OrderStatus(str, enum.Enum):
     AWAITING_CONFIRMATION = "awaiting_confirmation"
     SUCCESS = "success"
     FAILED = "failed"
+    # Commande abandonnee : jamais payee dans le delai imparti (voir
+    # services/orders.py, ORDER_PENDING_TTL_MINUTES) ou annulee a la main par
+    # l'organisateur. Distincte de FAILED (paiement refuse/rejete) pour que
+    # les statistiques ne melangent pas "client parti" et "paiement refuse".
+    CANCELLED = "cancelled"
 
 
 class PaymentMethod(str, enum.Enum):
@@ -67,6 +72,10 @@ class Order(Base):
         nullable=False,
     )
     payment_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Derniere impression des tirages papier de la commande (page d'impression
+    # de la borne ou de l'admin). NULL = tirages encore a imprimer : alimente
+    # la file "Tirages a imprimer" de l'organisateur et evite les doublons.
+    printed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False

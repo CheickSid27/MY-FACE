@@ -17,7 +17,7 @@ export default function DownloadPage() {
   const [data, setData] = useState<DownloadResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     api
       .getDownload(orderId)
       .then((result) => {
@@ -36,12 +36,28 @@ export default function DownloadPage() {
       );
   }, [orderId]);
 
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Les liens signes expirent (voir expires_in) mais l'acces a la commande,
+  // lui, est permanent : si la page reste ouverte, on les renouvelle un peu
+  // avant leur expiration pour que "Telecharger" marche toujours.
+  useEffect(() => {
+    if (!data) return;
+    const refreshMs = Math.max(60, data.expires_in - 120) * 1000;
+    const timer = setTimeout(load, refreshMs);
+    return () => clearTimeout(timer);
+  }, [data, load]);
+
+  const kiosk = data != null && isKioskMode(data.event_id);
   const printPhotos = data?.photos.filter((p) => p.print_requested) ?? [];
-  const showPrintButton = printPhotos.length > 0 && data != null && isKioskMode(data.event_id);
+  const showPrintButton = printPhotos.length > 0 && kiosk;
 
   // Retour automatique a la galerie si le client reste inactif : evite
-  // qu'une borne/tablette partagee reste bloquee sur la page de telechargement
-  // d'un client precedent.
+  // qu'une borne partagee reste bloquee sur la page de telechargement d'un
+  // client precedent. Borne uniquement : sur son propre telephone, le client
+  // doit pouvoir prendre son temps.
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const goToGallery = useCallback(() => {
@@ -49,7 +65,7 @@ export default function DownloadPage() {
   }, [data, router]);
 
   useEffect(() => {
-    if (!data) return;
+    if (!data || !kiosk) return;
 
     function resetTimer() {
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
@@ -64,7 +80,7 @@ export default function DownloadPage() {
       events.forEach((evt) => window.removeEventListener(evt, resetTimer));
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     };
-  }, [data, goToGallery]);
+  }, [data, kiosk, goToGallery]);
 
   if (error) {
     return (
@@ -89,9 +105,9 @@ export default function DownloadPage() {
           <CheckIcon />
         </div>
         <h1 className="text-2xl font-bold text-brand">Paiement confirme !</h1>
-        <p className="mt-1 text-ink-500">
-          Vos {data.photos.length} photo(s) sont pretes. Les liens expirent dans{" "}
-          {Math.round(data.expires_in / 60)} minutes.
+        <p className="mx-auto mt-1 max-w-md text-ink-500">
+          Vos {data.photos.length} photo(s) en qualite originale sont pretes. Elles restent
+          disponibles a tout moment depuis ce lien ou le QR code ci-dessous.
         </p>
       </div>
 
@@ -121,20 +137,31 @@ export default function DownloadPage() {
           alt="QR code de telechargement"
           className="h-40 w-40 rounded-lg"
         />
-        <p className="max-w-[200px] text-center text-xs text-ink-500">
-          Scannez ce QR code pour retrouver ce lien sur un autre appareil.
+        <p className="max-w-[220px] text-center text-xs text-ink-500">
+          Scannez ce QR code pour retrouver vos photos sur un autre appareil, maintenant ou plus
+          tard.
         </p>
       </div>
 
-      <div className="grid w-full max-w-2xl grid-cols-3 gap-3 sm:grid-cols-4">
+      <div className="grid w-full max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
         {data.photos.map((photo) => (
-          <div key={photo.photo_id} className="glass overflow-hidden rounded-xl">
+          <div key={photo.photo_id} className="glass flex flex-col overflow-hidden rounded-xl">
+            {/* Miniature pour l'apercu : afficher les originaux ici faisait
+                telecharger plusieurs Mo par photo rien que pour voir la liste. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={photo.url}
+              src={photo.thumbnail_url}
               alt={photo.filename}
+              loading="lazy"
               className="aspect-square w-full object-cover"
             />
+            <a
+              href={photo.url}
+              download={photo.filename}
+              className="flex items-center justify-center gap-1 px-2 py-2 text-xs font-semibold text-brand transition hover:bg-white/60"
+            >
+              <span aria-hidden>&darr;</span> Telecharger
+            </a>
           </div>
         ))}
       </div>

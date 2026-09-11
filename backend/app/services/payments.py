@@ -9,13 +9,16 @@ imprevisible en prod), chaque adaptateur reel leve NotImplementedError avec
 un message explicite tant qu'il n'est pas branche avec de vraies cles et
 implemente contre la documentation officielle de l'operateur.
 
-L'adaptateur MANUAL est un simulateur de dev/test explicitement signale comme
-tel : il ne deplace jamais d'argent reel. Il permet de tester tout le
-parcours (panier -> paiement -> telechargement) avant que les vrais
-operateurs soient integres. Le provider actif est choisi par
-PAYMENT_PROVIDER dans .env — jamais de fallback silencieux vers MANUAL si un
-autre provider est demande sans etre configure : dans ce cas on leve une
-erreur claire.
+L'adaptateur MANUAL ne cree plus aucune commande : c'etait un repli qui
+s'activait quand aucun moyen de paiement n'etait choisi, et produisait des
+commandes "processing" que personne ne pouvait ni payer ni confirmer (3
+bloquees en production). /payments/init exige desormais un moyen de paiement
+reel (QR marchand configure ou especes a la borne). Le provider global
+(PAYMENT_PROVIDER dans .env) ne sert plus qu'a verifier la signature HMAC du
+webhook operateur generique (POST /payments/webhook), en attendant qu'une
+vraie API Mobile Money soit branchee — jamais de fallback silencieux vers
+MANUAL si un autre provider est demande sans etre configure : dans ce cas on
+leve une erreur claire.
 """
 
 import hashlib
@@ -53,19 +56,16 @@ def _hmac_sign(secret: str, raw_body: bytes) -> str:
 
 
 class ManualPaymentAdapter(PaymentProvider):
-    """Simulateur de paiement pour le dev/test. AUCUN ARGENT REEL NE BOUGE.
+    """Adaptateur sans operateur reel. AUCUN ARGENT REEL NE BOUGE.
 
-    Le paiement est initie avec une reference locale ; sa confirmation se
-    fait via l'endpoint de test `POST /payments/{order_id}/simulate` (non
-    expose en production, voir routers/payments.py), qui reproduit le meme
-    chemin de code qu'un vrai webhook operateur (signature HMAC comprise)."""
+    N'est plus utilise pour creer des commandes (voir docstring du module) :
+    il ne sert qu'a verifier la signature HMAC (PAYMENT_WEBHOOK_SECRET) des
+    appels a POST /payments/webhook, meme chemin de code qu'un vrai webhook
+    operateur."""
 
     async def init_payment(self, order: Order) -> PaymentInitResult:
         reference = f"MANUAL-{secrets.token_hex(8)}"
-        return PaymentInitResult(
-            reference=reference,
-            instructions="Mode test (aucun paiement reel) : confirmez via l'endpoint de simulation.",
-        )
+        return PaymentInitResult(reference=reference, instructions="Aucun operateur de paiement branche.")
 
     def verify_webhook_signature(self, raw_body: bytes, signature: str | None) -> bool:
         if signature is None:

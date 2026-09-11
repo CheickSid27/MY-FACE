@@ -25,6 +25,7 @@ dependencies = [
     "numpy>=1.26.4",
     "qrcode>=7.4.2",
     "africastalking>=1.2.9",
+    "pywebpush>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -36,7 +37,12 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# Fixtures ET tests sur la meme boucle (session) : avec des tests en boucle
+# "function" et des fixtures en boucle "session", une connexion asyncpg
+# ouverte dans une boucle etait fermee depuis l'autre ("attached to a
+# different loop" au teardown de test_faces.py).
 asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 
 [tool.ruff]

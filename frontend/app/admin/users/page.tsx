@@ -4,10 +4,12 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import RequireAuth from "@/components/admin/RequireAuth";
 import { api, ApiError } from "@/lib/api-client";
+import { useAuthStore } from "@/store/auth-store";
 import type { User, UserRole } from "@/types/api";
 
 function UsersContent() {
   const router = useRouter();
+  const currentUser = useAuthStore((s) => s.user);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -129,15 +131,21 @@ function UsersContent() {
             <li key={user.id} className="glass flex items-center justify-between rounded-2xl p-4">
               <div>
                 <p className="font-semibold text-ink-900">{user.email}</p>
-                <p className="text-sm text-ink-500">{user.role}</p>
+                <p className="text-sm text-ink-500">
+                  {user.role === "admin" ? "Administrateur" : "Photographe"}
+                  {user.id === currentUser?.id && " · vous"}
+                </p>
               </div>
-              <button
-                type="button"
-                onClick={() => handleDelete(user.id)}
-                className="text-sm font-medium text-red-600 transition hover:text-red-800"
-              >
-                Supprimer
-              </button>
+              {/* Suppression de son propre compte refusee par l'API : bouton masque. */}
+              {user.id !== currentUser?.id && (
+                <button
+                  type="button"
+                  onClick={() => handleDelete(user.id)}
+                  className="text-sm font-medium text-red-600 transition hover:text-red-800"
+                >
+                  Supprimer
+                </button>
+              )}
             </li>
           ))}
         </ul>

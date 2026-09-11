@@ -7,6 +7,7 @@ import { AlertIcon, CameraIcon, CheckIcon, SearchIcon } from "@/components/icons
 import { api, ApiError } from "@/lib/api-client";
 import { getCartSessionId, setCartSessionId } from "@/lib/cart";
 import { flyToCart } from "@/lib/fly-to-cart";
+import { getKioskToken } from "@/lib/kiosk";
 import type { CartRead, FaceScanMatch, Photo } from "@/types/api";
 
 type Step = "consent" | "camera" | "scanning" | "results" | "error";
@@ -15,9 +16,12 @@ interface ScanDialogProps {
   eventId: string;
   open: boolean;
   onClose: () => void;
+  /** Appele apres chaque ajout/retrait confirme par le serveur, pour que la
+   * page parente (galerie) resynchronise son propre etat du panier. */
+  onCartChanged?: () => void;
 }
 
-export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) {
+export default function ScanDialog({ eventId, open, onClose, onCartChanged }: ScanDialogProps) {
   const router = useRouter();
 
   const [step, setStep] = useState<Step>("consent");
@@ -165,7 +169,7 @@ export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) 
     setStep("scanning");
 
     try {
-      const result = await api.scanFace(eventId, blob, true);
+      const result = await api.scanFace(eventId, blob, true, getKioskToken(eventId));
       setMatches(result.matches);
       setStep("results");
     } catch (err) {
@@ -208,6 +212,7 @@ export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) 
           newMap[item.photo.id] = item.id;
         });
         setItemIdByPhoto((prev) => ({ ...prev, ...newMap }));
+        onCartChanged?.();
       } catch {
         setSelectedIds((prev) => {
           const next = new Set(prev);
@@ -219,7 +224,7 @@ export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) 
       }
     });
     return flushChainRef.current;
-  }, [eventId]);
+  }, [eventId, onCartChanged]);
 
   function handlePhotoClick(photo: Photo) {
     const wasSelected = selectedIds.has(photo.id);
@@ -259,6 +264,7 @@ export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) 
           delete next[photo.id];
           return next;
         });
+        onCartChanged?.();
       } catch {
         setSelectedIds((prev) => new Set(prev).add(photo.id));
         setCartCount((c) => c + 1);
@@ -471,15 +477,20 @@ export default function ScanDialog({ eventId, open, onClose }: ScanDialogProps) 
         )}
       </div>
 
+      {/* Clics de la visionneuse arretes ici : sinon fermer une photo
+          remontait jusqu'au fond du dialogue et fermait tout le scan (les
+          resultats etaient perdus). */}
       {lightboxIndex !== null && (
-        <PhotoLightbox
-          photos={matches.map((m) => m.photo)}
-          index={lightboxIndex}
-          onClose={() => setLightboxIndex(null)}
-          onNavigate={setLightboxIndex}
-          selectedPhotoIds={selectedIds}
-          onToggleSelect={handlePhotoClick}
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <PhotoLightbox
+            photos={matches.map((m) => m.photo)}
+            index={lightboxIndex}
+            onClose={() => setLightboxIndex(null)}
+            onNavigate={setLightboxIndex}
+            selectedPhotoIds={selectedIds}
+            onToggleSelect={handlePhotoClick}
+          />
+        </div>
       )}
     </div>
   );

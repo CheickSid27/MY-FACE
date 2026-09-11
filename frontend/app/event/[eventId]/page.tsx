@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import FramedPhoto from "@/components/photo/FramedPhoto";
 import ScanDialog from "@/components/scan/ScanDialog";
 import { api } from "@/lib/api-client";
-import { setKioskMode } from "@/lib/kiosk";
+import { forgetKioskToken, getKioskToken, rememberKioskToken } from "@/lib/kiosk";
 import type { EventPublicRead, Photo } from "@/types/api";
 
 export default function EventHomePage() {
@@ -20,19 +20,32 @@ export default function EventHomePage() {
 
   // Detection du mode borne : le lien configure sur la borne physique porte
   // ?kiosk=<le vrai kiosk_token de l'evenement> (voir admin, page evenement).
-  // Le serveur seul decide si le token est valide (is_kiosk) ; on garde le
-  // resultat pour toute la session de navigation, voir lib/kiosk.ts.
+  // Sans ce parametre (retour a l'accueil, reset d'inactivite...), on
+  // re-verifie le jeton deja memorise pour cette session. Le serveur seul
+  // decide si le jeton est valide (is_kiosk) ; voir lib/kiosk.ts.
+  const urlKioskToken = searchParams.get("kiosk");
   useEffect(() => {
-    const kioskToken = searchParams.get("kiosk") ?? undefined;
+    const candidate = urlKioskToken ?? getKioskToken(eventId);
     api
-      .getEventPublic(eventId, kioskToken)
+      .getEventPublic(eventId, candidate)
       .then((data) => {
         setEvent(data);
-        setKioskMode(eventId, data.is_kiosk);
+        if (data.is_kiosk && candidate) {
+          rememberKioskToken(eventId, candidate);
+          if (urlKioskToken) {
+            // Jeton retire de la barre d'adresse une fois memorise : il n'a
+            // pas a rester visible (ni partageable) sur l'ecran de la borne.
+            router.replace(`/event/${eventId}`);
+          }
+        } else if (candidate) {
+          // Jeton refuse (lien errone, ou jeton d'un autre evenement) :
+          // comportement invite normal.
+          forgetKioskToken(eventId);
+        }
       })
       .catch(() => setError("Evenement introuvable."))
       .finally(() => setLoading(false));
-  }, [eventId, searchParams]);
+  }, [eventId, urlKioskToken, router]);
 
   // Photo vedette pour le cadre decoratif de l'accueil (voir
   // Event.frame_caption) : la plus recemment uploadee, pas de selection
@@ -40,12 +53,12 @@ export default function EventHomePage() {
   useEffect(() => {
     if (!event?.frame_caption) return;
     api
-      .listPhotos(eventId, 1, 1)
+      .listPhotos(eventId, 1, 1, event.is_kiosk ? getKioskToken(eventId) : null)
       .then((data) => setFeaturedPhoto(data.items[0] ?? null))
       .catch(() => {
         // pas de photo vedette disponible : le cadre ne s'affiche simplement pas
       });
-  }, [eventId, event?.frame_caption]);
+  }, [eventId, event?.frame_caption, event?.is_kiosk]);
 
   if (loading) {
     return (

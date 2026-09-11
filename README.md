@@ -23,40 +23,58 @@ vision produit complete, et [docs/](docs/) pour la documentation technique detai
 ## Fonctionnalites
 
 **Cote invite** (application borne/mobile, sans compte requis)
-- Accueil evenement par lien/QR code unique, galerie complete virtualisee (react-window) pour tenir
-  sur des milliers de photos sans ralentir
+- Accueil evenement par lien/QR code unique, galerie complete virtualisee (react-window) et paginee
+  pour tenir sur des milliers de photos sans ralentir
 - **Scan facial** : selfie pris depuis la camera du navigateur (aperçu en mode miroir, effets visuels
   "scanner"), comparaison contre tous les visages indexes de l'evenement (InsightFace + pgvector),
   resultats en quelques secondes
-- Vue "personnes detectees" : parcourir des groupes de visages similaires (pre-groupage DBSCAN) sans
-  avoir a scanner son visage
-- Panier avec mise a jour optimiste (aucune latence percue), animation "vol vers le panier"
+- Vue "personnes detectees" ("Trouver mon visage") : parcourir des groupes de visages similaires
+  (pre-groupage DBSCAN) sans avoir a scanner son visage — resultat mis en cache, affiche en moins
+  d'une seconde
+- Panier avec mise a jour optimiste (aucune latence percue)
 - Chargement progressif des photos : miniature instantanee (cache navigateur), puis version nette
   chargee silencieusement en arriere-plan (fondu, zero spinner)
+- **Apercus filigranes sur le telephone des invites** (motif "MYFACE" diagonal) ; la borne et
+  l'organisateur voient l'apercu net
 - Zoom/pan et swipe tactile dans la visionneuse plein ecran
 - Paiement par QR code marchand (Wave, Orange Money, MTN Money, Moov Money) : le client scanne, paie
-  hors-app, declare "j'ai paye", l'organisateur valide manuellement
-- Telechargement : liens individuels + zip complet + QR code de retour, valables indefiniment tant
-  que la commande est payee (pas de session a usage unique)
-- Retour automatique a la galerie apres 90s d'inactivite sur l'ecran de telechargement (usage borne)
+  hors-app, declare "j'ai paye", l'organisateur valide manuellement. Numero de telephone saisi avec
+  **selection de l'indicatif pays** et verification du format reel (stocke en +225...)
+- Commande non payee annulee automatiquement apres 1 h (configurable), jamais bloquee "en attente"
+- Telechargement : bouton de telechargement par photo (nom d'origine) + zip complet + QR code de
+  retour, valables indefiniment tant que la commande est payee (liens renouveles automatiquement)
+- **Mode borne** (lien avec jeton, verifie par le serveur) : paiement en especes, tirage papier par
+  photo, apercus sans filigrane, retour automatique a l'accueil apres 90s d'inactivite — la borne
+  reste une borne apres chaque reinitialisation
 
 **Cote organisateur** (dashboard admin, JWT)
-- Creation/gestion d'evenements (nom, date, lieu, grille tarifaire)
-- Upload batch de photos (lots de 10, jusqu'a 500 Mo par lot) avec generation automatique de
-  miniature (400px) + preview (1600px) + conservation de l'original intact (aucune perte de qualite,
-  reserve au telechargement post-achat)
+- Creation/gestion d'evenements (nom, date, lieu modifiables), **grille tarifaire complete** : prix
+  unitaire, lots a prix fixe, remises de volume, prix d'impression, especes a la borne
+- **Partage** : lien invite + QR code + affiche A4 imprimable ; lien/QR borne a part
+- Upload de photos par glisser-deposer (lots de 10, jusqu'a 500 Mo par lot) avec generation
+  automatique de miniature (400px) + preview (1600px) + preview filigranee + conservation de
+  l'original intact (aucune perte de qualite, reserve au telechargement post-achat)
 - **Dossier surveille** : ingestion automatique par polling d'un dossier local (ex: carte SD d'un
-  appareil photo copiee sur le PC), sans upload manuel
-- Suppression de photos individuelles (bloquee si la photo appartient deja a une commande payee)
+  appareil photo copiee sur le PC), sans upload manuel — sous-dossier cree automatiquement
+- Etat de la reconnaissance faciale par photo (en attente / echec) + bouton "Relancer l'indexation" ;
+  reprise automatique au redemarrage des indexations interrompues
+- Suppression de photos individuelles (bloquee si la photo appartient deja a une commande payee) ;
+  suppression d'un evenement bloquee s'il a des ventes, fichiers de stockage nettoyes sinon
 - Vue "personnes detectees" identique cote invite, avec vignettes recadrees sur le visage (pas la
   photo entiere) pour identifier chaque groupe d'un coup d'oeil
 - Configuration des moyens de paiement par evenement (numero marchand + image QR)
-- Confirmation manuelle des commandes en attente de verification
+- Commandes : **fiche detaillee / recu** (liste nominative des photos, tirages, detail du prix, QR
+  de telechargement du client), imprimable ; historique des paiements avec recherche par
+  telephone, numero de commande ou reference ; confirmation/rejet, annulation d'une commande
+  jamais payee, validation manuelle d'une commande expiree si le paiement est bien arrive
+- **Tirages papier** : commandes a la borne uniquement, impression a la borne apres paiement,
+  file "Tirages a imprimer" et impression depuis l'admin, suivi "imprime le..."
 - Statistiques (photos, ventes, revenu par jour) + **historique complet des commandes exportable en
   CSV**
 - **Notifications push (PWA)** : alerte sur le telephone de l'organisateur des qu'un client declare
   avoir paye, sans app mobile separee
-- Creation de comptes photographe (role limite) par un admin
+- Un admin voit et gere tous les evenements (tous organisateurs) et cree les comptes photographe ;
+  chacun peut changer son mot de passe ("Mon compte")
 
 ## Stack technique
 
@@ -102,22 +120,25 @@ vision produit complete, et [docs/](docs/) pour la documentation technique detai
 Flux d'une photo, de l'upload a la revente :
 
 1. **Ingestion** — upload manuel (batch admin) ou automatique (dossier surveille) → validation
-   (type, taille) → generation thumbnail (400px) + preview (1600px) → upload de l'original +
-   des deux derives vers le stockage objet → ligne `Photo` en base (`indexing_status=pending`).
+   (type, taille) → generation thumbnail (400px) + preview (1600px) + preview filigranee (orientation
+   EXIF appliquee) → upload de l'original et des derives vers le stockage objet → ligne `Photo` en
+   base (`indexing_status=pending`).
 2. **Indexation** (tache de fond, parallelisme borne) — telechargement de l'original, detection de
    visages (InsightFace), un embedding 512-d par visage detecte, ecriture dans `face_embeddings`
    (pgvector). Seul le calcul GPU est serialise (verrou global) ; le reseau (storage, DB) se
-   recouvre entre plusieurs photos.
+   recouvre entre plusieurs photos. Toute indexation interrompue est reprise au demarrage.
 3. **Recherche** — un invite prend un selfie → un embedding est calcule → comparaison par similarite
    cosinus contre tous les embeddings de l'evenement → photos correspondantes renvoyees, triees.
 4. **Groupage** — DBSCAN sur tous les embeddings d'un evenement (metrique cosinus) forme des groupes
    de visages similaires ; un visage sans voisin forme son propre groupe a une photo (jamais
-   d'exclusion silencieuse).
+   d'exclusion silencieuse). Resultat mis en cache par evenement, recalcule apres chaque indexation.
 5. **Panier → commande → paiement** — le client scanne un QR marchand, paie hors-app, declare
    "j'ai paye" (`AWAITING_CONFIRMATION`) → notification push a l'organisateur → validation manuelle
-   → SMS + acces telechargement.
+   → SMS + acces telechargement. Une commande jamais payee passe en `CANCELLED` apres
+   `ORDER_PENDING_TTL_MINUTES`.
 6. **Telechargement** — URLs presignees a expiration courte generees a la demande (jamais stockees),
-   zip genere a la volee, QR code permanent vers la page de telechargement.
+   zip genere et envoye au fil de l'eau (une photo en memoire a la fois), QR code permanent vers la
+   page de telechargement.
 
 ## Demarrage rapide
 
@@ -154,9 +175,15 @@ Voir [.env.example](.env.example) pour la liste complete et commentee. Points no
   d'asyncpg).
 - `STORAGE_BACKEND` — `local` (MinIO) ou `supabase`. Le support S3-compatible generique
   (`S3_ENDPOINT_URL` + credentials) couvre aussi Cloudflare R2 sans code specifique.
-- `PAYMENT_PROVIDER` — `manual` par defaut (aucun operateur reel branche, section paiement pilotee
-  par QR marchand + validation humaine). Les adaptateurs Wave/Orange Money/MTN/Moov existent en
+- `PAYMENT_PROVIDER` — `manual` par defaut. Ne sert plus qu'a verifier la signature HMAC du
+  webhook operateur generique (`/payments/webhook`) : toute commande passe par un QR marchand
+  configure ou par les especes a la borne. Les adaptateurs Wave/Orange Money/MTN/Moov existent en
   squelette et levent une erreur explicite tant qu'aucune cle API reelle n'est fournie.
+- `ORDER_PENDING_TTL_MINUTES` — delai avant annulation automatique d'une commande jamais payee
+  (60 par defaut). Ne s'applique jamais a une commande "a confirmer".
+- `APP_BASE_URL` — URL publique de l'app, utilisee dans les SMS, les QR codes (telechargement,
+  lien invite, affiche) et les notifications. Tant qu'elle vaut `localhost`, la page admin affiche
+  un avertissement : ces liens ne s'ouvriraient pas sur le telephone des invites.
 - `VAPID_*` — necessaires pour les notifications push admin ; voir
   [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#notifications-push-vapid) pour generer une paire de cles.
 - `WATCHED_FOLDER_*` — configuration du dossier surveille (ingestion automatique).
@@ -191,7 +218,11 @@ docker compose exec backend pytest
 
 La base `myface_test` est creee automatiquement au premier demarrage du conteneur `db` (voir
 `backend/docker/init-test-db.sql`). Les tables sont creees/supprimees par les fixtures pytest a
-chaque run, contre un vrai Postgres — pas de mock de la base de donnees.
+chaque run, contre un vrai Postgres — pas de mock de la base de donnees. Aucun appel externe
+pendant les tests : stockage en memoire, SMS simules, dossier surveille redirige vers un dossier
+temporaire. Parcours couverts notamment : QR → "j'ai paye" → validation → telechargement,
+expiration des commandes, filigrane/mode borne, cache des groupes de visages, dossier surveille,
+formats de telephone.
 
 ## Documentation complementaire
 
@@ -213,4 +244,10 @@ chaque run, contre un vrai Postgres — pas de mock de la base de donnees.
 - **Tunnel Cloudflare "quick"** (sans compte) genere une URL ephemere qui change a chaque
   redemarrage du conteneur `tunnel-app` ; un nom de domaine + tunnel nomme est necessaire pour une
   URL stable en production.
+- **GeniusPay** : endpoints backend presents (`/payments/geniuspay/*`, sandbox) mais aucun ecran
+  invite et secret webhook non configure — laisse en l'etat, decision produit en attente.
+- **Donnees biometriques** : droit a l'effacement, chiffrement des embeddings au repos et texte de
+  consentement a revoir (voir cahier des charges section 8) — reporte.
+- Animation "vol vers le panier" : code present (`lib/fly-to-cart.ts`) mais inactive (aucun element
+  cible dans les pages), laissee en l'etat pour le moment.
 - Pas de suite CI automatisee configuree dans ce depot (tests a lancer manuellement).

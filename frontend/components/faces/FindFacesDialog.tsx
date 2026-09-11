@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import PhotoLightbox from "@/components/gallery/PhotoLightbox";
 import { CheckIcon, UsersIcon } from "@/components/icons";
 import { api } from "@/lib/api-client";
+import { getKioskToken } from "@/lib/kiosk";
 import type { FaceCluster, Photo } from "@/types/api";
 
 interface FindFacesDialogProps {
@@ -38,7 +39,7 @@ export default function FindFacesDialog({
     setLoading(true);
     setError(null);
     api
-      .getClustersPublic(eventId)
+      .getClustersPublic(eventId, getKioskToken(eventId))
       .then((clusterData) => setClusters(clusterData.clusters))
       .catch(() => setError("Impossible de charger les visages detectes."))
       .finally(() => setLoading(false));
@@ -120,16 +121,21 @@ export default function FindFacesDialog({
         </div>
       </div>
 
+      {/* Les clics a l'interieur de la vue d'une personne (fond, bouton
+          fermer de la visionneuse...) ne doivent pas remonter jusqu'au fond
+          de CE dialogue, dont le onClick ferme tout "Trouver mon visage". */}
       {selectedCluster && (
-        <ClusterLightbox
-          cluster={selectedCluster}
-          photos={clusterPhotos}
-          onClose={() => setSelectedCluster(null)}
-          selectedPhotoIds={selectedPhotoIds}
-          onToggleSelect={onToggleSelect}
-          onBulkSelect={onBulkSelect}
-          addingPhotoId={addingPhotoId}
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <ClusterLightbox
+            cluster={selectedCluster}
+            photos={clusterPhotos}
+            onClose={() => setSelectedCluster(null)}
+            selectedPhotoIds={selectedPhotoIds}
+            onToggleSelect={onToggleSelect}
+            onBulkSelect={onBulkSelect}
+            addingPhotoId={addingPhotoId}
+          />
+        </div>
       )}
     </div>
   );
@@ -226,11 +232,13 @@ function ClusterLightbox({
     );
   }
 
+  // Fermer la visionneuse ramene aux photos de CETTE personne (et non a la
+  // liste de tous les visages, qu'il fallait alors re-parcourir en entier).
   return (
     <PhotoLightbox
       photos={photos}
       index={index}
-      onClose={onClose}
+      onClose={() => setIndex(null)}
       onNavigate={setIndex}
       selectedPhotoIds={selectedPhotoIds}
       onToggleSelect={onToggleSelect}

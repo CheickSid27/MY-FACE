@@ -208,7 +208,7 @@ async def test_toggle_print_updates_pricing(auth_client, client, storage_service
             "pricing": {"unit_price": 1000, "print_unit_price": 150},
         },
     )
-    event_id = resp.json()["id"]
+    event_id, kiosk_token = resp.json()["id"], resp.json()["kiosk_token"]
     photo1 = await seed_photo(event_id, storage_service, test_session_factory, "p1.jpg", _jpeg_bytes((1, 1, 1)))
     photo2 = await seed_photo(event_id, storage_service, test_session_factory, "p2.jpg", _jpeg_bytes((2, 2, 2)))
 
@@ -217,9 +217,16 @@ async def test_toggle_print_updates_pricing(auth_client, client, storage_service
     add2 = await client.post("/cart/add", json={"session_id": session_id, "event_id": event_id, "photo_id": photo2})
     item1_id = add2.json()["items"][0]["id"]
 
+    # Sans le jeton de la borne (telephone d'un invite) : refuse.
+    for token in (None, "faux-jeton"):
+        refused = await client.patch(f"/cart/{item1_id}", json={"print_requested": True, "kiosk_token": token})
+        assert refused.status_code == 403
+
     # Seule la 1ere photo est marquee pour impression : le prix ne doit
     # augmenter que de 150, pas de 300 (l'autre photo n'est pas cochee).
-    patch_resp = await client.patch(f"/cart/{item1_id}", json={"print_requested": True})
+    patch_resp = await client.patch(
+        f"/cart/{item1_id}", json={"print_requested": True, "kiosk_token": kiosk_token}
+    )
     assert patch_resp.status_code == 200
     data = patch_resp.json()
     assert data["pricing"]["print_count"] == 1
@@ -228,7 +235,7 @@ async def test_toggle_print_updates_pricing(auth_client, client, storage_service
     item1 = next(i for i in data["items"] if i["id"] == item1_id)
     assert item1["print_requested"] is True
 
-    # Decocher revient au prix digital seul.
+    # Decocher revient au prix digital seul (toujours permis, meme sans jeton).
     unpatch_resp = await client.patch(f"/cart/{item1_id}", json={"print_requested": False})
     assert unpatch_resp.json()["pricing"]["total"] == 2000
     assert unpatch_resp.json()["pricing"]["print_count"] == 0

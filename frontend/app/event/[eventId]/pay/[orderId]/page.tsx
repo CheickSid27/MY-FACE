@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { CardIcon, ClockIcon, CrossIcon } from "@/components/icons";
+import { AlertIcon, CardIcon, ClockIcon, CrossIcon } from "@/components/icons";
 import MethodIcon from "@/components/payments/MethodIcon";
-import { api } from "@/lib/api-client";
-import type { PaymentStatusResponse } from "@/types/api";
+import { api, ApiError } from "@/lib/api-client";
+import type { OrderStatus, PaymentStatusResponse } from "@/types/api";
 
 const POLL_INTERVAL_MS = 3000;
+// Statuts definitifs : plus rien a attendre, le polling s'arrete.
+const FINAL_STATUSES: OrderStatus[] = ["success", "failed", "cancelled"];
 
 export default function PaymentStatusPage() {
   const { eventId, orderId } = useParams<{ eventId: string; orderId: string }>();
@@ -15,48 +17,87 @@ export default function PaymentStatusPage() {
 
   const [data, setData] = useState<PaymentStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Commande inexistante (lien errone/tronque) : distinct d'une simple
+  // erreur reseau passagere, qui laisse le polling continuer.
+  const [notFound, setNotFound] = useState(false);
   const [markingPaid, setMarkingPaid] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    async function poll() {
-      try {
-        const result = await api.getPaymentStatus(orderId);
-        setData(result);
-        if (result.status === "success") {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          router.push(`/order/${orderId}/download`);
-        } else if (result.status === "failed") {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-        }
-      } catch {
-        setError("Impossible de verifier le statut du paiement.");
-      }
-    }
+  const stopPolling = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = null;
+  }, []);
 
+  const poll = useCallback(async () => {
+    try {
+      const result = await api.getPaymentStatus(orderId);
+      setData(result);
+      setError(null);
+      if (result.status === "success") {
+        stopPolling();
+        router.push(`/order/${orderId}/download`);
+      } else if (FINAL_STATUSES.includes(result.status)) {
+        stopPolling();
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        setNotFound(true);
+        stopPolling();
+        return;
+      }
+      setError("Connexion instable : nouvelle verification automatique dans quelques secondes...");
+    }
+  }, [orderId, router, stopPolling]);
+
+  const startPolling = useCallback(() => {
+    stopPolling();
     poll();
     intervalRef.current = setInterval(poll, POLL_INTERVAL_MS);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [orderId, router]);
+  }, [poll, stopPolling]);
+
+  useEffect(() => {
+    startPolling();
+    return stopPolling;
+  }, [startPolling, stopPolling]);
 
   async function handleMarkPaid() {
     setMarkingPaid(true);
     try {
       const result = await api.markPaid(orderId);
       setData(result);
-    } catch {
-      setError("Impossible de confirmer votre paiement. Reessayez.");
+      setError(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Impossible de confirmer votre paiement. Reessayez.");
+      // Le statut a pu changer (ex: commande expiree) : on le relit.
+      poll();
     } finally {
       setMarkingPaid(false);
     }
   }
 
+  if (notFound) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-5 bg-gradient-to-br from-brand to-brand-light px-6 text-center text-white animate-fade-in">
+        <div className="glass-pill flex h-16 w-16 items-center justify-center text-3xl">
+          <AlertIcon />
+        </div>
+        <h1 className="text-xl font-bold">Commande introuvable</h1>
+        <p className="max-w-sm text-sm text-ink-300">
+          Ce lien de paiement n&apos;existe pas ou est incomplet. Verifiez le lien, ou refaites
+          votre selection depuis la galerie.
+        </p>
+        <button type="button" onClick={() => router.push(`/event/${eventId}/gallery`)} className="btn-accent">
+          Retour a la galerie
+        </button>
+      </main>
+    );
+  }
+
   if (!data) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand to-brand-light">
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gradient-to-br from-brand to-brand-light px-6 text-center text-white">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-accent border-t-transparent" />
+        {error && <p className="max-w-sm text-sm text-red-200">{error}</p>}
       </main>
     );
   }
@@ -67,9 +108,29 @@ export default function PaymentStatusPage() {
         <div className="glass-pill flex h-16 w-16 items-center justify-center text-3xl">
           <CrossIcon />
         </div>
-        <h1 className="text-xl font-bold">Le paiement a echoue</h1>
-        <p className="text-ink-300">
-          Aucun montant n&apos;a ete debite. Vous pouvez reessayer depuis votre panier.
+        <h1 className="text-xl font-bold">Paiement non confirme</h1>
+        <p className="max-w-sm text-ink-300">
+          L&apos;organisateur n&apos;a pas pu verifier la reception de ce paiement. Si vous avez
+          bien paye, rapprochez-vous de l&apos;organisateur avec votre numero de telephone.
+        </p>
+        <button type="button" onClick={() => router.push(`/event/${eventId}/cart`)} className="btn-accent">
+          Retour au panier
+        </button>
+      </main>
+    );
+  }
+
+  if (data.status === "cancelled") {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-gradient-to-br from-brand to-brand-light px-6 text-center text-white animate-fade-in">
+        <div className="glass-pill flex h-16 w-16 items-center justify-center text-3xl">
+          <ClockIcon />
+        </div>
+        <h1 className="text-xl font-bold">Commande expiree</h1>
+        <p className="max-w-sm text-ink-300">
+          Cette commande n&apos;a pas ete payee a temps et a ete annulee. Si vous avez deja paye,
+          rapprochez-vous de l&apos;organisateur avec votre numero de telephone : il peut la
+          valider. Sinon, vous pouvez repasser commande depuis votre panier.
         </p>
         <button type="button" onClick={() => router.push(`/event/${eventId}/cart`)} className="btn-accent">
           Retour au panier
@@ -104,7 +165,7 @@ export default function PaymentStatusPage() {
           </p>
         )}
 
-        {error && <p className="text-sm text-red-300">{error}</p>}
+        {error && <p className="max-w-sm text-sm text-red-200">{error}</p>}
 
         <button
           type="button"
@@ -140,7 +201,7 @@ export default function PaymentStatusPage() {
             commande. Ne fermez pas cette page : vous serez redirige automatiquement des
             confirmation.
           </p>
-          {error && <p className="text-sm text-red-300">{error}</p>}
+          {error && <p className="text-sm text-red-200">{error}</p>}
         </main>
       );
     }
@@ -156,7 +217,7 @@ export default function PaymentStatusPage() {
           L&apos;organisateur verifie la reception de votre paiement. Ne fermez pas cette page :
           vous serez redirige automatiquement des confirmation.
         </p>
-        {error && <p className="text-sm text-red-300">{error}</p>}
+        {error && <p className="text-sm text-red-200">{error}</p>}
       </main>
     );
   }
@@ -172,7 +233,7 @@ export default function PaymentStatusPage() {
         Ne fermez pas cette page. Vous recevrez un SMS avec votre lien de telechargement des la
         confirmation.
       </p>
-      {error && <p className="text-sm text-red-300">{error}</p>}
+      {error && <p className="text-sm text-red-200">{error}</p>}
     </main>
   );
 }

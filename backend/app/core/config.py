@@ -53,8 +53,8 @@ class Settings(BaseSettings):
     # Similarite cosinus min pour considerer deux visages comme la meme personne
     # (1.0 = identique). Seuil configurable par evenement dans une phase ulterieure.
     face_match_similarity_threshold: float = 0.45
-    # DBSCAN sur les embeddings normalises (voir routers/events.py,
-    # _compute_face_clusters) : eps est une DISTANCE cosinus (1 - similarite),
+    # DBSCAN sur les embeddings normalises (voir services/face_clusters.py,
+    # compute_event_clusters) : eps est une DISTANCE cosinus (1 - similarite),
     # pas une distance euclidienne. On reutilise le meme seuil de similarite
     # que le scan visiteur pour que "meme personne" veuille dire la meme chose
     # partout dans l'app. BUG CORRIGE : l'ancienne version utilisait
@@ -65,9 +65,21 @@ class Settings(BaseSettings):
     # ambiguite d'ordre d'evaluation dans le corps de classe Pydantic).
     face_cluster_eps: float = 0.55
     face_cluster_min_samples: int = 2
+    # Duree de vie max du cache memoire des groupes de visages (voir
+    # services/face_clusters.py). Le cache est de toute facon invalide des
+    # qu'une photo de l'evenement est indexee/supprimee : ce delai n'est
+    # qu'un filet de securite (ex: modification faite directement en base).
+    face_cluster_cache_ttl_seconds: int = 600
 
     # Panier invite
     cart_session_ttl_hours: int = 24
+
+    # Commande jamais payee (QR jamais scanne, client parti...) : annulee
+    # automatiquement passe ce delai (voir services/orders.py) au lieu de
+    # rester "en attente" indefiniment. Ne s'applique JAMAIS a une commande
+    # "awaiting_confirmation" (le client declare avoir paye : seul
+    # l'organisateur tranche).
+    order_pending_ttl_minutes: int = 60
 
     # Paiement (Phase 3). PAYMENT_PROVIDER=manual = adaptateur de secours SANS
     # aucun mouvement d'argent reel (voir services/payments.py), utilise tant

@@ -68,6 +68,16 @@ docker restart myface-nginx-1   # voir gotcha ci-dessous
 **Pour une URL stable** (recommande en production reelle) : achetez un nom de domaine, ajoutez-le a
 un compte Cloudflare, et remplacez le quick tunnel par un [tunnel nomme](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/create-remote-tunnel/).
 
+`APP_BASE_URL` alimente tous les liens envoyes ou imprimes : SMS de confirmation, QR code de
+telechargement, lien invite, QR et affiche A4 de l'evenement. Tant qu'il vaut `localhost`, la page
+admin de l'evenement affiche un avertissement : ces liens ne s'ouvriraient pas sur le telephone
+d'un invite.
+
+**Limites anti-abus derriere le tunnel** : tout le trafic public arrive a nginx par le conteneur
+`cloudflared`. nginx lit donc l'adresse reelle du client dans l'en-tete `CF-Connecting-IP`
+(`set_real_ip_from 172.16.0.0/12` + `real_ip_header`, voir `nginx/nginx.conf`) : les limites
+(connexion, scan facial, visages) s'appliquent par invite et non a tout l'evenement a la fois.
+
 ## 4. Piege operationnel : cache DNS nginx
 
 nginx resout le nom d'hote de ses upstreams (`backend`, `frontend`) **au demarrage** et met en cache
@@ -128,6 +138,18 @@ docker compose exec backend alembic upgrade head
 
 Appliquee automatiquement au demarrage du conteneur `backend` (voir la commande `CMD` dans
 `backend/Dockerfile`) — a executer manuellement uniquement si besoin de reappliquer hors demarrage.
+
+## 7 bis. Redemarrages, mises a jour et logs
+
+- **Backend** : le code est monte en bind-mount, un `docker restart myface-backend-1` suffit pour
+  prendre en compte une modification Python (uvicorn tourne sans rechargement automatique).
+- **Frontend** : image de production compilee, toute modification (y compris des `NEXT_PUBLIC_*`)
+  demande `docker compose build frontend` puis `docker compose up -d --no-deps frontend`.
+- **nginx** : `nginx.conf` est copie dans l'image (`docker compose build nginx`) ; le redemarrer
+  apres toute recreation de `backend`/`frontend` (cache DNS, voir section 4).
+- **Logs applicatifs** : `docker logs -f myface-backend-1` affiche les messages `myface.*` —
+  provider GPU utilise, indexation, dossier surveille, rattrapages au demarrage (commandes
+  expirees, indexations reprises, filigranes generes, groupes de visages pre-calcules).
 
 ## 8. Sauvegarde / donnees sensibles
 

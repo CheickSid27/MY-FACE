@@ -2,12 +2,19 @@
 
 import { ChangeEvent, useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import OrderDetailDialog from "@/components/admin/OrderDetailDialog";
+import OrderHistory from "@/components/admin/OrderHistory";
 import RequireAuth from "@/components/admin/RequireAuth";
+import { PrinterIcon } from "@/components/icons";
 import MethodIcon, { METHOD_LABELS } from "@/components/payments/MethodIcon";
 import { api, ApiError } from "@/lib/api-client";
+import { ORDER_STATUS_LABELS } from "@/lib/order-labels";
 import type { EventPaymentMethodRead, OrderRead, PaymentMethod } from "@/types/api";
 
 const METHODS: PaymentMethod[] = ["wave", "orange_money", "mtn_money", "moov_money"];
+// Nouvelles commandes a confirmer visibles sans recharger la page (en plus
+// de la notification push, qui peut ne pas etre activee sur cet appareil).
+const ORDERS_REFRESH_MS = 15_000;
 
 function MethodCard({
   method,
@@ -35,7 +42,9 @@ function MethodCard({
       setError("Numero requis.");
       return;
     }
-    if (!file) {
+    // A la creation, le QR est obligatoire ; en modification, le QR deja
+    // enregistre est conserve si aucun nouveau fichier n'est choisi.
+    if (!file && !configured) {
       setError("Image du QR requise.");
       return;
     }
@@ -94,6 +103,9 @@ function MethodCard({
             className="rounded-lg border border-ink-900/10 bg-white/70 px-3 py-2 text-sm outline-none focus:border-brand-accent"
           />
           <input type="file" accept="image/*" onChange={handleFile} className="text-xs text-ink-500" />
+          {configured && !file && (
+            <p className="text-xs text-ink-300">Sans nouveau fichier, le QR actuel est conserve.</p>
+          )}
           {error && <p className="text-xs text-red-600">{error}</p>}
           <div className="flex gap-2">
             <button
@@ -123,20 +135,88 @@ function MethodCard({
   );
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  awaiting_confirmation: "En attente de confirmation",
-};
+function OrderRow({
+  order,
+  actingId,
+  onOpen,
+  onDecision,
+}: {
+  order: OrderRead;
+  actingId: string | null;
+  onOpen: (orderId: string) => void;
+  onDecision?: (orderId: string, approved: boolean) => void;
+}) {
+  return (
+    <div className="glass flex flex-wrap items-center justify-between gap-4 rounded-2xl p-4">
+      <button type="button" onClick={() => onOpen(order.id)} className="flex items-center gap-3 text-left">
+        <MethodIcon method={order.payment_method} size={30} />
+        <div>
+          <p className="font-semibold text-ink-900">
+            {order.total_amount.toLocaleString("fr-FR")} {order.currency}{" "}
+            <span className="font-normal text-ink-500">&middot; {order.photo_count} photo(s)</span>
+          </p>
+          <p className="text-sm text-ink-500">
+            {order.contact_phone} &middot; {METHOD_LABELS[order.payment_method] ?? order.payment_method}
+          </p>
+          <p className="flex flex-wrap items-center gap-x-2 text-xs text-ink-300">
+            <span>{new Date(order.created_at).toLocaleString("fr-FR")}</span>
+            <span>&middot; {ORDER_STATUS_LABELS[order.status]}</span>
+            {order.print_count > 0 && (
+              <span className="flex items-center gap-1 font-semibold text-brand">
+                <PrinterIcon /> {order.print_count} tirage(s)
+              </span>
+            )}
+          </p>
+        </div>
+      </button>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => onOpen(order.id)}
+          className="rounded-lg border border-ink-900/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 transition hover:bg-surface-alt"
+        >
+          Details
+        </button>
+        {onDecision && (
+          <>
+            <button
+              type="button"
+              disabled={actingId === order.id}
+              onClick={() => onDecision(order.id, true)}
+              className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+            >
+              Confirmer
+            </button>
+            <button
+              type="button"
+              disabled={actingId === order.id}
+              onClick={() => onDecision(order.id, false)}
+              className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+            >
+              Rejeter
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
-function OrdersToConfirm({ eventId }: { eventId: string }) {
+function OrdersToHandle({ eventId }: { eventId: string }) {
   const [orders, setOrders] = useState<OrderRead[]>([]);
   const [loading, setLoading] = useState(true);
   const [actingId, setActingId] = useState<string | null>(null);
+  const [openOrderId, setOpenOrderId] = useState<string | null>(null);
 
+  // Une seule requete pour toutes les commandes de l'evenement, reparties
+  // ensuite en "a confirmer" et "en attente de paiement". Les commandes
+  // jamais payees depuis trop longtemps sont annulees cote serveur a cette
+  // occasion (voir backend services/orders.py).
   const load = useCallback(async () => {
-    setLoading(true);
     try {
-      const data = await api.listOrders(eventId, "awaiting_confirmation");
-      setOrders(data);
+      setOrders(await api.listOrders(eventId));
+    } catch {
+      // rafraichissement suivant
     } finally {
       setLoading(false);
     }
@@ -144,6 +224,8 @@ function OrdersToConfirm({ eventId }: { eventId: string }) {
 
   useEffect(() => {
     load();
+    const interval = setInterval(load, ORDERS_REFRESH_MS);
+    return () => clearInterval(interval);
   }, [load]);
 
   async function handleDecision(orderId: string, approved: boolean) {
@@ -158,54 +240,109 @@ function OrdersToConfirm({ eventId }: { eventId: string }) {
 
   if (loading) return <p className="text-sm text-ink-500">Chargement...</p>;
 
-  if (orders.length === 0) {
-    return (
-      <div className="glass rounded-2xl p-5 text-sm text-ink-500">
-        Aucune commande en attente de confirmation.
-      </div>
-    );
-  }
+  const toConfirm = orders.filter((o) => o.status === "awaiting_confirmation");
+  const awaitingPayment = orders.filter((o) => o.status === "pending" || o.status === "processing");
+  // File d'impression : commandes payees dont les tirages papier n'ont pas
+  // encore ete imprimes (a la borne ou depuis ce poste).
+  const toPrint = orders.filter((o) => o.status === "success" && o.print_count > 0 && !o.printed_at);
 
   return (
-    <div className="flex flex-col gap-3">
-      {orders.map((order) => (
-        <div key={order.id} className="glass flex items-center justify-between gap-4 rounded-2xl p-4">
-          <div className="flex items-center gap-3">
-            <MethodIcon method={order.payment_method} size={30} />
-            <div>
-              <p className="font-semibold text-ink-900">
-                {order.total_amount.toLocaleString("fr-FR")} {order.currency}{" "}
-                <span className="font-normal text-ink-500">&middot; {order.photo_count} photo(s)</span>
-              </p>
-              <p className="text-sm text-ink-500">
-                {order.contact_phone} &middot; {METHOD_LABELS[order.payment_method]}
-              </p>
-              <p className="text-xs text-ink-300">
-                {new Date(order.created_at).toLocaleString("fr-FR")} &middot; {STATUS_LABELS[order.status] ?? order.status}
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={actingId === order.id}
-              onClick={() => handleDecision(order.id, true)}
-              className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
-            >
-              Confirmer
-            </button>
-            <button
-              type="button"
-              disabled={actingId === order.id}
-              onClick={() => handleDecision(order.id, false)}
-              className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
-            >
-              Rejeter
-            </button>
-          </div>
+    <>
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-500">
+        Commandes a confirmer ({toConfirm.length})
+      </h2>
+      {toConfirm.length === 0 ? (
+        <div className="glass mb-8 rounded-2xl p-5 text-sm text-ink-500">
+          Aucune commande en attente de confirmation.
         </div>
-      ))}
-    </div>
+      ) : (
+        <div className="mb-8 flex flex-col gap-3">
+          {toConfirm.map((order) => (
+            <OrderRow
+              key={order.id}
+              order={order}
+              actingId={actingId}
+              onOpen={setOpenOrderId}
+              onDecision={handleDecision}
+            />
+          ))}
+        </div>
+      )}
+
+      <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-ink-500">
+        En attente de paiement ({awaitingPayment.length})
+      </h2>
+      <p className="mb-3 text-xs text-ink-500">
+        Le client n&apos;a pas encore declare avoir paye. Ces commandes sont annulees
+        automatiquement si elles ne sont pas payees a temps (1 h par defaut) ; ouvrez-en une
+        pour l&apos;annuler tout de suite ou la valider si vous avez recu le paiement.
+      </p>
+      {awaitingPayment.length === 0 ? (
+        <div className="glass mb-8 rounded-2xl p-5 text-sm text-ink-500">Aucune commande en attente de paiement.</div>
+      ) : (
+        <div className="mb-8 flex flex-col gap-3">
+          {awaitingPayment.map((order) => (
+            <OrderRow key={order.id} order={order} actingId={actingId} onOpen={setOpenOrderId} />
+          ))}
+        </div>
+      )}
+
+      <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-ink-500">
+        <PrinterIcon /> Tirages a imprimer ({toPrint.length})
+      </h2>
+      <p className="mb-3 text-xs text-ink-500">
+        Commandes payees avec des tirages papier pas encore imprimes. Normalement imprimees a la
+        borne juste apres le paiement ; sinon, imprimez-les d&apos;ici depuis un poste relie a
+        l&apos;imprimante.
+      </p>
+      {toPrint.length === 0 ? (
+        <div className="glass mb-8 rounded-2xl p-5 text-sm text-ink-500">Aucun tirage en attente.</div>
+      ) : (
+        <div className="mb-8 flex flex-col gap-3">
+          {toPrint.map((order) => (
+            <div key={order.id} className="glass flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
+              <button type="button" onClick={() => setOpenOrderId(order.id)} className="text-left">
+                <p className="font-semibold text-ink-900">
+                  {order.print_count} tirage(s){" "}
+                  <span className="font-normal text-ink-500">
+                    &middot; commande {order.id.slice(0, 8).toUpperCase()} &middot; {order.contact_phone}
+                  </span>
+                </p>
+                <p className="text-xs text-ink-300">{new Date(order.created_at).toLocaleString("fr-FR")}</p>
+              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOpenOrderId(order.id)}
+                  className="rounded-lg border border-ink-900/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 transition hover:bg-surface-alt"
+                >
+                  Recu
+                </button>
+                <a
+                  href={`/order/${order.id}/print`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-brand-accent px-3 py-2 text-xs font-semibold text-brand transition hover:bg-brand-accent-light"
+                >
+                  <PrinterIcon /> Imprimer
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <OrderHistory
+        orders={orders}
+        csvFilename={`paiements-${eventId}.csv`}
+        onChanged={load}
+        title="Historique des paiements"
+      />
+
+      {openOrderId && (
+        <OrderDetailDialog orderId={openOrderId} onClose={() => setOpenOrderId(null)} onChanged={load} />
+      )}
+    </>
   );
 }
 
@@ -267,10 +404,7 @@ function PaymentsContent() {
           </div>
         )}
 
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-500">
-          Commandes a confirmer
-        </h2>
-        <OrdersToConfirm eventId={eventId} />
+        <OrdersToHandle eventId={eventId} />
       </div>
     </main>
   );

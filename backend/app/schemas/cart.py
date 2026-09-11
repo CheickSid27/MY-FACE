@@ -51,3 +51,6 @@ class CartRead(BaseModel):
 
 class CartItemUpdateRequest(BaseModel):
     print_requested: bool
+    # Jeton de la borne : obligatoire pour COCHER un tirage papier (une
+    # imprimante n'existe que sur place, jamais sur le telephone d'un invite).
+    kiosk_token: str | None = None

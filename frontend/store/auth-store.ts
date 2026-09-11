@@ -10,6 +10,7 @@ interface AuthState {
   error: string | null;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
+  setUser: (user: User) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -31,8 +32,15 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
+  // N'efface que la session : RequireAuth (components/admin/RequireAuth.tsx)
+  // detecte le changement et renvoie vers /admin/login. Avant, l'ecran admin
+  // restait affiche apres deconnexion.
   logout: () => {
     clearTokens();
     set({ isLoggedIn: false, user: null });
   },
+
+  // Renseigne par RequireAuth une fois le jeton verifie (GET /auth/me) : role
+  // et email disponibles pour toutes les pages admin.
+  setUser: (user: User) => set({ user, isLoggedIn: true }),
 }));
