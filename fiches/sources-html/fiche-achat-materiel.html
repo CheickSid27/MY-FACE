@@ -1,0 +1,342 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiche d'achat du matériel MYFACE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --ground: #F4EFE6; --surface: #FFFFFF; --fill: #EAE3D6; --ink: #0E2429;
+    --ink-soft: #33484D; --muted: #5E7378; --line: #D8CEBE; --orange: #F26A1B;
+    --orange-ink: #B34A08; --orange-soft: #FCE3D1; --green: #00854B;
+    --green-soft: #D2EDDF; --rouge: #A33208; --rouge-soft: #F8DCD2;
+    --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+    --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0B1A1E; --surface: #122A30; --fill: #17343B; --ink: #EFE7DA;
+      --ink-soft: #CBD8D7; --muted: #91A6A9; --line: #27454D; --orange: #FF8A3D;
+      --orange-ink: #FFAB70; --orange-soft: #3B2413; --green: #3FC489;
+      --green-soft: #113828; --rouge: #FF9A73; --rouge-soft: #3A1B12;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0B1A1E; --surface: #122A30; --fill: #17343B; --ink: #EFE7DA;
+    --ink-soft: #CBD8D7; --muted: #91A6A9; --line: #27454D; --orange: #FF8A3D;
+    --orange-ink: #FFAB70; --orange-soft: #3B2413; --green: #3FC489;
+    --green-soft: #113828; --rouge: #FF9A73; --rouge-soft: #3A1B12;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 400 17px/1.6 var(--body); }
+  .band { height: 14px; background:
+      radial-gradient(circle at 50% 50%, var(--orange) 0 2.5px, transparent 3px) 0 0 / 14px 14px,
+      conic-gradient(from 45deg at 50% 50%, var(--ink) 0 25%, transparent 0 50%, var(--ink) 0 75%, transparent 0) 0 0 / 14px 14px,
+      var(--ground); }
+  header.top { max-width: 1060px; margin: 0 auto; padding: 44px 22px 22px; display: grid; gap: 14px; }
+  .eyebrow { margin: 0; font: 600 12px/1.4 var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 0; font: 700 clamp(28px, 4.2vw, 44px)/1.1 var(--display); letter-spacing: -.012em; max-width: 22ch; text-wrap: balance; }
+  h1 em { font-style: normal; color: var(--orange); }
+  .lede { margin: 0; max-width: 62ch; font-size: 19px; color: var(--ink-soft); }
+  main { max-width: 1060px; margin: 0 auto; padding: 0 22px 80px; }
+  section { padding-top: 48px; }
+  h2 { margin: 0 0 12px; font: 600 clamp(21px, 2.4vw, 27px)/1.2 var(--display); text-wrap: balance; }
+  h3 { margin: 22px 0 6px; font: 650 17px/1.35 var(--body); }
+  p { margin: 0 0 13px; max-width: 66ch; }
+  .intro { color: var(--ink-soft); }
+  ul, ol { margin: 0 0 13px; padding-left: 1.2em; }
+  li { margin: 0 0 7px; }
+  .fine { font-size: 14px; color: var(--muted); }
+  code { font: 500 14px/1.4 var(--mono); background: var(--fill); padding: 1px 5px; border-radius: 4px; }
+
+  .table-wrap { overflow-x: auto; margin: 16px 0 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 15px; }
+  th { font: 600 11.5px/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 11px 13px; background: var(--fill); border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 11px 13px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td:first-child { font-weight: 600; }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+  th.num { text-align: right; }
+  tfoot td { border-top: 2px solid var(--ink); font-weight: 700; }
+
+  .piece { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 24px 26px; margin: 18px 0; }
+  .piece header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+  .piece h3 { margin: 0; font: 600 19px/1.25 var(--display); }
+  .prix { font: 600 13px/1 var(--mono); padding: 6px 10px; border-radius: 999px; background: var(--orange-soft); color: var(--orange-ink); white-space: nowrap; }
+  .verif { margin-top: 14px; padding: 14px 16px; background: var(--fill); border-radius: 10px; }
+  .verif b { display: block; font: 600 11.5px/1.4 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .verif ul { margin: 0; padding-left: 1.1em; font-size: 15.5px; }
+
+  .alerte { border-radius: 12px; padding: 20px 22px; margin: 18px 0; background: var(--rouge-soft); }
+  .alerte h3 { margin: 0 0 8px; color: var(--rouge); }
+  .alerte p { margin: 0 0 10px; }
+  .ok { background: var(--green-soft); }
+  .ok h3 { color: var(--green); }
+
+  .listes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
+  .listes div { border-radius: 12px; padding: 18px 20px; }
+  .listes .oui { background: var(--green-soft); }
+  .listes .non { background: var(--rouge-soft); }
+  .listes h3 { margin: 0 0 8px; }
+  .listes ul { margin: 0; padding-left: 1.1em; font-size: 15.5px; }
+
+  .copy { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin: 14px 0; overflow: hidden; }
+  .copy header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px 8px 14px; background: var(--fill); border-bottom: 1px solid var(--line); margin: 0; }
+  .copy header span { font: 600 11px/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .copy button { font: 600 12px/1 var(--body); padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .copy button:hover { background: var(--orange); color: #fff; border-color: var(--orange); }
+  .copy pre { margin: 0; padding: 13px 16px; white-space: pre-wrap; font: 400 15px/1.55 var(--body); }
+
+  .todo { list-style: none; padding: 0; margin: 16px 0; counter-reset: t; }
+  .todo li { counter-increment: t; border-top: 1px solid var(--line); }
+  .todo li:last-child { border-bottom: 1px solid var(--line); }
+  .todo label { display: grid; grid-template-columns: 22px 26px minmax(0, 1fr); gap: 10px; align-items: start; padding: 12px 0; cursor: pointer; font-size: 16px; }
+  .todo label::before { content: counter(t); grid-column: 2; grid-row: 1; font: 600 14px/1.6 var(--mono); color: var(--muted); text-align: right; }
+  .todo input { grid-column: 1; grid-row: 1; width: 18px; height: 18px; margin: 3px 0 0; accent-color: var(--orange); }
+  .todo span { grid-column: 3; grid-row: 1; }
+  .todo input:checked ~ span { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+
+  footer.end { margin: 44px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+  @media (max-width: 760px) { .listes { grid-template-columns: minmax(0, 1fr); } body { font-size: 16px; } }
+</style>
+
+<div class="band" aria-hidden="true"></div>
+
+<header class="top">
+  <p class="eyebrow">À emporter chez le vendeur · 27 septembre 2026</p>
+  <h1>Monter la borne MYFACE <em>en pièces détachées</em></h1>
+  <p class="lede">Une borne toute faite coûte entre 1,5 et 3 millions FCFA. Avec un écran tactile, une webcam, une imprimante et le PC que tu as déjà, tu t'en sors pour 375 000 à 645 000, et tu améliores pièce par pièce.</p>
+</header>
+
+<main>
+  <section id="principe">
+    <h2>Le montage, en une phrase</h2>
+    <p class="intro">Ton PC reste derrière la borne. Il envoie l'image à l'écran tactile par un câble <strong>HDMI</strong>, reçoit les touchers par un câble <strong>USB</strong>, filme par la <strong>webcam</strong> posée sur l'écran, et imprime sur la <strong>SELPHY</strong> branchée en USB. C'est tout : aucune pièce n'a besoin d'intelligence propre.</p>
+  </section>
+
+  <section id="pieces">
+    <h2>Les trois pièces à acheter</h2>
+
+    <article class="piece">
+      <header><h3>1. L'écran tactile</h3><span class="prix">50 000 à 300 000 FCFA</span></header>
+      <p>C'est la pièce la plus chère, et celle où l'occasion vaut vraiment le coup : les écrans de caisse de supermarché revendus font parfaitement l'affaire.</p>
+      <ul>
+        <li><strong>15 à 17 pouces d'occasion</strong> : 50 000 à 90 000 FCFA. Suffisant pour l'usage.</li>
+        <li><strong>21,5 pouces capacitif neuf</strong> : 180 000 à 300 000 FCFA. L'allure d'une vraie borne, le toucher d'un téléphone.</li>
+        <li><strong>Capacitif</strong> (on effleure) ou <strong>résistif</strong> (on appuie) : les deux marchent avec nos gros boutons. Le capacitif est simplement plus agréable.</li>
+      </ul>
+      <div class="verif">
+        <b>À vérifier avant de payer</b>
+        <ul>
+          <li><strong>Les deux câbles sont là</strong> : HDMI ou VGA pour l'image, <strong>USB pour le tactile</strong>. Sans l'USB, c'est un écran ordinaire.</li>
+          <li><strong>Teste le tactile sur place</strong>, branché à un ordinateur. Windows le reconnaît sans pilote : si rien ne se passe, passe ton chemin.</li>
+          <li>Touche <strong>les quatre coins et le centre</strong> : les écrans résistifs usés perdent les bords.</li>
+          <li>Écran allumé sur fond blanc puis noir : cherche les points morts et les taches.</li>
+          <li>Le pied permet-il de <strong>tourner l'écran en portrait</strong> ? Sinon, prévois un support VESA.</li>
+          <li>Luminosité : sous les projecteurs d'une salle, en dessous de 250 cd/m² on ne voit plus rien.</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="piece">
+      <header><h3>2. La webcam</h3><span class="prix">20 000 à 75 000 FCFA</span></header>
+      <p>C'est elle qui décide si la reconnaissance faciale marche. On la sous-estime toujours.</p>
+      <ul>
+        <li><strong>Logitech C920 ou C922</strong>, 50 000 à 75 000 FCFA : 1080p avec mise au point automatique. C'est le bon choix.</li>
+        <li><strong>Logitech C270</strong>, environ 20 000 FCFA : ça marche, mais en salle sombre les visages sortent bruités et la reconnaissance se dégrade.</li>
+        <li><strong>La lampe annulaire compte plus que les pixels.</strong> 20 000 à 30 000 FCFA, et elle fait plus pour la détection que de passer de 720p à 1080p.</li>
+      </ul>
+      <div class="verif">
+        <b>À vérifier avant de payer</b>
+        <ul>
+          <li>La mise au point est-elle <strong>automatique</strong> ? Une webcam 1080p à mise au point fixe donne des visages flous à 50 cm.</li>
+          <li>Teste-la <strong>dans une pièce mal éclairée</strong>, pas sous le néon du magasin.</li>
+          <li>Le support tient-il sur le haut de l'écran sans tomber ?</li>
+          <li>Méfie-toi des webcams sans marque à 10 000 FCFA : l'image est inutilisable dès que la lumière baisse.</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="piece">
+      <header><h3>3. L'imprimante</h3><span class="prix">110 000 à 140 000 FCFA</span></header>
+      <p>Il faut de la <strong>sublimation thermique</strong> : la photo sort sèche, solide, sans bavure. Pas de jet d'encre, qui reste humide et se tache dans la main d'un invité.</p>
+      <ul>
+        <li><strong>Canon SELPHY CP1500</strong> (ou CP1300 d'occasion) : format 10×15, environ 40 secondes par photo. C'est par là qu'on commence.</li>
+        <li><strong>Consommable</strong> : pack Canon <code>KP-108IN</code>, 108 tirages, 25 000 à 35 000 FCFA. Papier et ruban ensemble.</li>
+        <li>Plus tard, si le volume suit : <strong>DNP DS-RX1HS</strong>, 10 secondes par tirage et 120 à 150 FCFA de consommable, mais 600 000 FCFA et plus.</li>
+      </ul>
+      <div class="verif">
+        <b>À vérifier avant de payer</b>
+        <ul>
+          <li><strong>Le pack KP-108IN se trouve-t-il à Abidjan ?</strong> Demande le prix au vendeur avant d'acheter l'imprimante. Une SELPHY sans consommable est un presse-papier.</li>
+          <li>Achète <strong>deux packs d'avance</strong> : 216 tirages, de quoi tenir plusieurs événements sans rupture.</li>
+          <li>Vérifie que c'est bien le format <strong>10×15</strong> (Postcard), pas le petit format carte de crédit.</li>
+          <li>Si tu la prends d'occasion : fais imprimer une photo devant toi, et regarde s'il reste du ruban.</li>
+        </ul>
+      </div>
+    </article>
+  </section>
+
+  <section id="prix-tirage">
+    <h2>Le prix du tirage, et pourquoi il passe à 500 F</h2>
+    <div class="alerte">
+      <h3>À 200 FCFA, chaque tirage te faisait perdre de l'argent</h3>
+      <p>Un pack de 108 tirages à 25 000-35 000 FCFA revient à <strong>230 à 320 FCFA la photo</strong>, rien qu'en consommable. Sans compter l'imprimante, l'électricité et les ratés.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Par tirage vendu</th><th class="num">Ancien prix</th><th class="num">Nouveau prix</th></tr></thead>
+        <tbody>
+          <tr><td>Prix facturé à l'invité</td><td class="num">200 F</td><td class="num">500 F</td></tr>
+          <tr><td>Consommable (papier + ruban)</td><td class="num">- 250 F</td><td class="num">- 250 F</td></tr>
+        </tbody>
+        <tfoot><tr><td>Ce qu'il te reste</td><td class="num">- 50 F</td><td class="num">+ 250 F</td></tr></tfoot>
+      </table>
+    </div>
+    <p>500 FCFA, c'est aussi ce que les gens paient déjà aux photographes sur place. Personne ne trouvera ça cher, surtout en voyant la photo sortir en direct. C'est désormais le prix affiché dans l'application, sur les affiches, sur le site et dans toutes les fiches.</p>
+    <div class="alerte ok">
+      <h3>Rentabilité du matériel</h3>
+      <p>Avec 250 FCFA de marge par tirage, l'imprimante et son premier pack (environ 150 000 FCFA) sont remboursés en <strong>600 tirages</strong>, soit une vingtaine d'événements moyens. Le reste du matériel se rembourse sur les ventes de photos numériques, qui ne coûtent rien à produire.</p>
+    </div>
+  </section>
+
+  <section id="oublis">
+    <h2>Ce qu'on oublie toujours d'acheter</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Pièce</th><th class="num">Prix</th><th>Pourquoi c'est indispensable</th></tr></thead>
+        <tbody>
+          <tr><td>Onduleur</td><td class="num">55 000 F</td><td>Avec les coupures, c'est ce qui évite d'éteindre le PC en pleine soirée devant les clients</td></tr>
+          <tr><td>Colonne ou pied</td><td class="num">30 000 à 60 000 F</td><td>Un menuisier la fait en bois, tu l'habilles d'un adhésif à tes couleurs</td></tr>
+          <tr><td>Lampe annulaire</td><td class="num">20 000 à 30 000 F</td><td>La lumière fait la moitié du travail de la reconnaissance faciale</td></tr>
+          <tr><td>Câble HDMI 5 m</td><td class="num">8 000 F</td><td>Le PC reste derrière ou dessous, jamais à la vue</td></tr>
+          <tr><td>Rallonge USB active</td><td class="num">7 000 F</td><td>Au-delà de 5 mètres, une rallonge USB passive ne transmet plus rien</td></tr>
+          <tr><td>Multiprise et serre-câbles</td><td class="num">6 000 F</td><td>Des câbles qui pendent, et la borne fait bricolage</td></tr>
+          <tr><td>Routeur 4G</td><td class="num">40 000 F</td><td>Le jour où la salle n'a pas de connexion, tout dépend de lui</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="budgets">
+    <h2>Les deux budgets</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Poste</th><th>Économique</th><th class="num">FCFA</th><th>Confortable</th><th class="num">FCFA</th></tr></thead>
+        <tbody>
+          <tr><td>Écran tactile</td><td>17 pouces d'occasion</td><td class="num">70 000</td><td>21,5 pouces capacitif</td><td class="num">220 000</td></tr>
+          <tr><td>Webcam</td><td>Logitech C270</td><td class="num">20 000</td><td>Logitech C920</td><td class="num">65 000</td></tr>
+          <tr><td>Lampe annulaire</td><td>Modèle simple</td><td class="num">20 000</td><td>Avec pied réglable</td><td class="num">25 000</td></tr>
+          <tr><td>Imprimante</td><td>SELPHY CP1500</td><td class="num">120 000</td><td>SELPHY CP1500</td><td class="num">120 000</td></tr>
+          <tr><td>Consommables</td><td>1 pack, 108 tirages</td><td class="num">30 000</td><td>2 packs, 216 tirages</td><td class="num">60 000</td></tr>
+          <tr><td>Colonne</td><td>Bois, faite sur mesure</td><td class="num">40 000</td><td>Bois + habillage adhésif</td><td class="num">60 000</td></tr>
+          <tr><td>Onduleur</td><td>650 VA</td><td class="num">55 000</td><td>1000 VA</td><td class="num">70 000</td></tr>
+          <tr><td>Câbles et divers</td><td>HDMI, USB, multiprise</td><td class="num">20 000</td><td>Idem, meilleure qualité</td><td class="num">25 000</td></tr>
+        </tbody>
+        <tfoot><tr><td>Total</td><td></td><td class="num">375 000</td><td></td><td class="num">645 000</td></tr></tfoot>
+      </table>
+    </div>
+    <p class="fine">Prix indicatifs pour Abidjan en septembre 2026, à vérifier sur place. Le routeur 4G n'est pas compté : il sert aussi en dehors des événements.</p>
+  </section>
+
+  <section id="pieges">
+    <h2>À acheter, à fuir</h2>
+    <div class="listes">
+      <div class="oui">
+        <h3>Ce qui marche</h3>
+        <ul>
+          <li>Un écran de caisse d'occasion, testé devant toi</li>
+          <li>Une webcam de marque avec mise au point automatique</li>
+          <li>Une imprimante à sublimation, format 10×15</li>
+          <li>Deux packs de consommable d'avance</li>
+          <li>Un onduleur, même petit</li>
+        </ul>
+      </div>
+      <div class="non">
+        <h3>Ce qu'il ne faut pas acheter</h3>
+        <ul>
+          <li>Un écran tactile sans son câble USB</li>
+          <li>Une imprimante jet d'encre : la photo sort humide et se tache</li>
+          <li>Une webcam sans marque à 10 000 FCFA</li>
+          <li>Une SELPHY dont le consommable est introuvable en ville</li>
+          <li>Un écran tactile de télévision : le tactile y est rarement compatible PC</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="vendeur">
+    <h2>Ce qu'il faut demander au vendeur</h2>
+    <div class="copy">
+      <header><span>Message WhatsApp pour un écran tactile d'occasion</span><button type="button">Copier</button></header>
+      <pre>Bonjour, je cherche un écran tactile 17 ou 21 pouces, d'occasion ou neuf.
+Trois questions : est-ce qu'il vient avec le câble USB du tactile en plus du câble vidéo ? Est-ce qu'on peut le tester branché sur un PC avant achat ? Et le pied permet-il de le tourner en portrait ?
+Quel est votre meilleur prix ?</pre>
+    </div>
+    <div class="copy">
+      <header><span>Message pour l'imprimante et ses consommables</span><button type="button">Copier</button></header>
+      <pre>Bonjour, avez-vous la Canon SELPHY CP1500 (ou CP1300) ?
+Surtout : avez-vous les packs KP-108IN (papier + ruban, 108 tirages) en stock, et à quel prix l'unité ? J'en prends deux avec l'imprimante.</pre>
+    </div>
+  </section>
+
+  <section id="apres">
+    <h2>Une fois le matériel acheté</h2>
+    <p class="intro">Ce que je configure, sans que tu aies à y toucher :</p>
+    <ul>
+      <li>Chrome en mode borne avec impression directe : plus aucune boîte de dialogue quand un invité imprime</li>
+      <li>La SELPHY en imprimante par défaut, au bon format</li>
+      <li>L'écran en portrait, la veille et les notifications Windows désactivées</li>
+      <li>Le clavier tactile pour la saisie du numéro de téléphone</li>
+      <li>Le démarrage automatique de la borne à l'allumage du PC</li>
+    </ul>
+    <p class="intro">Et les essais à faire ensemble avant le premier événement :</p>
+    <ol class="todo">
+      <li><label><input type="checkbox" data-key="m1"><span>Dix selfies à la borne, dans une pièce mal éclairée : on regarde combien de visages sont reconnus.</span></label></li>
+      <li><label><input type="checkbox" data-key="m2"><span>Dix tirages d'affilée : on mesure le temps réel par photo et on vérifie qu'il n'y a pas de bourrage.</span></label></li>
+      <li><label><input type="checkbox" data-key="m3"><span>Une coupure de courant simulée : on débranche, l'onduleur doit tenir le temps de finir la commande en cours.</span></label></li>
+      <li><label><input type="checkbox" data-key="m4"><span>Un paiement en espèces de bout en bout, avec le reçu imprimé.</span></label></li>
+      <li><label><input type="checkbox" data-key="m5"><span>Une soirée blanche de deux heures, borne allumée, pour voir si quelque chose se fige.</span></label></li>
+    </ol>
+  </section>
+
+  <footer class="end">
+    Fiche établie le 27 septembre 2026. Les prix sont des repères pour Abidjan : fais jouer la concurrence, et n'achète jamais un écran tactile sans l'avoir testé branché.
+  </footer>
+</main>
+
+<script>
+  document.querySelectorAll('.copy').forEach(function (block) {
+    var btn = block.querySelector('button');
+    var pre = block.querySelector('pre');
+    if (!btn || !pre) return;
+    btn.addEventListener('click', function () {
+      var txt = pre.innerText;
+      var done = function () { btn.textContent = 'Copié'; setTimeout(function () { btn.textContent = 'Copier'; }, 1800); };
+      function fallback() {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); document.body.removeChild(ta); done();
+        } catch (e) { btn.textContent = 'Sélectionne le texte'; setTimeout(function () { btn.textContent = 'Copier'; }, 2200); }
+      }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(done, fallback);
+        } else { fallback(); }
+      } catch (e) { fallback(); }
+    });
+  });
+  (function () {
+    var store = null;
+    try { store = window.localStorage; } catch (e) { store = null; }
+    document.querySelectorAll('.todo input[type="checkbox"]').forEach(function (box) {
+      var key = 'myface-materiel-' + box.dataset.key;
+      try { if (store && store.getItem(key) === '1') box.checked = true; } catch (e) {}
+      box.addEventListener('change', function () {
+        try { if (store) store.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+      });
+    });
+  })();
+</script>

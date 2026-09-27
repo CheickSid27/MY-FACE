@@ -883,7 +883,7 @@ AFFICHES = [
         b_logo(0.07), b_gap(0.04),
         b_title("Tes photos,\nà partir de 450 F", 0.078), b_gap(0.04),
         b_prices([("La photo", "450 F"),
-                  ("Impression papier, en option", "+200 F"),
+                  ("Impression papier, en option", "+500 F"),
                   ("Lots et remises", "selon l'événement")]),
         b_gap(0.02),
         b_body("Les prix sont fixés par événement : ils s'adaptent au type de cérémonie et au nombre d'invités. Demandez les vôtres à l'organisateur.", 0.029),

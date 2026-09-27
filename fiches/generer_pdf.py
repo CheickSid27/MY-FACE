@@ -113,6 +113,7 @@ FICHES = [
     ("kit-lancement-myface.html", "Kit de lancement MYFACE.pdf"),
     ("affiches-myface.html", "Affiches MYFACE - note d'intention.pdf"),
     ("fiche-publication-myface.html", "Fiche de publication MYFACE.pdf"),
+    ("fiche-achat-materiel.html", "Fiche d achat du materiel MYFACE.pdf"),
 ]
 
 GUIDES = [

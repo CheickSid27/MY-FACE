@@ -44,7 +44,7 @@ CE QU'IL FAUT CHANGER AVANT DE PUBLIER
      de prospection (A6, A7, B7, C1, C3, C4, C5, C6). S'il change un jour :
      cherche-le dans generer_affiches.py, remplace, et relance le script.
   1. A7 : la date limite de l'offre (30 novembre pour l'instant).
-  2. A5 : les prix affiches sont 450 F la photo et +200 F l'impression en
+  2. A5 : les prix affiches sont 450 F la photo et +500 F l'impression en
      option, plus la phrase qui rappelle que tout depend de l'evenement.
      A adapter evenement par evenement.
   2 bis. C1 : les forfaits organisateurs (150 000 / 250 000 F) sont des
