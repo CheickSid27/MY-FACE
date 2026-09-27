@@ -1,0 +1,161 @@
+=====================================================================
+  MYFACE - COMMENT LANCER LE PROJET DE A A Z
+  Guide ecrit le 27 septembre 2026
+=====================================================================
+
+---------------------------------------------------------------------
+1. DEMARRER (la seule chose a faire au quotidien)
+---------------------------------------------------------------------
+
+Double-clique sur le fichier "DEMARRER MYFACE" (il est sur le Bureau
+et dans le dossier D:\MY FACE).
+
+Une fenetre noire s'ouvre et fait tout toute seule :
+  - elle lance Docker Desktop s'il n'est pas deja lance ;
+  - elle demarre MYFACE ;
+  - elle attend le chargement de la reconnaissance faciale (1 a 2 min) ;
+  - elle ouvre l'acces public ;
+  - elle ouvre le site dans ton navigateur.
+
+Quand elle affiche "MYFACE EST EN LIGNE", c'est bon.
+Tu peux fermer la fenetre noire, le projet continue de tourner.
+
+Le premier demarrage de la journee prend 1 a 3 minutes. C'est normal :
+le modele de reconnaissance faciale se charge dans la carte graphique.
+
+
+---------------------------------------------------------------------
+2. LES ADRESSES
+---------------------------------------------------------------------
+
+Pour les invites (telephones), QR codes, affiches, SMS :
+    https://myface.tail715f81.ts.net
+    -> cette adresse ne change plus jamais.
+    -> elle ne marche que si le PC est allume et MYFACE demarre.
+
+Sur ce PC (le plus rapide, pour toi) :
+    http://localhost
+
+Administration :
+    http://localhost/admin/login
+
+Borne :
+    Dans l'administration, ouvre l'evenement, bouton de partage :
+    copie le "lien borne" et ouvre-le sur la borne. Le mode borne est
+    ensuite memorise (apercus sans filigrane, especes, impression).
+    Si la borne est ce PC, remplace le debut de l'adresse par
+    http://localhost
+
+
+---------------------------------------------------------------------
+3. ARRETER
+---------------------------------------------------------------------
+
+Double-clique sur "ARRETER MYFACE".
+Ca ferme l'acces public et ca arrete le projet. Rien n'est perdu :
+les photos sont chez Cloudflare R2 et les donnees chez Neon.
+
+Eteindre le PC arrete aussi le site, c'est normal.
+
+
+---------------------------------------------------------------------
+4. SI CA NE MARCHE PAS
+---------------------------------------------------------------------
+
+"502 Bad Gateway"
+    -> Lance "ARRETER MYFACE", puis "DEMARRER MYFACE".
+       (nginx garde en memoire l'ancienne adresse du moteur.)
+
+Le site ne s'ouvre pas du tout sur http://localhost
+    -> Docker Desktop n'est pas encore pret. Attends 2 minutes et
+       relance "DEMARRER MYFACE".
+
+Le lien public ne repond pas juste apres le demarrage
+    -> Normal : il faut 1 a 2 minutes apres l'ouverture de l'acces.
+       Reessaie. S'il ne revient pas, ouvre une fenetre PowerShell et
+       tape :
+       & "C:\Program Files\Tailscale\tailscale.exe" funnel status
+       Tu dois voir "Funnel on". Sinon tape :
+       & "C:\Program Files\Tailscale\tailscale.exe" funnel --bg 80
+
+Sur un telephone, l'appareil photo ne s'ouvre pas pour le scan
+    -> Il faut utiliser le lien public (https://...), jamais une
+       adresse en http://192.168... : les navigateurs interdisent la
+       camera sans HTTPS.
+
+Tout est lent (2 a 3 secondes par page)
+    -> C'est connu : la base de donnees est aux Etats-Unis. Les
+       solutions sont listees dans les notes (Obsidian, "A faire").
+
+Autre message d'erreur
+    -> Prends une photo de la fenetre noire et envoie-la moi.
+
+
+---------------------------------------------------------------------
+5. LE JOUR OU TU ACHETES LE NOM DE DOMAINE
+---------------------------------------------------------------------
+
+But : remplacer https://myface.tail715f81.ts.net par une adresse
+courte et professionnelle, par exemple https://myface.homes
+
+CE QUE TU FAIS (30 minutes, plus le temps d'attente) :
+
+  Etape 1 - Acheter le domaine
+     Sur porkbun.com : chercher "myface.homes" (environ 1 000 FCFA la
+     premiere annee, puis environ 9 000 FCFA par an). Payer par carte.
+     N'importe quel autre nom convient aussi.
+
+  Etape 2 - Ajouter le domaine a Cloudflare
+     Va sur dash.cloudflare.com avec le compte qui heberge deja les
+     photos (R2). Clique "Add a domain", tape le nom du domaine,
+     choisis le plan Free.
+     Cloudflare affiche alors DEUX adresses de serveurs de noms,
+     du genre : amy.ns.cloudflare.com et rob.ns.cloudflare.com
+     Note-les.
+
+  Etape 3 - Pointer le domaine vers Cloudflare
+     Retourne sur Porkbun, ouvre ton domaine, cherche la ligne
+     "Authoritative Nameservers" (ou "Serveurs de noms"), efface ce
+     qui s'y trouve et mets les deux adresses de Cloudflare.
+     Enregistre.
+
+  Etape 4 - Attendre
+     Cloudflare envoie un mail quand le domaine passe en "Active".
+     C'est souvent moins d'une heure, parfois jusqu'a 24 h.
+
+  Etape 5 - Me prevenir
+     Dis-moi : "le domaine est actif, il s'appelle ...".
+
+CE QUE JE FAIS ENSUITE (une trentaine de minutes) :
+
+  - Creation du tunnel Cloudflare nomme et branchement du domaine sur
+    le site (tu auras peut-etre une page de connexion Cloudflare a
+    valider : je ne tape jamais tes mots de passe).
+  - Lancement du tunnel dans Docker, avec demarrage automatique.
+  - APP_BASE_URL reglee sur la nouvelle adresse, moteur recree.
+  - Reserrage des limites anti-abus : avec Cloudflare on retrouve
+    l'adresse reelle de chaque visiteur, ce que Tailscale ne donne pas
+    aujourd'hui.
+  - Test complet depuis l'exterieur, et mise a jour des notes.
+  - Les scripts "DEMARRER" et "ARRETER" seront mis a jour.
+
+APRES :
+  - Refaire les QR codes et les affiches avec la nouvelle adresse
+    (l'administration les regenere toute seule).
+  - L'ancienne adresse Tailscale peut rester en secours, ca ne gene
+    rien.
+
+
+---------------------------------------------------------------------
+6. A NE PAS FAIRE
+---------------------------------------------------------------------
+
+  - Ne jamais envoyer ni publier le fichier .env : il contient tous
+    les mots de passe (base de donnees, stockage photos, SMS).
+  - Ne pas supprimer le dossier watched-photos : c'est le dossier
+    surveille qui avale automatiquement les photos des evenements.
+  - Ne pas eteindre le PC pendant un evenement : le site s'arrete.
+  - Ne pas donner le lien borne aux invites : il enleve le filigrane
+    et autorise le paiement en especes.
+
+=====================================================================
