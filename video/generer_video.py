@@ -136,6 +136,7 @@ def bloc_bas(img, W, H, titre, sous_titre, a_titre, a_sous, voile=True):
     fs = font(F_BODY, int(W * 0.036))
     y_sous = int(H * 0.87)
     lignes_titre = titre.count(chr(10)) + 1
+    hauteur_titre = int(lignes_titre * ft.size * 1.18)
     y_titre = y_sous - hauteur_titre - int(H * 0.035)
     texte_centre(d, titre, ft, W, y_titre, SAND, a_titre)
     if sous_titre:
