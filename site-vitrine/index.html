@@ -149,7 +149,7 @@
   }
   .hero-in {
     position: relative; z-index: 2;
-    display: grid; grid-template-columns: minmax(0, .88fr) minmax(0, 1.12fr);
+    display: grid; grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr);
     gap: clamp(20px, 3vw, 46px); align-items: center;
     padding: clamp(40px, 6vw, 76px) var(--pad) 0; max-width: 1240px; margin: 0 auto;
   }
@@ -161,7 +161,7 @@
   .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 32px 0 0; }
   .hero-note { margin: 18px 0 0; font-size: 14.5px; color: var(--muted-dark); }
 
-  .scene { position: relative; align-self: end; justify-self: center; width: min(720px, 108%); margin-right: -2%; }
+  .scene { position: relative; align-self: end; justify-self: center; width: min(900px, 118%); margin-right: -5%; }
   .scene .personne { width: 100%; filter: drop-shadow(0 30px 50px rgba(0,0,0,.45)); }
   .bulle {
     position: absolute; z-index: 3; border-radius: 16px; padding: 12px 16px;
@@ -176,7 +176,7 @@
   @media (max-width: 1080px) { .bulle-1 { left: -2%; } .bulle-2 { right: -2%; } .bulle-3 { left: 0; } }
   @media (max-width: 920px) {
     .hero-in { grid-template-columns: minmax(0, 1fr); padding-bottom: 0; }
-    .scene { order: 2; width: min(580px, 112%); margin: 4px auto 0; }
+    .scene { order: 2; width: min(680px, 120%); margin: 4px auto 0; }
     .bulle { min-width: 0; padding: 10px 13px; }
     .bulle b { font-size: 13.5px; }
     .bulle span { font-size: 11.5px; }
@@ -384,9 +384,9 @@
         <p class="eyebrow anim">Abidjan · Côte d'Ivoire</p>
         <h1 class="anim anim-2">Chaque invité repart avec <em>SES photos.</em></h1>
         <p class="lead anim anim-3">
-          Vos invités prennent un selfie et retrouvent en quelques secondes toutes les photos
-          où ils apparaissent. Ils les achètent en Mobile Money ou en espèces, et les impriment
-          sur place. Vous n'avez plus rien à envoyer à personne.
+          Fini les tirages étalés par terre où chacun fouille pour se retrouver. Vos invités
+          prennent un selfie, leurs photos s'affichent, ils paient en Mobile Money ou en espèces
+          et repartent avec — en qualité d'origine, imprimées sur place s'ils le veulent.
         </p>
         <div class="hero-actions anim anim-4">
           <a class="btn btn-primaire" href="https://wa.me/2250758509403?text=Bonjour%20MYFACE%2C%20je%20voudrais%20un%20devis%20pour%20mon%20%C3%A9v%C3%A9nement." target="_blank" rel="noopener">Demander un devis</a>
@@ -421,36 +421,38 @@
     <div class="wrap">
       <div class="titre-bloc revele">
         <p class="eyebrow">Ce qui se passe aujourd'hui</p>
-        <h2>Les photos de la fête finissent dans un groupe WhatsApp.</h2>
-        <p>Des centaines d'images en vrac, compressées, que personne ne trie. Vos invités s'étaient
-          préparés pour ce jour-là : ils méritent mieux qu'une photo floue trouvée au bout de dix
-          minutes de défilement.</p>
+        <h2>On fouille les tirages par terre, ou dans un groupe WhatsApp.</h2>
+        <p>Les photos sont posées à même le sol ou sur une table, et chacun s'accroupit pour
+          se chercher dans le tas. On perd du temps, on s'énerve, on repart souvent sans ses
+          photos — et celles qui restent finissent entre les mains de quelqu'un d'autre.</p>
       </div>
       <div class="compare">
         <div class="avant revele d1">
-          <p class="etiq">Sans MYFACE</p>
-          <h3>« Quelqu'un a mes photos&nbsp;? »</h3>
+          <p class="etiq">La méthode habituelle</p>
+          <h3>« C'est où, ma photo&nbsp;? »</h3>
           <ul>
-            <li>400 photos envoyées dans un groupe, en qualité réduite</li>
-            <li>Chacun fait défiler pour se chercher, et abandonne</li>
-            <li>L'organisateur passe sa semaine à renvoyer des fichiers</li>
-            <li>Le photographe ne vend presque rien de son travail</li>
+            <li>Les tirages étalés par terre, et tout le monde fouille en même temps</li>
+            <li>On abîme, on mélange, on abandonne avant d'avoir trouvé</li>
+            <li>Le prix se négocie au moment de payer, et il grimpe</li>
+            <li>Vos photos restent dans les mains d'un inconnu, sans savoir ce qu'elles deviennent</li>
+            <li>Et la qualité ne vaut souvent pas ce qu'on a payé</li>
           </ul>
         </div>
         <div class="apres revele d2">
           <p class="etiq">Avec MYFACE</p>
-          <h3>Un selfie, et c'est réglé</h3>
+          <h3>Chacun trouve les siennes, tout seul</h3>
           <ul>
-            <li>L'invité scanne le QR code posé sur sa table</li>
-            <li>Il se prend en selfie&nbsp;: ses photos apparaissent, seulement les siennes</li>
-            <li>Il paie ce qu'il veut garder et télécharge en qualité d'origine</li>
-            <li>Il peut repartir avec le tirage papier, imprimé à la borne</li>
+            <li>Un selfie, et seules vos photos s'affichent : personne ne fouille</li>
+            <li>Les prix sont affichés avant de choisir, aucune négociation</li>
+            <li>Qualité d'origine, sans compression, directement sur votre téléphone</li>
+            <li>Vos photos ne restent chez personne : elles sont à vous, tout de suite</li>
+            <li>Et le tirage papier sort de la borne pendant que la fête continue</li>
           </ul>
         </div>
       </div>
       <div class="chiffres">
-        <div class="chiffre verre-clair revele d1"><b><span class="compteur" data-vers="4">0</span> s</b><span>pour qu'un invité retrouve toutes ses photos</span></div>
-        <div class="chiffre verre-clair revele d2"><b><span class="compteur" data-vers="450">0</span> F</b><span>la photo en qualité d'origine, impression en option</span></div>
+        <div class="chiffre verre-clair revele d1"><b><span class="compteur" data-vers="4">0</span> s</b><span>pour qu'un invité retrouve toutes ses photos, sans fouiller</span></div>
+        <div class="chiffre verre-clair revele d2"><b><span class="compteur" data-vers="450">0</span> F</b><span>la photo en qualité d'origine, prix affiché d'avance</span></div>
         <div class="chiffre verre-clair revele d3"><b><span class="compteur" data-vers="0">0</span> F</b><span>à payer par l'organisateur dans la formule simple</span></div>
       </div>
     </div>
@@ -622,6 +624,12 @@
           <p>Oui, et c'est même le mieux. Il photographie comme d'habitude, nous mettons ses photos
             sur MYFACE, et il touche la majorité des ventes. Photographes : écrivez-nous, les premiers
             partenaires gardent 100&nbsp;% de leurs ventes pendant trois mois.</p>
+        </details>
+        <details>
+          <summary>Pourquoi c'est moins cher que le photographe du coin&nbsp;?</summary>
+          <p>Parce qu'il n'y a plus de tirage imprimé « au cas où ». On n'imprime que ce qu'un invité
+            a choisi et payé, et le prix est affiché avant l'achat, le même pour tout le monde.
+            L'invité paie ses photos, pas les cinquante qui finiront à la poubelle.</p>
         </details>
         <details>
           <summary>Vous déplacez-vous en dehors d'Abidjan&nbsp;?</summary>
