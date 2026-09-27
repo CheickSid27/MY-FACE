@@ -1,0 +1,336 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Story WhatsApp MYFACE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --ground: #F4EFE6; --surface: #FFFFFF; --fill: #EAE3D6; --ink: #0E2429;
+    --ink-soft: #33484D; --muted: #5E7378; --line: #D8CEBE; --orange: #F26A1B;
+    --orange-ink: #B34A08; --orange-soft: #FCE3D1; --green: #00854B;
+    --green-soft: #D2EDDF; --wa: #128C7E;
+    --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+    --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0B1A1E; --surface: #122A30; --fill: #17343B; --ink: #EFE7DA;
+      --ink-soft: #CBD8D7; --muted: #91A6A9; --line: #27454D; --orange: #FF8A3D;
+      --orange-ink: #FFAB70; --orange-soft: #3B2413; --green: #3FC489;
+      --green-soft: #113828; --wa: #4CD4A8;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0B1A1E; --surface: #122A30; --fill: #17343B; --ink: #EFE7DA;
+    --ink-soft: #CBD8D7; --muted: #91A6A9; --line: #27454D; --orange: #FF8A3D;
+    --orange-ink: #FFAB70; --orange-soft: #3B2413; --green: #3FC489;
+    --green-soft: #113828; --wa: #4CD4A8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 400 17px/1.6 var(--body); }
+  .band { height: 14px; background:
+      radial-gradient(circle at 50% 50%, var(--orange) 0 2.5px, transparent 3px) 0 0 / 14px 14px,
+      conic-gradient(from 45deg at 50% 50%, var(--ink) 0 25%, transparent 0 50%, var(--ink) 0 75%, transparent 0) 0 0 / 14px 14px,
+      var(--ground); }
+  header.top { max-width: 1020px; margin: 0 auto; padding: 44px 22px 20px; display: grid; gap: 14px; }
+  .eyebrow { margin: 0; font: 600 12px/1.4 var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 0; font: 700 clamp(28px, 4.2vw, 44px)/1.12 var(--display); letter-spacing: -.012em; max-width: 22ch; text-wrap: balance; }
+  h1 em { font-style: normal; color: var(--orange); }
+  .lede { margin: 0; max-width: 62ch; font-size: 19px; color: var(--ink-soft); }
+  main { max-width: 1020px; margin: 0 auto; padding: 0 22px 80px; }
+  section { padding-top: 46px; }
+  h2 { margin: 0 0 10px; font: 600 clamp(21px, 2.4vw, 27px)/1.22 var(--display); text-wrap: balance; }
+  h3 { margin: 24px 0 6px; font: 650 17px/1.35 var(--body); }
+  p { margin: 0 0 13px; max-width: 66ch; }
+  .intro { color: var(--ink-soft); }
+  ul, ol { margin: 0 0 13px; padding-left: 1.2em; }
+  li { margin: 0 0 7px; }
+  .fine { font-size: 14px; color: var(--muted); }
+
+  .jour { display: flex; align-items: baseline; gap: 12px; margin: 34px 0 6px; }
+  .jour b { font: 600 12px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--orange-ink); background: var(--orange-soft); padding: 7px 11px; border-radius: 999px; }
+  .jour span { font-size: 15.5px; color: var(--muted); }
+
+  .statut { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; margin: 14px 0; }
+  .statut .tete { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; background: var(--fill); border-bottom: 1px solid var(--line); }
+  .statut .num { font: 700 13px/1 var(--mono); color: #fff; background: var(--wa); padding: 7px 9px; border-radius: 8px; }
+  .statut .role { font: 600 11.5px/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .statut button { margin-left: auto; font: 600 12px/1 var(--body); padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .statut button:hover { background: var(--orange); color: #fff; border-color: var(--orange); }
+  .statut pre { margin: 0; padding: 18px 20px; white-space: pre-wrap; font: 400 16.5px/1.6 var(--body); }
+  .statut .note { margin: 0; padding: 0 20px 16px; font-size: 14.5px; color: var(--muted); }
+
+  .conseils { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 18px 0; }
+  .conseils div { border-radius: 12px; padding: 18px 20px; }
+  .conseils .oui { background: var(--green-soft); }
+  .conseils .non { background: var(--orange-soft); }
+  .conseils h3 { margin: 0 0 8px; }
+  .conseils ul { margin: 0; padding-left: 1.1em; font-size: 15.5px; }
+
+  .qa { margin: 16px 0; }
+  .qa dt { font-weight: 650; margin-top: 16px; }
+  .qa dd { margin: 5px 0 0; color: var(--ink-soft); }
+
+  .table-wrap { overflow-x: auto; margin: 16px 0 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 15px; }
+  th { font: 600 11.5px/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 11px 13px; background: var(--fill); border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 11px 13px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td:first-child { font-weight: 600; }
+
+  footer.end { margin: 44px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+  @media (max-width: 760px) { .conseils { grid-template-columns: minmax(0, 1fr); } body { font-size: 16px; } }
+</style>
+
+<div class="band" aria-hidden="true"></div>
+
+<header class="top">
+  <p class="eyebrow">Statuts WhatsApp · à copier tels quels</p>
+  <h1>Raconter MYFACE à tes contacts, <em>en onze statuts</em></h1>
+  <p class="lede">Une histoire étalée sur cinq jours : on observe un problème que tout le monde a vécu, on pose des questions, on écoute, puis seulement on présente la solution. À la fin, on demande les trois premiers événements.</p>
+</header>
+
+<main>
+  <section id="principe">
+    <h2>Comment ça marche</h2>
+    <p class="intro">Le but n'est pas de vendre dès le premier statut. C'est de faire réagir : chaque réponse qu'on te fait en privé est une information que tu n'avais pas, et une conversation ouverte avec un futur client.</p>
+    <ul>
+      <li><strong>Un ou deux statuts par jour</strong>, pas plus. Entre 12h et 13h30, ou entre 19h et 22h.</li>
+      <li><strong>Les trois premiers jours, tu ne parles pas de MYFACE.</strong> Tu parles du problème. Sinon on te range dans la case publicité et on passe.</li>
+      <li><strong>Réponds à tout le monde en privé</strong>, même à un simple 😂. C'est là que se fait le travail.</li>
+      <li><strong>Note ce qu'on te répond.</strong> Les phrases qui reviennent deviennent tes arguments de vente.</li>
+    </ul>
+  </section>
+
+  <section id="serie">
+    <h2>La série complète</h2>
+
+    <div class="jour"><b>Jour 1</b><span>On raconte la scène. Aucune mention de MYFACE.</span></div>
+
+    <article class="statut">
+      <div class="tete"><span class="num">1</span><span class="role">L'observation</span><button type="button">Copier</button></div>
+      <pre>Vous vous souvenez de la dernière cérémonie où vous êtes allés ?
+
+Les tirages du photographe étalés par terre, et tout le monde accroupi à fouiller dans le tas pour se retrouver 😅
+
+Dites-moi franchement : ça vous est arrivé combien de fois ?</pre>
+      <p class="note">Une vraie question, pas une phrase rhétorique. Les gens répondent quand ils ont quelque chose à raconter.</p>
+    </article>
+
+    <article class="statut">
+      <div class="tete"><span class="num">2</span><span class="role">Le soir, on renvoie la balle</span><button type="button">Copier</button></div>
+      <pre>Merci pour vos réponses, vous êtes nombreux à dire la même chose 😄
+
+Soit on ne trouve pas sa photo, soit on la paie cher alors qu'elle est floue.
+
+Et il y a pire : la photo reste dans les mains du photographe, et on ne sait jamais où elle finit.</pre>
+      <p class="note">Si personne n'a répondu au statut 1, garde quand même celui-ci : il fait avancer l'histoire.</p>
+    </article>
+
+    <div class="jour"><b>Jour 2</b><span>On creuse. On parle d'argent et de qualité.</span></div>
+
+    <article class="statut">
+      <div class="tete"><span class="num">3</span><span class="role">La question qui pique</span><button type="button">Copier</button></div>
+      <pre>Question sérieuse pour ceux qui sont allés à un mariage cette année :
+
+La dernière photo que vous avez payée sur place, c'était combien ?
+
+Et vous l'avez eue tout de suite, ou c'était « je t'envoie demain » 🙂</pre>
+    </article>
+
+    <article class="statut">
+      <div class="tete"><span class="num">4</span><span class="role">Le second problème</span><button type="button">Copier</button></div>
+      <pre>Autre chose que je remarque à chaque fois :
+
+Les photos finissent dans le groupe WhatsApp de la famille, compressées à mort.
+
+On a tous une photo de cérémonie toute pixelisée quelque part dans le téléphone 😭</pre>
+    </article>
+
+    <div class="jour"><b>Jour 3</b><span>On présente la solution. C'est le moment.</span></div>
+
+    <article class="statut">
+      <div class="tete"><span class="num">5</span><span class="role">La révélation</span><button type="button">Copier</button></div>
+      <pre>Bon. Je travaille sur ce problème depuis un moment, et c'est prêt.
+
+Ça s'appelle MYFACE.
+
+À l'événement, tu scannes un QR code, tu fais un selfie, et TOUTES tes photos s'affichent. Les tiennes seulement. Personne ne fouille par terre.</pre>
+    </article>
+
+    <article class="statut">
+      <div class="tete"><span class="num">6</span><span class="role">Comment ça se passe</span><button type="button">Copier</button></div>
+      <pre>Tu choisis celles que tu veux garder.
+
+Tu paies avec Wave, Orange Money, MTN, Moov, ou en espèces à la borne.
+
+Tu télécharges en qualité d'origine, sans compression. Et si tu veux ta photo en papier, elle sort de la borne sur place, en quelques secondes ✨</pre>
+    </article>
+
+    <article class="statut">
+      <div class="tete"><span class="num">7</span><span class="role">Le lien, avec une demande d'avis</span><button type="button">Copier</button></div>
+      <pre>Le site est en ligne 👉 myfaceci.online
+
+Allez voir et dites-moi franchement ce que vous en pensez.
+
+Surtout si c'est négatif : un avis qui pique m'aide dix fois plus qu'un « c'est bien » 🙏</pre>
+      <p class="note">Mets une capture du site ou la photo de la borne en image de fond de ce statut. C'est le premier où tu donnes un lien.</p>
+    </article>
+
+    <div class="jour"><b>Jour 4</b><span>Les prix, sans détour. Puis on refait parler les gens.</span></div>
+
+    <article class="statut">
+      <div class="tete"><span class="num">8</span><span class="role">Les prix, annoncés d'avance</span><button type="button">Copier</button></div>
+      <pre>Les prix, puisqu'on me pose la question :
+
+450 F la photo en qualité d'origine.
+500 F de plus si tu veux le tirage papier sur place.
+
+Affichés avant que tu choisisses. Pas de négociation, pas de surprise au moment de payer.</pre>
+    </article>
+
+    <article class="statut">
+      <div class="tete"><span class="num">9</span><span class="role">On les fait choisir</span><button type="button">Copier</button></div>
+      <pre>Une question pour vous, et ça m'aide vraiment :
+
+À un mariage, vous préféreriez payer vos photos vous-même... ou que les mariés les offrent à tous les invités ?
+
+Les deux formules existent. Je veux juste savoir laquelle vous parle le plus 👇</pre>
+    </article>
+
+    <div class="jour"><b>Jour 5</b><span>On demande. C'est tout l'intérêt de ce qui précède.</span></div>
+
+    <article class="statut">
+      <div class="tete"><span class="num">10</span><span class="role">L'appel aux premiers événements</span><button type="button">Copier</button></div>
+      <pre>Qui a un mariage, une remise de diplôme, un baptême ou une soirée d'ici décembre ?
+
+Je cherche 3 événements pour les premiers tests.
+
+C'est gratuit pour l'organisateur. Je veux juste vos retours honnêtes, et le droit de filmer un peu. Écrivez-moi en privé 📲</pre>
+    </article>
+
+    <article class="statut">
+      <div class="tete"><span class="num">11</span><span class="role">L'appel aux photographes</span><button type="button">Copier</button></div>
+      <pre>Et si tu es photographe, ou si tu connais un photographe :
+
+J'ai une offre pour les 5 premiers partenaires. Ils gardent 100 % de leurs ventes pendant 3 mois.
+
+Il photographie comme d'habitude, MYFACE s'occupe de vendre et d'encaisser. Envoie-moi son contact 🙏</pre>
+    </article>
+  </section>
+
+  <section id="version-courte">
+    <h2>Si tu veux aller plus vite</h2>
+    <p class="intro">Version en trois statuts, à publier le même jour, matin, midi et soir. Moins d'échanges, mais ça avance.</p>
+    <article class="statut">
+      <div class="tete"><span class="num">A</span><span class="role">Matin</span><button type="button">Copier</button></div>
+      <pre>Les tirages du photographe étalés par terre, et tout le monde accroupi à fouiller pour se retrouver.
+
+On a tous vécu ça. Et souvent on repart sans ses photos 😅</pre>
+    </article>
+    <article class="statut">
+      <div class="tete"><span class="num">B</span><span class="role">Midi</span><button type="button">Copier</button></div>
+      <pre>J'ai construit la solution : MYFACE.
+
+Un selfie, et toutes TES photos s'affichent. Tu paies en Mobile Money ou en espèces, tu télécharges en qualité d'origine, et tu peux imprimer sur place.
+
+450 F la photo, 500 F de plus pour le papier.</pre>
+    </article>
+    <article class="statut">
+      <div class="tete"><span class="num">C</span><span class="role">Soir</span><button type="button">Copier</button></div>
+      <pre>Le site : myfaceci.online
+
+Dites-moi ce que vous en pensez, franchement.
+
+Et si vous avez un événement d'ici décembre, écrivez-moi : je cherche 3 occasions de tester, c'est gratuit pour l'organisateur 📲</pre>
+    </article>
+  </section>
+
+  <section id="reponses">
+    <h2>Ce qu'on va te répondre, et quoi dire</h2>
+    <p class="intro">Réponds en privé, jamais en statut. Une phrase courte, puis une question pour garder la conversation ouverte.</p>
+    <dl class="qa">
+      <dt>« C'est cher. »</dt>
+      <dd>« 450 F la photo que tu gardes en vraie qualité, contre 1 000 F un tirage flou qu'on te tend. Tu payes seulement celles que tu choisis. » Puis : « Tu as un événement bientôt ? »</dd>
+      <dt>« Et mes photos, elles vont où ? »</dt>
+      <dd>« Elles restent sur l'événement. Ton selfie sert uniquement à retrouver tes photos, il n'est ni publié ni revendu. Et tant que tu n'as pas payé, personne ne voit tes photos en grand. »</dd>
+      <dt>« Ça marche sans Internet ? »</dt>
+      <dd>« Sur ton téléphone il faut un peu de connexion. Mais à la borne, non : tu fais ton selfie sur l'écran, tu paies en espèces, et la photo sort imprimée. »</dd>
+      <dt>« Tu fais ça tout seul ? »</dt>
+      <dd>« Pour l'instant oui, c'est pour ça que je cherche des photographes partenaires. Tu en connais un ? »</dd>
+      <dt>« C'est bien 👍 »</dt>
+      <dd>Ne t'arrête pas là. Réponds : « Merci ! Dis-moi, tu as un mariage ou une cérémonie en vue d'ici décembre ? »</dd>
+    </dl>
+  </section>
+
+  <section id="conseils">
+    <h2>À faire, à éviter</h2>
+    <div class="conseils">
+      <div class="oui">
+        <h3>À faire</h3>
+        <ul>
+          <li>Écrire à la première personne, comme tu parles vraiment</li>
+          <li>Poser une question à la fin d'un statut sur deux</li>
+          <li>Mettre les couleurs de la marque en fond : orange ou bleu très foncé</li>
+          <li>Répondre en privé dans l'heure</li>
+          <li>Reprendre en statut une réponse marquante d'un ami (avec son accord)</li>
+        </ul>
+      </div>
+      <div class="non">
+        <h3>À éviter</h3>
+        <ul>
+          <li>Mettre le lien dès le premier statut</li>
+          <li>Publier les onze statuts le même jour</li>
+          <li>Écrire un pavé : trois à cinq lignes suffisent</li>
+          <li>Répondre « merci » et s'arrêter là</li>
+          <li>Insister auprès de ceux qui ne répondent pas</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="apres">
+    <h2>Après la série</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Quand</th><th>Quoi publier</th></tr></thead>
+        <tbody>
+          <tr><td>Le lendemain</td><td>Un remerciement, et le nombre de personnes qui t'ont écrit. Les chiffres rassurent.</td></tr>
+          <tr><td>Après le premier événement</td><td>Une vidéo de quelqu'un qui retrouve ses photos, avec son accord. C'est ce qui convainc le plus.</td></tr>
+          <tr><td>Chaque semaine</td><td>Un statut par semaine suffit ensuite : une photo de la borne, un témoignage, une offre datée.</td></tr>
+          <tr><td>Quand quelqu'un réserve</td><td>Dis-le en statut : « un mariage de plus en décembre 🙏 ». Ça donne envie aux autres.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="end">
+    Série écrite le 27 septembre 2026. Les statuts sont à copier tels quels, mais reformule-les avec tes mots si une phrase ne te ressemble pas : sur un statut, on reconnaît tout de suite celui qui ne parle pas comme d'habitude.
+  </footer>
+</main>
+
+<script>
+  document.querySelectorAll('.statut').forEach(function (bloc) {
+    var btn = bloc.querySelector('button');
+    var pre = bloc.querySelector('pre');
+    if (!btn || !pre) return;
+    btn.addEventListener('click', function () {
+      var txt = pre.innerText;
+      var done = function () { btn.textContent = 'Copié'; setTimeout(function () { btn.textContent = 'Copier'; }, 1800); };
+      function fallback() {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); document.body.removeChild(ta); done();
+        } catch (e) { btn.textContent = 'Sélectionne le texte'; setTimeout(function () { btn.textContent = 'Copier'; }, 2200); }
+      }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(done, fallback);
+        } else { fallback(); }
+      } catch (e) { fallback(); }
+    });
+  });
+</script>

@@ -114,6 +114,7 @@ FICHES = [
     ("affiches-myface.html", "Affiches MYFACE - note d'intention.pdf"),
     ("fiche-publication-myface.html", "Fiche de publication MYFACE.pdf"),
     ("fiche-achat-materiel.html", "Fiche d achat du materiel MYFACE.pdf"),
+    ("story-whatsapp.html", "Story WhatsApp MYFACE.pdf"),
 ]
 
 GUIDES = [
