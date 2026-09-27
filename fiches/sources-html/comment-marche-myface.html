@@ -1,0 +1,341 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comment fonctionne MYFACE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --ground: #F4EFE6; --surface: #FFFFFF; --fill: #EAE3D6; --ink: #0E2429;
+    --ink-soft: #33484D; --muted: #5E7378; --line: #D8CEBE; --orange: #F26A1B;
+    --orange-ink: #B34A08; --orange-soft: #FCE3D1; --green: #00854B; --green-soft: #D2EDDF;
+    --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+    --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0B1A1E; --surface: #122A30; --fill: #17343B; --ink: #EFE7DA;
+      --ink-soft: #CBD8D7; --muted: #91A6A9; --line: #27454D; --orange: #FF8A3D;
+      --orange-ink: #FFAB70; --orange-soft: #3B2413; --green: #3FC489; --green-soft: #113828;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0B1A1E; --surface: #122A30; --fill: #17343B; --ink: #EFE7DA;
+    --ink-soft: #CBD8D7; --muted: #91A6A9; --line: #27454D; --orange: #FF8A3D;
+    --orange-ink: #FFAB70; --orange-soft: #3B2413; --green: #3FC489; --green-soft: #113828;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 400 17.5px/1.68 var(--body); }
+  .band { height: 14px; background:
+      radial-gradient(circle at 50% 50%, var(--orange) 0 2.5px, transparent 3px) 0 0 / 14px 14px,
+      conic-gradient(from 45deg at 50% 50%, var(--ink) 0 25%, transparent 0 50%, var(--ink) 0 75%, transparent 0) 0 0 / 14px 14px,
+      var(--ground); }
+  header.top { max-width: 980px; margin: 0 auto; padding: 46px 22px 18px; display: grid; gap: 14px; }
+  .eyebrow { margin: 0; font: 600 12px/1.4 var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 0; font: 700 clamp(30px, 4.4vw, 46px)/1.12 var(--display); letter-spacing: -.014em; max-width: 20ch; text-wrap: balance; }
+  h1 em { font-style: normal; color: var(--orange); }
+  .lede { margin: 0; max-width: 60ch; font-size: 19.5px; color: var(--ink-soft); }
+  main { max-width: 980px; margin: 0 auto; padding: 0 22px 84px; }
+  section { padding-top: 46px; }
+  h2 { margin: 0 0 14px; font: 600 clamp(22px, 2.5vw, 28px)/1.22 var(--display); text-wrap: balance; }
+  h3 { margin: 26px 0 6px; font: 650 18px/1.35 var(--body); }
+  p { margin: 0 0 15px; max-width: 68ch; }
+  .intro { color: var(--ink-soft); }
+  ul, ol { margin: 0 0 15px; padding-left: 1.25em; max-width: 68ch; }
+  li { margin: 0 0 8px; }
+  strong { font-weight: 650; }
+  .fine { font-size: 14.5px; color: var(--muted); }
+
+  .phare { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--orange); border-radius: 0 14px 14px 0; padding: 22px 26px; margin: 22px 0; font-size: 19px; line-height: 1.55; }
+
+  .etapes { counter-reset: e; list-style: none; padding: 0; margin: 20px 0; }
+  .etapes li { counter-increment: e; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 16px; padding: 18px 0; border-top: 1px solid var(--line); max-width: none; }
+  .etapes li:last-child { border-bottom: 1px solid var(--line); }
+  .etapes li::before { content: counter(e); font: 700 20px/44px var(--display); color: #fff; background: var(--orange); border-radius: 50%; width: 44px; height: 44px; text-align: center; }
+  .etapes h3 { margin: 0 0 4px; }
+  .etapes p { margin: 0; color: var(--ink-soft); font-size: 16.5px; }
+
+  .table-wrap { overflow-x: auto; margin: 18px 0 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 600px; font-size: 15.5px; }
+  th { font: 600 11.5px/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 12px 14px; background: var(--fill); border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td:first-child { font-weight: 600; }
+
+  .roles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 20px 0; }
+  .role { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px 24px; }
+  .role h3 { margin: 0 0 8px; font: 600 17px/1.3 var(--display); }
+  .role p { margin: 0; font-size: 16px; color: var(--ink-soft); }
+  @media (max-width: 860px) { .roles { grid-template-columns: minmax(0, 1fr); } }
+
+  .copy { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin: 16px 0; overflow: hidden; }
+  .copy .tete { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 10px 9px 15px; background: var(--fill); border-bottom: 1px solid var(--line); }
+  .copy .tete span { font: 600 11.5px/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .copy button { font: 600 12px/1 var(--body); padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .copy button:hover { background: var(--orange); color: #fff; border-color: var(--orange); }
+  .copy pre { margin: 0; padding: 16px 19px; white-space: pre-wrap; font: 400 16.5px/1.62 var(--body); }
+
+  .confiance { background: var(--green-soft); border-radius: 14px; padding: 22px 26px; margin: 20px 0; }
+  .confiance h3 { margin: 0 0 10px; color: var(--green); }
+  .confiance ul { margin: 0; padding-left: 1.15em; }
+
+  footer.end { margin: 46px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14.5px; color: var(--muted); }
+  @media (max-width: 700px) { body { font-size: 16.5px; } }
+</style>
+
+<div class="band" aria-hidden="true"></div>
+
+<header class="top">
+  <p class="eyebrow">Le texte de référence · 27 septembre 2026</p>
+  <h1>Comment fonctionne <em>MYFACE</em></h1>
+  <p class="lede">Le fonctionnement expliqué en entier, dans l'ordre où un invité le vit. À la fin, trois versions courtes à copier selon la personne en face : un invité, un organisateur, un photographe.</p>
+</header>
+
+<main>
+  <section id="phrase">
+    <h2>En une phrase</h2>
+    <div class="phare">
+      MYFACE est une plateforme qui permet de retrouver ses photos d'événement avec un simple scan du visage,
+      et de les payer en Mobile Money ou en espèces.
+    </div>
+    <p>Tout le reste découle de là : le photographe n'a plus à trier, l'invité n'a plus à fouiller, et
+      personne ne repart sans ses photos.</p>
+  </section>
+
+  <section id="probleme">
+    <h2>Le problème qu'on résout</h2>
+    <p>Dans une cérémonie, aujourd'hui, les tirages du photographe finissent étalés par terre ou sur une
+      table. Chacun s'accroupit et fouille dans le tas pour se retrouver. On mélange, on abîme, on perd du
+      temps, et beaucoup repartent sans rien. Les photos qui restent, personne ne sait ce qu'elles
+      deviennent. Et le prix se discute au moment de payer, souvent pour une image de qualité médiocre.</p>
+    <p>L'autre moitié du problème arrive le lendemain : les photos atterrissent dans le groupe WhatsApp de
+      la famille, compressées, en vrac, et il faut faire défiler des centaines d'images pour retrouver
+      les siennes.</p>
+  </section>
+
+  <section id="deroulement">
+    <h2>Comment ça se passe, dans l'ordre</h2>
+
+    <h3>Le photographe photographie, sans se limiter</h3>
+    <p>C'est le premier changement, et il compte. Le photographe n'a plus besoin de compter ses prises ni
+      d'imprimer au hasard en espérant vendre. Il photographie tout ce qu'il veut, autant qu'il veut.
+      Plus il y a de photos, mieux c'est : chaque invité retrouvera les siennes de toute façon.</p>
+
+    <h3>Les photos arrivent sur la plateforme au fil de la soirée</h3>
+    <p>Elles sont déposées dans l'application pendant l'événement. Chacune est analysée automatiquement :
+      les visages présents sur la photo sont reconnus et mémorisés. C'est ce travail invisible qui permet,
+      quelques secondes plus tard, de retrouver quelqu'un à partir d'un simple selfie.</p>
+
+    <h3>Deux portes d'entrée pour l'invité</h3>
+    <p>Dans la salle, il y a une <strong>borne</strong> : un écran tactile posé sur un pied. Et à l'entrée,
+      un <strong>QR code</strong> affiché, qui ouvre exactement la même chose sur le téléphone. L'invité
+      choisit ce qui l'arrange.</p>
+
+    <ol class="etapes">
+      <li>
+        <div>
+          <h3>Il regarde les photos</h3>
+          <p>Sur la borne ou sur son téléphone, toute la galerie de l'événement est là. Il peut la
+            parcourir tranquillement, comme un album.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Ou il scanne son visage</h3>
+          <p>S'il n'a pas le temps de tout regarder, il passe son visage devant la caméra. En quelques
+            secondes, toutes les photos où il apparaît s'affichent. Uniquement les siennes.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Il sélectionne</h3>
+          <p>Il garde celles qu'il veut, il laisse les autres. Les prix sont affichés avant de choisir :
+            rien ne se négocie au moment de payer.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Il paie</h3>
+          <p>Wave, Orange Money, MTN Money, Moov Money. Et à la borne, les espèces sont acceptées, pour
+            ceux qui n'ont pas de Mobile Money ou qui préfèrent le liquide.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Il reçoit un lien de téléchargement qui n'appartient qu'à lui</h3>
+          <p>Ce lien est unique et personnel. Il n'y a que ses photos dedans, en qualité d'origine, sans
+            compression. Il peut le rouvrir plus tard, ou le partager à qui il veut.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>À la borne, il peut repartir avec la photo imprimée</h3>
+          <p>Le tirage 10×15 sort sur place, en quelques secondes, pendant que la fête continue. Parce
+            qu'une photo qu'on tient dans la main reste un souvenir que le téléphone ne remplace pas.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section id="borne-ou-telephone">
+    <h2>La borne ou le téléphone, quelle différence</h2>
+    <p class="intro">Le contenu est identique : mêmes photos, même recherche par visage, mêmes prix. Seules
+      la commodité et l'impression changent.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th>La borne, dans la salle</th><th>Le téléphone, par le QR code</th></tr></thead>
+        <tbody>
+          <tr><td>Voir toutes les photos</td><td>Oui</td><td>Oui</td></tr>
+          <tr><td>Retrouver les siennes par le visage</td><td>Oui</td><td>Oui</td></tr>
+          <tr><td>Payer</td><td>Mobile Money ou espèces</td><td>Mobile Money</td></tr>
+          <tr><td>Imprimer sur place</td><td>Oui, en quelques secondes</td><td>Non</td></tr>
+          <tr><td>Attendre son tour</td><td>Possible aux heures de pointe</td><td>Jamais</td></tr>
+          <tr><td>Avoir de la connexion</td><td>Pas nécessaire pour l'invité</td><td>Nécessaire</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Autrement dit : le téléphone évite la file d'attente, la borne donne la photo papier. Les deux
+      fonctionnent en même temps, pendant toute la soirée.</p>
+  </section>
+
+  <section id="pour-qui">
+    <h2>Ce que ça change, pour chacun</h2>
+    <div class="roles">
+      <div class="role">
+        <h3>Pour l'invité</h3>
+        <p>Il ne fouille plus, il ne négocie plus, il ne dépend plus de personne. Il repart avec ses photos
+          en vraie qualité, et le tirage papier s'il en veut un.</p>
+      </div>
+      <div class="role">
+        <h3>Pour l'organisateur</h3>
+        <p>Il n'a plus à collecter ni à renvoyer les photos une par une après la fête. Ses invités se
+          servent eux-mêmes. Et il peut choisir de leur offrir les photos.</p>
+      </div>
+      <div class="role">
+        <h3>Pour le photographe</h3>
+        <p>Il photographie sans compter et sans trier. Ses photos se vendent toutes seules pendant
+          l'événement, au lieu de finir gratuitement dans un groupe WhatsApp.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="prix">
+    <h2>Les prix</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Formule</th><th>Prix</th><th>Pour quel événement</th></tr></thead>
+        <tbody>
+          <tr><td>La photo, en qualité d'origine</td><td>450 F</td><td>L'invité achète ce qu'il veut garder</td></tr>
+          <tr><td>Le tirage papier 10×15</td><td>500 F de plus</td><td>À la borne, imprimé sur place</td></tr>
+          <tr><td>Lots et remises</td><td>Selon l'événement</td><td>Fixés avec l'organisateur</td></tr>
+          <tr><td>Forfait « photos offertes »</td><td>Dès 150 000 F</td><td>Mariages et galas, les invités ne paient rien</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="fine">Les prix sont réglés événement par événement : ils dépendent du type de cérémonie, du
+      nombre d'invités et de la durée. Ils sont toujours affichés avant que l'invité choisisse.</p>
+  </section>
+
+  <section id="confiance">
+    <h2>Ce qu'on fait des photos et du selfie</h2>
+    <div class="confiance">
+      <h3>Les trois règles</h3>
+      <ul>
+        <li><strong>Le selfie sert uniquement à retrouver les photos</strong> de la personne qui le prend.
+          Il n'est ni publié, ni revendu, ni utilisé pour autre chose.</li>
+        <li><strong>Rien n'est visible en grand avant l'achat.</strong> Les invités voient des aperçus
+          marqués ; les fichiers en qualité d'origine n'arrivent qu'après le paiement.</li>
+        <li><strong>Chaque commande a son reçu</strong> : numéro, liste des photos, montant et moyen de
+          paiement. En cas de réclamation, tout est retrouvable.</li>
+      </ul>
+    </div>
+    <p>Une affiche à l'entrée prévient que l'événement est photographié. Si quelqu'un ne souhaite pas
+      apparaître, il le signale à l'équipe ou à l'organisateur, et ses photos sont retirées.</p>
+  </section>
+
+  <section id="surplace">
+    <h2>Ce qu'il faut sur place</h2>
+    <ul>
+      <li>La borne : un écran tactile, une caméra et une imprimante, installés par notre équipe.</li>
+      <li>Un QR code à l'entrée et des chevalets sur les tables, pour ceux qui préfèrent leur téléphone.</li>
+      <li>Une prise de courant, et un coin visible mais pas dans le passage.</li>
+      <li>Une connexion Internet si possible. Sinon, nous venons avec la nôtre.</li>
+    </ul>
+    <p>On installe, on reste pendant l'événement, on remballe. L'organisateur n'a rien à gérer.</p>
+  </section>
+
+  <section id="versions">
+    <h2>Trois versions courtes, selon la personne en face</h2>
+
+    <div class="copy">
+      <div class="tete"><span>Pour un invité, ou en message WhatsApp</span><button type="button">Copier</button></div>
+      <pre>MYFACE permet de retrouver ses photos d'événement avec un simple scan du visage.
+
+Tu passes ton visage devant la borne, ou tu scannes le QR code à l'entrée avec ton téléphone : toutes les photos où tu apparais s'affichent, uniquement les tiennes. Tu choisis celles que tu veux, tu paies en Mobile Money ou en espèces, et tu reçois un lien personnel pour les télécharger en vraie qualité.
+
+À la borne, tu peux même repartir avec ta photo imprimée, en quelques secondes.</pre>
+    </div>
+
+    <div class="copy">
+      <div class="tete"><span>Pour un organisateur, mariés ou entreprise</span><button type="button">Copier</button></div>
+      <pre>MYFACE installe une borne photo à votre événement. Vos invités y retrouvent leurs photos en passant simplement leur visage devant l'écran, ou depuis leur téléphone en scannant un QR code à l'entrée.
+
+Ils choisissent leurs photos, les paient en Mobile Money ou en espèces, et les téléchargent en qualité d'origine. Ils peuvent aussi les imprimer sur place.
+
+Vous n'avez plus rien à collecter ni à renvoyer après la fête. Et si vous préférez offrir les photos à tous vos invités, nous avons un forfait pour ça.
+
+Nous installons, nous restons pendant l'événement, nous remballons.</pre>
+    </div>
+
+    <div class="copy">
+      <div class="tete"><span>Pour un photographe</span><button type="button">Copier</button></div>
+      <pre>Avec MYFACE, tu photographies sans compter et sans trier.
+
+Tes photos partent sur la plateforme pendant l'événement. Chaque invité passe son visage devant la borne ou scanne le QR code, retrouve ses photos en quelques secondes, les paie et les télécharge. Il peut aussi les imprimer sur place.
+
+Tu ne cours plus après les clients, tu ne vends plus des tirages étalés par terre, et tes photos ne finissent plus gratuitement dans un groupe WhatsApp.
+
+Tu gardes la majorité des ventes. Les premiers partenaires gardent 100 % pendant trois mois.</pre>
+    </div>
+
+    <div class="copy">
+      <div class="tete"><span>À dire à l'oral, en trente secondes</span><button type="button">Copier</button></div>
+      <pre>Tu sais, quand tu vas à une cérémonie et que les photos du photographe sont étalées par terre, et tout le monde fouille pour se retrouver ?
+
+MYFACE règle ça. On installe une borne dans la salle. L'invité passe son visage devant l'écran, et toutes SES photos s'affichent, en quelques secondes. Il choisit, il paie en Wave ou en espèces, et il télécharge en vraie qualité. S'il veut la photo papier, elle sort de la borne sur place.
+
+Et pour ceux qui ne veulent pas faire la queue, il y a un QR code à l'entrée : la même chose, sur leur téléphone.</pre>
+    </div>
+  </section>
+
+  <footer class="end">
+    Texte de référence établi le 27 septembre 2026, à partir de l'explication orale du porteur du projet.
+    C'est la version à reprendre partout : site, affiches, devis, présentations. Si une formulation change
+    ici, elle change partout ailleurs.
+  </footer>
+</main>
+
+<script>
+  document.querySelectorAll('.copy').forEach(function (bloc) {
+    var btn = bloc.querySelector('button');
+    var pre = bloc.querySelector('pre');
+    if (!btn || !pre) return;
+    btn.addEventListener('click', function () {
+      var txt = pre.innerText;
+      var done = function () { btn.textContent = 'Copié'; setTimeout(function () { btn.textContent = 'Copier'; }, 1800); };
+      function fallback() {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); document.body.removeChild(ta); done();
+        } catch (e) { btn.textContent = 'Sélectionne le texte'; setTimeout(function () { btn.textContent = 'Copier'; }, 2200); }
+      }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(done, fallback);
+        } else { fallback(); }
+      } catch (e) { fallback(); }
+    });
+  });
+</script>
