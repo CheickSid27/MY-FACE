@@ -1,4 +1,5 @@
 "use client";
+import MyfaceLogo from "@/components/brand/Logo";
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -32,7 +33,15 @@ export default function AdminLoginPage() {
       />
 
       <form onSubmit={handleSubmit} className="glass-strong relative z-10 w-full max-w-sm rounded-2xl p-8 animate-scale-in">
-        <h1 className="mb-6 text-xl font-bold text-ink-900">MYFACE &mdash; Admin</h1>
+        <div className="mb-6 flex items-center gap-3">
+          <MyfaceLogo size={44} />
+          <div>
+            <p className="text-lg font-bold leading-tight text-ink-900">
+              MY<span className="text-[#F26A1B]">FACE</span>
+            </p>
+            <p className="text-xs text-ink-500">Espace organisateur</p>
+          </div>
+        </div>
 
         <label className="mb-1 block text-sm font-medium text-ink-700">Email</label>
         <input

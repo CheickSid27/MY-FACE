@@ -18,7 +18,7 @@ export default function GlobalError({ reset }: { reset: () => void }) {
             gap: "1.25rem",
             padding: "1.5rem",
             textAlign: "center",
-            background: "#14171f",
+            background: "#0e2429",
             color: "#fff",
             fontFamily: "system-ui, sans-serif",
           }}
@@ -32,10 +32,10 @@ export default function GlobalError({ reset }: { reset: () => void }) {
             onClick={reset}
             style={{
               borderRadius: "1rem",
-              background: "#c9a15a",
+              background: "#f26a1b",
               padding: "0.75rem 1.5rem",
               fontWeight: 600,
-              color: "#14171f",
+              color: "#0e2429",
               border: "none",
               cursor: "pointer",
             }}

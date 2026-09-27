@@ -1,0 +1,544 @@
+<title>Huit affiches MYFACE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #F4EFE6;
+    --surface: #FFFFFF;
+    --fill: #EAE3D6;
+    --ink: #0E2429;
+    --ink-soft: #33484D;
+    --muted: #5E7378;
+    --line: #D8CEBE;
+    --orange: #F26A1B;
+    --orange-ink: #B34A08;
+    --orange-soft: #FCE3D1;
+    --green: #00854B;
+    --green-soft: #D2EDDF;
+    --on-orange: #FFFFFF;
+    --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+    --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0B1A1E; --surface: #122A30; --fill: #17343B; --ink: #EFE7DA;
+      --ink-soft: #CBD8D7; --muted: #91A6A9; --line: #27454D; --orange: #FF8A3D;
+      --orange-ink: #FFAB70; --orange-soft: #3B2413; --green: #3FC489;
+      --green-soft: #113828; --on-orange: #1C0D03;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0B1A1E; --surface: #122A30; --fill: #17343B; --ink: #EFE7DA;
+    --ink-soft: #CBD8D7; --muted: #91A6A9; --line: #27454D; --orange: #FF8A3D;
+    --orange-ink: #FFAB70; --orange-soft: #3B2413; --green: #3FC489;
+    --green-soft: #113828; --on-orange: #1C0D03;
+  }
+
+  /* Les affiches gardent toujours leurs vraies couleurs de marque, quel que
+     soit le theme du lecteur : c'est ce qui sera imprime. */
+  :root {
+    --p-ink: #0E2429;
+    --p-sand: #F4EFE6;
+    --p-orange: #F26A1B;
+    --p-green: #00854B;
+    --p-white: #FFFFFF;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { background: var(--ground); color: var(--ink); font: 400 17px/1.6 var(--body); }
+  a { color: var(--orange-ink); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+
+  .band { height: 14px; background:
+      radial-gradient(circle at 50% 50%, var(--orange) 0 2.5px, transparent 3px) 0 0 / 14px 14px,
+      conic-gradient(from 45deg at 50% 50%, var(--ink) 0 25%, transparent 0 50%, var(--ink) 0 75%, transparent 0) 0 0 / 14px 14px,
+      var(--ground); }
+
+  header.top { max-width: 1080px; margin: 0 auto; padding: 46px 24px 26px; display: grid; gap: 15px; }
+  .eyebrow { margin: 0; font: 600 12px/1.4 var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 0; font: 700 clamp(29px, 4.3vw, 46px)/1.1 var(--display); letter-spacing: -.012em; text-wrap: balance; max-width: 22ch; }
+  h1 em { font-style: normal; color: var(--orange); }
+  .lede { margin: 0; max-width: 62ch; font-size: 19px; color: var(--ink-soft); }
+
+  main { max-width: 1080px; margin: 0 auto; padding: 0 24px 90px; }
+  section { padding-top: 54px; }
+  h2 { margin: 0 0 12px; font: 600 clamp(21px, 2.4vw, 28px)/1.2 var(--display); text-wrap: balance; }
+  h3 { margin: 0 0 6px; font: 650 17px/1.35 var(--body); }
+  p { margin: 0 0 13px; max-width: 66ch; }
+  .intro { color: var(--ink-soft); }
+  ul, ol { margin: 0 0 13px; padding-left: 1.2em; }
+  li { margin: 0 0 6px; }
+  .fine { font-size: 14px; color: var(--muted); }
+
+  /* ---------- fiche affiche ---------- */
+  .sheet { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 28px; padding: 30px 0; border-top: 1px solid var(--line); align-items: start; }
+  .sheet:last-of-type { border-bottom: 1px solid var(--line); }
+  .sheet .notes h3 { font: 600 19px/1.25 var(--display); margin-bottom: 8px; }
+  .sheet .notes p { font-size: 16px; color: var(--ink-soft); }
+  .meta { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 12px; padding: 0; list-style: none; }
+  .meta li { font: 600 11px/1 var(--mono); letter-spacing: .03em; padding: 6px 9px; border-radius: 999px; background: var(--fill); color: var(--muted); }
+  .meta li.easy { background: var(--green-soft); color: var(--green); }
+  .meta li.mid { background: var(--orange-soft); color: var(--orange-ink); }
+  .recipe { margin: 12px 0 0; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+  .recipe b { display: block; font: 600 11.5px/1.4 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .recipe ul { margin: 0; padding-left: 1.1em; font-size: 15px; }
+  .recipe li { margin-bottom: 4px; }
+
+  .copy { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin: 12px 0 0; overflow: hidden; }
+  .copy header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px 8px 14px; background: var(--fill); border-bottom: 1px solid var(--line); }
+  .copy header span { font: 600 11px/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .copy button { font: 600 12px/1 var(--body); padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .copy button:hover { background: var(--orange); color: var(--on-orange); border-color: var(--orange); }
+  .copy pre { margin: 0; padding: 13px 16px; white-space: pre-wrap; font: 400 15px/1.55 var(--body); }
+
+  /* ---------- maquettes d'affiches ---------- */
+  .poster {
+    width: 300px; aspect-ratio: 4 / 5; border-radius: 10px; overflow: hidden;
+    position: relative; box-shadow: 0 10px 26px rgba(14, 36, 41, .18);
+    font-family: var(--body); color: var(--p-ink); background: var(--p-sand);
+    display: flex; flex-direction: column;
+  }
+  .poster.story { aspect-ratio: 9 / 16; }
+  .poster.dark { background: var(--p-ink); color: var(--p-sand); }
+  .poster .pad { padding: 22px; display: flex; flex-direction: column; height: 100%; }
+  .poster .mark { display: flex; align-items: center; gap: 6px; font: 800 13px/1 var(--body); letter-spacing: -.02em; }
+  .poster .mark .ic { width: 20px; height: 20px; border-radius: 5px; flex: 0 0 auto; }
+  .poster .big { font-family: var(--display); font-weight: 800; letter-spacing: -.03em; line-height: .96; }
+  .poster .sig { font: 600 10px/1.3 var(--body); opacity: .72; }
+  .poster .orange { color: var(--p-orange); }
+  .spacer { flex: 1; }
+
+  .frame-deco { position: absolute; inset: 16px; border-radius: 6px; pointer-events: none; }
+  .frame-deco span { position: absolute; width: 34px; height: 34px; border: 4px solid var(--p-orange); }
+  .frame-deco span:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0; border-top-left-radius: 6px; }
+  .frame-deco span:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 6px; }
+  .frame-deco span:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 6px; }
+  .frame-deco span:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 6px; border-color: var(--p-green); }
+
+  .steps { display: grid; gap: 12px; }
+  .steps div { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; }
+  .steps b { font: 800 15px/1 var(--display); color: var(--p-orange); }
+  .steps p { margin: 0; font-size: 12.5px; line-height: 1.35; }
+  .steps strong { display: block; font-size: 13.5px; }
+
+  .phone { width: 128px; margin: 0 auto; border-radius: 16px; background: #1B1B1F; padding: 6px 5px 10px; box-shadow: 0 8px 18px rgba(0,0,0,.28); }
+  .phone .screen { border-radius: 11px; overflow: hidden; background: #12171E; padding: 7px; }
+  .phone .bar { height: 3px; width: 34px; border-radius: 3px; background: #4A5560; margin: 0 auto 6px; }
+  .phone .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+  .phone .grid3 i { display: block; aspect-ratio: 1; border-radius: 3px; background: linear-gradient(135deg, #5C6B78, #2E3A44); }
+  .phone .grid3 i:nth-child(3n) { background: linear-gradient(135deg, #7E6A58, #3A2F28); }
+  .phone .grid3 i:nth-child(4) { background: linear-gradient(135deg, #6D7F6A, #2C3A2E); }
+  .phone .cta { margin-top: 6px; border-radius: 5px; background: var(--p-orange); color: #fff; font: 700 7px/1 var(--body); text-align: center; padding: 5px 0; }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .split figure { margin: 0; }
+  .split .img { aspect-ratio: 1; border-radius: 6px; background: linear-gradient(135deg, #6F7C86, #303B44); }
+  .split .img.blur { filter: blur(3px) saturate(.6); }
+  .split figcaption { margin-top: 5px; font: 700 9.5px/1.2 var(--body); text-transform: uppercase; letter-spacing: .05em; }
+  .split .ko { color: #B34A08; }
+  .split .ok { color: var(--p-green); }
+
+  .prices { display: grid; gap: 7px; }
+  .prices div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; border-bottom: 1px dashed rgba(14,36,41,.25); padding-bottom: 5px; }
+  .poster.dark .prices div { border-bottom-color: rgba(244,239,230,.25); }
+  .prices span { font-size: 12px; }
+  .prices b { font-family: var(--mono); font-weight: 600; font-size: 14px; }
+
+  .qrblock { width: 118px; height: 118px; margin: 0 auto; border-radius: 8px; background: var(--p-white); display: grid; place-items: center; }
+  .qrblock svg { width: 96px; height: 96px; }
+
+  .wax { position: absolute; inset: 0; opacity: .16; background:
+      radial-gradient(circle at 50% 50%, var(--p-orange) 0 4px, transparent 5px) 0 0 / 26px 26px,
+      conic-gradient(from 45deg at 50% 50%, var(--p-ink) 0 25%, transparent 0 50%, var(--p-ink) 0 75%, transparent 0) 0 0 / 26px 26px; }
+
+  .datebox { display: inline-flex; flex-direction: column; align-items: center; background: var(--p-orange); color: #fff; border-radius: 8px; padding: 8px 14px; }
+  .datebox b { font: 800 26px/1 var(--display); }
+  .datebox span { font: 700 9px/1.2 var(--body); text-transform: uppercase; letter-spacing: .08em; }
+
+  .table-wrap { overflow-x: auto; margin: 16px 0 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 15px; }
+  th { font: 600 11.5px/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 11px 14px; background: var(--fill); border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td:first-child { font-weight: 600; }
+
+  .rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0 8px; }
+  .rules div { border-radius: 12px; padding: 18px 20px; }
+  .rules .yes { background: var(--green-soft); }
+  .rules .no { background: var(--orange-soft); }
+  .rules ul { margin: 0; padding-left: 1.1em; font-size: 15.5px; }
+
+  footer.end { margin: 50px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+
+  @media (max-width: 860px) {
+    .sheet { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+    .poster { width: 100%; max-width: 320px; }
+    .rules { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
+
+<div class="band" aria-hidden="true"></div>
+
+<header class="top">
+  <p class="eyebrow">Contenu à publier · sans tournage, sans vraies photos d'événement</p>
+  <h1>Huit affiches à faire tout de suite, <em>avec ce qu'on a</em></h1>
+  <p class="lede"><strong>Mise à jour du 27 septembre : les 21 affiches existent maintenant en fichiers</strong>, dans <code>D:\MY FACEffiches</code> (voir le README du dossier). Cette page reste la note d'intention.<br><br>Aucune de ces affiches n'a besoin d'une photo de client. Elles vivent de typographie, du logo, du motif de pagne et des captures de l'application. Chaque fiche montre la maquette, dit quoi écrire, et liste exactement ce qu'il faut préparer.</p>
+</header>
+
+<main>
+  <section id="principe">
+    <h2>Le principe : la marque avant les photos</h2>
+    <p class="intro">Une jeune entreprise n'a pas encore de galerie de clients, et des photos prises ailleurs ne peuvent pas être présentées comme des événements MYFACE. Ce serait un mauvais départ, et ça se voit vite. La solution est de faire parler la marque : un message par affiche, en très gros, dans les trois couleurs, avec le logo en bas. Ce style tient sans photo — et quand les vraies photos arriveront, elles se glisseront dedans sans rien changer.</p>
+    <p>Trois sources d'images honnêtes, dès maintenant :</p>
+    <ul>
+      <li><strong>Des captures de ton application.</strong> C'est ton produit, personne ne peut te le contester. Une capture de la galerie ou de l'écran « mes photos » vaut mille explications.</li>
+      <li><strong>Le motif et les couleurs.</strong> Le cadre de détection et la bande inspirée du pagne suffisent à remplir une affiche.</li>
+      <li><strong>Une image générée par IA, présentée comme une illustration.</strong> Jamais comme la photo d'un vrai événement, jamais avec un visage qui ressemble à quelqu'un de réel. Les consignes sont en bas de page.</li>
+    </ul>
+  </section>
+
+  <section id="affiches">
+    <h2>Les huit affiches</h2>
+
+    <!-- 1 -->
+    <article class="sheet">
+      <div class="poster dark">
+        <div class="frame-deco"><span></span><span></span><span></span><span></span></div>
+        <div class="pad">
+          <div class="mark"><span class="ic" style="background:var(--p-orange)"></span>MY<span class="orange">FACE</span></div>
+          <div class="spacer"></div>
+          <p class="big" style="font-size:38px">Un selfie.<br><span class="orange">Toutes</span><br>tes photos.</p>
+          <div class="spacer"></div>
+          <p style="margin:0;font-size:12px;opacity:.8">Mariages · Diplômes · Soirées<br>Abidjan</p>
+        </div>
+      </div>
+      <div class="notes">
+        <ul class="meta"><li class="easy">Très facile</li><li>Carré et story</li><li>Aucune image</li></ul>
+        <h3>1. La signature</h3>
+        <p>L'affiche d'identité, celle qu'on épingle en haut du profil. Fond encre, trois lignes énormes, le mot « Toutes » en orange, le cadre de détection en décor. Rien d'autre : c'est sa force.</p>
+        <div class="recipe">
+          <b>À préparer</b>
+          <ul>
+            <li>Fond <code>#0E2429</code>, texte <code>#F4EFE6</code>, accents <code>#F26A1B</code> et un coin en <code>#00854B</code>.</li>
+            <li>Police des titres en très gras, taille maximale : le texte doit toucher presque les bords.</li>
+            <li>Logo en haut à gauche, ville et types d'événements en bas.</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <!-- 2 -->
+    <article class="sheet">
+      <div class="poster">
+        <div class="pad">
+          <div class="mark"><span class="ic" style="background:var(--p-ink)"></span>MY<span class="orange">FACE</span></div>
+          <div class="spacer"></div>
+          <p class="big" style="font-size:22px;margin:0 0 14px">Tes photos<br>en 3 étapes</p>
+          <div class="steps">
+            <div><b>1</b><p><strong>Scanne le QR</strong>posé sur ta table</p></div>
+            <div><b>2</b><p><strong>Fais un selfie</strong>pour qu'on te reconnaisse</p></div>
+            <div><b>3</b><p><strong>Récupère tes photos</strong>en qualité d'origine</p></div>
+          </div>
+          <div class="spacer"></div>
+          <p class="sig">Un selfie. Toutes tes photos.</p>
+        </div>
+      </div>
+      <div class="notes">
+        <ul class="meta"><li class="easy">Très facile</li><li>Carré, story et A4</li><li>Aucune image</li></ul>
+        <h3>2. Le mode d'emploi</h3>
+        <p>La plus utile de toutes. Elle sert en publication, en story, et imprimée sur les chevalets de table pendant l'événement. Les gens ne se demandent plus quoi faire.</p>
+        <div class="recipe">
+          <b>À préparer</b>
+          <ul>
+            <li>Fond sable, chiffres en orange, trois lignes courtes. Une phrase par étape, pas deux.</li>
+            <li>Version imprimée : même affiche avec le QR de l'événement au centre. L'application la génère déjà : administration, page de l'événement, bouton d'affiche.</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <!-- 3 -->
+    <article class="sheet">
+      <div class="poster dark">
+        <div class="pad">
+          <div class="mark"><span class="ic" style="background:var(--p-orange)"></span>MY<span class="orange">FACE</span></div>
+          <div class="spacer"></div>
+          <div class="phone">
+            <div class="screen">
+              <div class="bar"></div>
+              <div class="grid3"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="cta">Télécharger mes 14 photos</div>
+            </div>
+          </div>
+          <div class="spacer"></div>
+          <p class="big" style="font-size:21px;margin:0">14 photos d'elle.<br><span class="orange">Trouvées en 4 secondes.</span></p>
+          <p class="sig" style="margin-top:8px">Elle n'a rien fait défiler.</p>
+        </div>
+      </div>
+      <div class="notes">
+        <ul class="meta"><li class="mid">Facile</li><li>Carré et story</li><li>1 capture d'écran</li></ul>
+        <h3>3. L'écran du téléphone</h3>
+        <p>La preuve que le produit existe. On met une capture de l'écran « mes photos » dans un téléphone dessiné, et un chiffre concret à côté. Le chiffre fait tout le travail.</p>
+        <div class="recipe">
+          <b>À préparer</b>
+          <ul>
+            <li>Une capture d'écran de ton application sur ton propre téléphone.</li>
+            <li>Si les photos de test viennent d'ailleurs : floute-les légèrement ou recadre sur la grille. On doit comprendre l'interface, pas reconnaître les visages.</li>
+            <li>Le cadre de téléphone se trouve gratuitement dans Canva (chercher « phone mockup »).</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <!-- 4 -->
+    <article class="sheet">
+      <div class="poster">
+        <div class="pad">
+          <div class="mark"><span class="ic" style="background:var(--p-ink)"></span>MY<span class="orange">FACE</span></div>
+          <div class="spacer"></div>
+          <div class="split">
+            <figure><div class="img blur"></div><figcaption class="ko">Groupe WhatsApp</figcaption></figure>
+            <figure><div class="img"></div><figcaption class="ok">Chez MYFACE</figcaption></figure>
+          </div>
+          <div class="spacer"></div>
+          <p class="big" style="font-size:20px;margin:0">Ta tenue méritait mieux qu'une <span class="orange">photo floue.</span></p>
+        </div>
+      </div>
+      <div class="notes">
+        <ul class="meta"><li class="mid">Facile</li><li>Carré</li><li>1 photo, deux versions</li></ul>
+        <h3>4. Avant / après WhatsApp</h3>
+        <p>Le format qui explique la valeur sans un mot d'explication. Tout le monde a déjà reçu une photo de cérémonie abîmée par trois partages.</p>
+        <div class="recipe">
+          <b>À préparer</b>
+          <ul>
+            <li>Une seule image : la version nette, et la même passée en flou léger, avec des couleurs ternies.</li>
+            <li>Une photo neutre suffit : un plan large de salle, un détail de tenue, des mains. Pas besoin de visage.</li>
+            <li>Ne jamais présenter cette image comme la photo d'un client.</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <!-- 5 -->
+    <article class="sheet">
+      <div class="poster">
+        <div class="wax"></div>
+        <div class="pad">
+          <div class="mark"><span class="ic" style="background:var(--p-ink)"></span>MY<span class="orange">FACE</span></div>
+          <div class="spacer"></div>
+          <p class="big" style="font-size:24px;margin:0 0 12px">Tes photos,<br>à partir de <span class="orange">450 F</span></p>
+          <div class="prices">
+            <div><span>La photo</span><b>450 F</b></div>
+            <div><span>Impression, en option</span><b>+200 F</b></div>
+            <div><span>Lots et remises</span><b>selon l'événement</b></div>
+          </div>
+          <div class="spacer"></div>
+          <p class="sig">Mobile Money ou espèces à la borne.</p>
+        </div>
+      </div>
+      <div class="notes">
+        <ul class="meta"><li class="easy">Très facile</li><li>A4 et carré</li><li>Aucune image</li></ul>
+        <h3>5. Les prix, en clair</h3>
+        <p>Celle qui fait vendre dans la salle. Posée sur la borne et sur les tables, elle répond à la seule question que tout le monde se pose. Adapte les montants à chaque événement.</p>
+        <div class="recipe">
+          <b>À préparer</b>
+          <ul>
+            <li>Montants alignés à droite, dans une police à chiffres réguliers.</li>
+            <li>Toujours écrire les moyens de paiement en bas : c'est ce qui débloque l'achat.</li>
+            <li>Une version par événement, puisque les prix changent.</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <!-- 6 -->
+    <article class="sheet">
+      <div class="poster dark">
+        <div class="frame-deco"><span></span><span></span><span></span><span></span></div>
+        <div class="pad">
+          <div class="mark"><span class="ic" style="background:var(--p-orange)"></span>MY<span class="orange">FACE</span></div>
+          <div class="spacer"></div>
+          <p class="big" style="font-size:26px;margin:0 0 10px">Photographe<br>à Abidjan ?</p>
+          <p style="margin:0;font-size:13.5px;line-height:1.45">Tu photographies.<br>On vend tes photos pour toi.<br><span class="orange" style="font-weight:800">Tu gardes 70 %.</span></p>
+          <div class="spacer"></div>
+          <p class="sig">Les 5 premiers partenaires : 100 % pendant 3 mois.</p>
+        </div>
+      </div>
+      <div class="notes">
+        <ul class="meta"><li class="easy">Très facile</li><li>Carré et story</li><li>Aucune image</li></ul>
+        <h3>6. L'appel aux photographes</h3>
+        <p>À publier une fois par semaine, et à envoyer en message direct aux photographes repérés sur Instagram. Trois phrases, un chiffre, une offre limitée. C'est tout ce qu'il faut.</p>
+        <div class="copy">
+          <header><span>Légende de la publication</span><button type="button">Copier</button></header>
+          <pre>Photographe à Abidjan ? Tes photos de cérémonie finissent dans un groupe WhatsApp, gratuitement.
+Chez MYFACE, tes invités retrouvent leurs photos avec un selfie et les achètent sur place. Tu gardes 70 %.
+Les 5 premiers partenaires gardent 100 % pendant 3 mois. Écris-nous en message privé.</pre>
+        </div>
+      </div>
+    </article>
+
+    <!-- 7 -->
+    <article class="sheet">
+      <div class="poster">
+        <div class="pad">
+          <div class="mark"><span class="ic" style="background:var(--p-ink)"></span>MY<span class="orange">FACE</span></div>
+          <div class="spacer"></div>
+          <p class="big" style="font-size:23px;margin:0 0 12px">Galas et soirées de fin d'année</p>
+          <div class="datebox"><b>30</b><span>novembre</span></div>
+          <p style="margin:12px 0 0;font-size:13px;line-height:1.45">Réservez avant cette date :<br><strong>les tirages papier sont offerts</strong> pour vos invités.</p>
+          <div class="spacer"></div>
+          <p class="sig">WhatsApp · [ton numéro]</p>
+        </div>
+      </div>
+      <div class="notes">
+        <ul class="meta"><li class="easy">Très facile</li><li>Carré et story</li><li>Aucune image</li></ul>
+        <h3>7. L'offre datée</h3>
+        <p>Une offre sans date ne fait agir personne. Le gros bloc de date crée l'urgence, et la même mise en page se recycle toute l'année : rentrée, fin d'année, Saint-Valentin, 8 mars, saison des mariages.</p>
+        <div class="recipe">
+          <b>À préparer</b>
+          <ul>
+            <li>Un seul avantage annoncé, jamais trois. Ici : les tirages offerts.</li>
+            <li>La date en pastille orange, plus grosse que tout le reste après le titre.</li>
+            <li>Le numéro WhatsApp en bas, toujours.</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <!-- 8 -->
+    <article class="sheet">
+      <div class="poster story">
+        <div class="wax"></div>
+        <div class="pad">
+          <div class="mark"><span class="ic" style="background:var(--p-ink)"></span>MY<span class="orange">FACE</span></div>
+          <div class="spacer"></div>
+          <p class="big" style="font-size:27px;margin:0 0 10px">Tes invités<br>repartent avec<br><span class="orange">leurs photos.</span></p>
+          <p style="margin:0;font-size:13px;line-height:1.5">Tu n'as plus à les envoyer une par une dans le groupe.</p>
+          <div class="spacer"></div>
+          <div class="qrblock">
+            <svg viewBox="0 0 29 29" shape-rendering="crispEdges" role="img" aria-label="Exemple de QR code">
+              <rect width="29" height="29" fill="#fff"/>
+              <g fill="#0E2429">
+                <rect x="1" y="1" width="7" height="7"/><rect x="2" y="2" width="5" height="5" fill="#fff"/><rect x="3" y="3" width="3" height="3"/>
+                <rect x="21" y="1" width="7" height="7"/><rect x="22" y="2" width="5" height="5" fill="#fff"/><rect x="23" y="3" width="3" height="3"/>
+                <rect x="1" y="21" width="7" height="7"/><rect x="2" y="22" width="5" height="5" fill="#fff"/><rect x="3" y="23" width="3" height="3"/>
+                <rect x="10" y="2" width="1" height="1"/><rect x="12" y="1" width="1" height="1"/><rect x="14" y="3" width="1" height="1"/><rect x="11" y="5" width="1" height="1"/><rect x="13" y="6" width="1" height="1"/>
+                <rect x="2" y="10" width="1" height="1"/><rect x="4" y="12" width="1" height="1"/><rect x="6" y="11" width="1" height="1"/><rect x="1" y="14" width="1" height="1"/><rect x="5" y="16" width="1" height="1"/>
+                <rect x="10" y="10" width="2" height="2"/><rect x="14" y="12" width="2" height="2"/><rect x="18" y="10" width="1" height="1"/><rect x="12" y="16" width="2" height="2"/><rect x="16" y="18" width="1" height="1"/>
+                <rect x="20" y="14" width="1" height="1"/><rect x="22" y="12" width="2" height="1"/><rect x="25" y="15" width="1" height="1"/><rect x="21" y="18" width="2" height="2"/><rect x="26" y="20" width="1" height="1"/>
+                <rect x="10" y="22" width="1" height="1"/><rect x="13" y="24" width="2" height="1"/><rect x="16" y="22" width="1" height="2"/><rect x="19" y="25" width="2" height="1"/><rect x="24" y="23" width="1" height="1"/><rect x="26" y="26" width="1" height="1"/>
+              </g>
+            </svg>
+          </div>
+          <p class="sig" style="text-align:center;margin-top:8px">Scanne pour voir un événement en vrai</p>
+        </div>
+      </div>
+      <div class="notes">
+        <ul class="meta"><li class="easy">Très facile</li><li>Story 9:16 et A4</li><li>Aucune image</li></ul>
+        <h3>8. L'affiche pagne, pour les organisateurs</h3>
+        <p>Format vertical plein écran, motif de pagne en fond très pâle, et un vrai QR qui mène à un événement de démonstration. C'est celle qu'on colle chez les partenaires : salles, wedding planners, boutiques de tenues.</p>
+        <div class="recipe">
+          <b>À préparer</b>
+          <ul>
+            <li>Le motif en fond à 15 % d'opacité maximum, sinon le texte devient illisible.</li>
+            <li>Le QR doit mener à un événement vitrine, pas à la page d'accueil : on veut montrer le produit qui tourne.</li>
+            <li>Sur une affiche imprimée, le QR ne descend jamais sous 3 cm de côté.</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section id="formats">
+    <h2>Les formats et l'outil</h2>
+    <p class="intro">Fais chaque affiche une fois au format carré, puis décline. Dans Canva, la fonction de redimensionnement fait le travail en deux clics, à condition de laisser de la marge autour du texte.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Usage</th><th>Taille</th><th>Remarque</th></tr></thead>
+        <tbody>
+          <tr><td>Publication Instagram et Facebook</td><td>1080 × 1350 px</td><td>Le format vertical prend plus de place dans le fil que le carré</td></tr>
+          <tr><td>Story, statut WhatsApp, TikTok</td><td>1080 × 1920 px</td><td>Garder le texte au centre : les bords sont masqués par l'interface</td></tr>
+          <tr><td>Chevalet de table, affichette de borne</td><td>A5 ou A4, 300 dpi</td><td>Export en PDF pour l'imprimeur, pas en JPEG</td></tr>
+          <tr><td>Affiche chez les partenaires</td><td>A3, 300 dpi</td><td>QR de 5 cm minimum à cette taille</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Dans Canva, crée une seule fois une « marque » avec les quatre couleurs et les deux polices : toutes tes affiches suivantes seront cohérentes sans y penser. Les fichiers du logo sont dans <code>D:\MY FACE\marque</code>.</p>
+  </section>
+
+  <section id="ia">
+    <h2>Si tu veux passer par l'IA pour les images</h2>
+    <p class="intro">C'est une bonne solution pour des fonds et des illustrations, à condition de ne jamais faire croire qu'il s'agit d'un vrai événement MYFACE. Deux règles simples : pas de visage qui pourrait passer pour un client réel, et la mention « illustration » quand l'image occupe toute l'affiche.</p>
+    <div class="copy">
+      <header><span>Consigne — fond de salle, sans visage</span><button type="button">Copier</button></header>
+      <pre>Photographie d'ambiance d'une salle de réception africaine en fin de journée, tables décorées, guirlandes lumineuses, aucune personne visible, arrière-plan volontairement flou, lumière chaude, format vertical, style photo de reportage</pre>
+    </div>
+    <div class="copy">
+      <header><span>Consigne — détail de tenue, dos ou mains</span><button type="button">Copier</button></header>
+      <pre>Gros plan sur un tissu pagne coloré et des bijoux dorés, mains tenant un téléphone, peau noire, lumière naturelle douce, visage hors cadre, arrière-plan neutre, format vertical, très net</pre>
+    </div>
+    <div class="copy">
+      <header><span>Consigne — illustration à plat, style graphique</span><button type="button">Copier</button></header>
+      <pre>Illustration vectorielle minimaliste, silhouettes de personnes qui font un selfie lors d'une fête, palette orange #F26A1B, vert #00854B et bleu très foncé #0E2429, motif géométrique inspiré du tissu wax, sans texte, format vertical</pre>
+    </div>
+    <p class="fine">Les images générées servent de décor : le message et le logo restent dessinés par-dessus, dans les couleurs de la marque. Une affiche entièrement produite par l'IA se reconnaît, et ça n'aide pas à faire sérieux.</p>
+  </section>
+
+  <section id="regles">
+    <h2>Les cinq règles qui font qu'une affiche marche</h2>
+    <div class="rules">
+      <div class="yes">
+        <h3>À faire</h3>
+        <ul>
+          <li>Un seul message par affiche. S'il y en a deux, fais deux affiches.</li>
+          <li>Du texte lisible sur un téléphone tenu à bout de bras : le titre occupe au moins un quart de l'affiche.</li>
+          <li>Le logo en haut ou en bas, toujours au même endroit.</li>
+          <li>Les trois couleurs de la marque, et rien d'autre.</li>
+          <li>Une action à la fin : écris-nous, scanne, réserve avant telle date.</li>
+        </ul>
+      </div>
+      <div class="no">
+        <h3>À éviter</h3>
+        <ul>
+          <li>Des photos trouvées sur Internet présentées comme tes événements.</li>
+          <li>Cinq polices et six couleurs sur la même affiche.</li>
+          <li>Un QR code sur une publication Instagram : personne ne peut le scanner depuis son propre écran. Le QR, c'est pour l'imprimé.</li>
+          <li>Du texte collé aux bords : les stories en coupent une partie.</li>
+          <li>Des promesses que l'application ne tient pas encore, comme un accès aux photos « à vie ».</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer class="end">
+    Maquettes préparées le 27 septembre 2026. Elles sont volontairement simples à reproduire dans Canva. Dis-moi laquelle tu veux en premier et je te prépare le fichier aux bonnes dimensions, avec les textes définitifs.
+  </footer>
+</main>
+
+<script>
+  document.querySelectorAll('.copy').forEach(function (block) {
+    var btn = block.querySelector('button');
+    var pre = block.querySelector('pre');
+    if (!btn || !pre) return;
+    btn.addEventListener('click', function () {
+      var txt = pre.innerText;
+      var done = function () { btn.textContent = 'Copié'; setTimeout(function () { btn.textContent = 'Copier'; }, 1800); };
+      function fallback() {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); document.body.removeChild(ta); done();
+        } catch (e) { btn.textContent = 'Sélectionne le texte'; setTimeout(function () { btn.textContent = 'Copier'; }, 2200); }
+      }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(done, fallback);
+        } else { fallback(); }
+      } catch (e) { fallback(); }
+    });
+  });
+</script>

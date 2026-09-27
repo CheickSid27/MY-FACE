@@ -116,6 +116,21 @@ services:
     command: tunnel --no-autoupdate --url http://nginx:80
     depends_on:
       - nginx
+    profiles: ["quick"]
+
+  # Tunnel Cloudflare NOMME : adresse publique fixe (https://myfaceci.online).
+  # Le tunnel et le nom d'hote se creent dans le tableau de bord Cloudflare
+  # (Zero Trust > Networks > Tunnels), qui fournit un jeton. Ce jeton se colle
+  # dans .env (CLOUDFLARE_TUNNEL_TOKEN=...) et ne doit jamais etre partage.
+  # Le service cible a declarer dans le tableau de bord : http://nginx:80
+  # Demarrage :  docker compose --profile domaine up -d tunnel-domaine
+  tunnel-domaine:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - nginx
+    profiles: ["domaine"]
 
 volumes:
   postgres-data:

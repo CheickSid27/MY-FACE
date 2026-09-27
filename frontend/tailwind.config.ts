@@ -8,19 +8,22 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Palette de la marque (voir /marque et components/brand/Logo.tsx) :
+        // encre lagune + orange MYFACE. Le vert de la marque reste reserve
+        // au logo, l'interface n'en a pas besoin.
         brand: {
-          DEFAULT: "#14171f",
-          light: "#1f2430",
-          accent: "#c9a15a",
-          "accent-light": "#e0c384",
+          DEFAULT: "#0e2429",
+          light: "#17343b",
+          accent: "#f26a1b",
+          "accent-light": "#ff8a3d",
         },
-        surface: "#faf8f5",
-        "surface-alt": "#f1ede6",
+        surface: "#f9f6f0",
+        "surface-alt": "#f0ebe0",
         ink: {
-          900: "#14171f",
-          700: "#3a3f4b",
-          500: "#6b7280",
-          300: "#a8adb8",
+          900: "#0e2429",
+          700: "#33484d",
+          500: "#5e7378",
+          300: "#9dafb2",
         },
       },
       fontFamily: {
@@ -31,9 +34,9 @@ const config: Config = {
         display: ["var(--font-display)", "Georgia", "serif"],
       },
       boxShadow: {
-        soft: "0 2px 12px 0 rgb(20 23 31 / 0.06)",
-        card: "0 4px 20px 0 rgb(20 23 31 / 0.08)",
-        elevated: "0 12px 40px 0 rgb(20 23 31 / 0.16)",
+        soft: "0 2px 12px 0 rgb(14 36 41 / 0.07)",
+        card: "0 4px 20px 0 rgb(14 36 41 / 0.09)",
+        elevated: "0 12px 40px 0 rgb(14 36 41 / 0.18)",
       },
       borderRadius: {
         xl2: "1.25rem",

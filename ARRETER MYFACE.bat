@@ -4,7 +4,7 @@ title MYFACE - Arret
 cd /d "D:\MY FACE"
 
 echo Fermeture de l'acces public...
-"C:\Program Files\Tailscale\tailscale.exe" funnel --https=443 off >nul 2>&1
+docker compose --profile domaine stop tunnel-domaine >nul 2>&1
 
 echo Arret de MYFACE...
 docker compose stop

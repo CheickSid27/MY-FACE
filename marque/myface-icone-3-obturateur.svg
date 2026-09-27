@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="MYFACE">
+  <rect width="512" height="512" rx="116" fill="#0E2429"/>
+  <circle cx="256" cy="256" r="186" fill="#F26A1B"/>
+  <path d="M256.0,124.0 L370.3,190.0 L370.3,322.0 L256.0,388.0 L141.7,322.0 L141.7,190.0 Z" fill="#0E2429"/>
+  <line x1="256.0" y1="124.0" x2="362.0" y2="180.3" stroke="#0E2429" stroke-width="20" stroke-linecap="round"/><line x1="370.3" y1="190.0" x2="374.5" y2="309.9" stroke="#0E2429" stroke-width="20" stroke-linecap="round"/><line x1="370.3" y1="322.0" x2="268.5" y2="385.6" stroke="#0E2429" stroke-width="20" stroke-linecap="round"/><line x1="256.0" y1="388.0" x2="150.0" y2="331.7" stroke="#0E2429" stroke-width="20" stroke-linecap="round"/><line x1="141.7" y1="322.0" x2="137.5" y2="202.1" stroke="#0E2429" stroke-width="20" stroke-linecap="round"/><line x1="141.7" y1="190.0" x2="243.5" y2="126.4" stroke="#0E2429" stroke-width="20" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="186" fill="none" stroke="#00A05A" stroke-width="10"/>
+  <circle cx="220.48000000000002" cy="230.76" r="11.1" fill="#F4EFE6"/><circle cx="291.52" cy="230.76" r="11.1" fill="#F4EFE6"/><path d="M217.52,272.2 Q256,307.72 294.48,272.2" fill="none" stroke="#F4EFE6" stroke-width="16.28" stroke-linecap="round"/>
+</svg>

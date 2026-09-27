@@ -1,0 +1,492 @@
+<title>Kit de lancement MYFACE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #F4EFE6;
+    --surface: #FFFFFF;
+    --fill: #EAE3D6;
+    --ink: #0E2429;
+    --ink-soft: #33484D;
+    --muted: #5E7378;
+    --line: #D8CEBE;
+    --orange: #F26A1B;
+    --orange-ink: #B34A08;
+    --orange-soft: #FCE3D1;
+    --green: #00854B;
+    --green-soft: #D2EDDF;
+    --on-orange: #FFFFFF;
+    --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+    --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0B1A1E;
+      --surface: #122A30;
+      --fill: #17343B;
+      --ink: #EFE7DA;
+      --ink-soft: #CBD8D7;
+      --muted: #91A6A9;
+      --line: #27454D;
+      --orange: #FF8A3D;
+      --orange-ink: #FFAB70;
+      --orange-soft: #3B2413;
+      --green: #3FC489;
+      --green-soft: #113828;
+      --on-orange: #1C0D03;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0B1A1E;
+    --surface: #122A30;
+    --fill: #17343B;
+    --ink: #EFE7DA;
+    --ink-soft: #CBD8D7;
+    --muted: #91A6A9;
+    --line: #27454D;
+    --orange: #FF8A3D;
+    --orange-ink: #FFAB70;
+    --orange-soft: #3B2413;
+    --green: #3FC489;
+    --green-soft: #113828;
+    --on-orange: #1C0D03;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { background: var(--ground); color: var(--ink); font: 400 17px/1.6 var(--body); }
+  a { color: var(--orange-ink); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+  img { display: block; }
+
+  .band { height: 14px; background:
+      radial-gradient(circle at 50% 50%, var(--orange) 0 2.5px, transparent 3px) 0 0 / 14px 14px,
+      conic-gradient(from 45deg at 50% 50%, var(--ink) 0 25%, transparent 0 50%, var(--ink) 0 75%, transparent 0) 0 0 / 14px 14px,
+      var(--ground); }
+
+  header.top { max-width: 1120px; margin: 0 auto; padding: 48px 24px 30px; display: grid; gap: 16px; }
+  .eyebrow { margin: 0; font: 600 12px/1.4 var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 0; font: 700 clamp(30px, 4.4vw, 48px)/1.1 var(--display); letter-spacing: -.012em; text-wrap: balance; max-width: 20ch; }
+  h1 em { font-style: normal; color: var(--orange); }
+  .lede { margin: 0; max-width: 60ch; font-size: 19px; color: var(--ink-soft); }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px 90px; display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 52px; }
+  nav.toc { position: sticky; top: 24px; align-self: start; display: grid; gap: 2px; font-size: 14px; }
+  nav.toc a { padding: 6px 10px; border-radius: 6px; color: var(--ink-soft); text-decoration: none; }
+  nav.toc a:hover { background: var(--fill); color: var(--ink); }
+
+  main { min-width: 0; max-width: 800px; }
+  section { padding-top: 58px; scroll-margin-top: 14px; }
+  section:first-child { padding-top: 0; }
+  h2 { margin: 6px 0 14px; font: 600 clamp(22px, 2.5vw, 29px)/1.2 var(--display); text-wrap: balance; }
+  h3 { margin: 0 0 6px; font: 650 17px/1.35 var(--body); }
+  p { margin: 0 0 14px; max-width: 66ch; }
+  .intro { color: var(--ink-soft); }
+  ul, ol { margin: 0 0 14px; padding-left: 1.2em; }
+  li { margin: 0 0 6px; }
+  .fine { font-size: 14px; color: var(--muted); }
+
+  .logos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 20px 0 10px; }
+  .logo-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+  .logo-card .art { background: var(--fill); display: grid; place-items: center; padding: 22px; }
+  .logo-card img { width: 128px; height: 128px; border-radius: 26px; }
+  .logo-card .txt { padding: 16px 18px 18px; display: grid; gap: 6px; }
+  .logo-card h3 { font: 600 15px/1.3 var(--display); }
+  .logo-card p { margin: 0; font-size: 14.5px; color: var(--ink-soft); }
+  .tag { justify-self: start; font: 600 11px/1 var(--mono); letter-spacing: .04em; padding: 5px 8px; border-radius: 999px; background: var(--fill); color: var(--muted); }
+  .tag.win { background: var(--orange); color: var(--on-orange); }
+
+  .lockup { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 26px; margin: 20px 0 8px; display: grid; gap: 18px; justify-items: center; }
+  .lockup img { width: min(520px, 100%); }
+  .variants { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 16px 0 8px; }
+  .variant { display: grid; gap: 8px; justify-items: center; text-align: center; font: 500 12px/1.4 var(--mono); color: var(--muted); }
+  .variant .box { width: 100%; aspect-ratio: 1; border-radius: 16px; display: grid; place-items: center; border: 1px solid var(--line); }
+  .variant img { width: 72%; border-radius: 14px; }
+  .variant .box.light { background: #F4EFE6; }
+  .variant .box.dark { background: #0E2429; }
+  .variant .box.orange { background: #F26A1B; }
+  .variant .mono { width: 72%; color: #0E2429; }
+
+  .swatches { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 18px 0 8px; }
+  .swatch { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
+  .swatch .chip { height: 66px; }
+  .swatch .meta { padding: 10px 12px; display: grid; gap: 2px; }
+  .swatch b { font-size: 14px; }
+  .swatch span { font: 500 12px/1.4 var(--mono); color: var(--muted); }
+
+  .table-wrap { overflow-x: auto; margin: 18px 0 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 15px; }
+  th { font: 600 11.5px/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 12px 14px; background: var(--fill); border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td:first-child { font-weight: 600; }
+
+  .copy { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin: 14px 0 18px; overflow: hidden; }
+  .copy header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 12px 9px 14px; background: var(--fill); border-bottom: 1px solid var(--line); }
+  .copy header span { font: 600 11.5px/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .copy button { font: 600 12px/1 var(--body); padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .copy button:hover { background: var(--orange); color: var(--on-orange); border-color: var(--orange); }
+  .copy pre { margin: 0; padding: 16px 18px; white-space: pre-wrap; font: 400 15px/1.6 var(--body); }
+
+  .posts { display: grid; gap: 0; margin: 18px 0 8px; }
+  .post { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 4px 14px; padding: 16px 0; border-top: 1px solid var(--line); }
+  .post:last-child { border-bottom: 1px solid var(--line); }
+  .post .n { font: 700 18px/1.2 var(--display); color: var(--orange); }
+  .post p { margin: 0; font-size: 15.5px; color: var(--ink-soft); grid-column: 2; }
+  .post .cap { grid-column: 2; margin-top: 8px; padding: 10px 14px; background: var(--fill); border-radius: 10px; font-size: 15px; }
+  .post h3 { grid-column: 2; }
+
+  .qa { margin: 16px 0 8px; }
+  .qa dt { font-weight: 650; margin-top: 14px; }
+  .qa dd { margin: 4px 0 0; color: var(--ink-soft); }
+
+  .week { list-style: none; padding: 0; margin: 18px 0 8px; }
+  .week li { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 18px; padding: 16px 0; border-top: 1px solid var(--line); }
+  .week li:last-child { border-bottom: 1px solid var(--line); }
+  .week .w { font: 600 13px/1.5 var(--mono); text-transform: uppercase; color: var(--orange-ink); }
+  .week p { margin: 0; font-size: 15.5px; color: var(--ink-soft); }
+
+  .rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 18px 0 8px; }
+  .rules div { border-radius: 12px; padding: 18px 20px; }
+  .rules .yes { background: var(--green-soft); }
+  .rules .no { background: var(--orange-soft); }
+  .rules h3 { margin-bottom: 8px; }
+  .rules ul { margin: 0; padding-left: 1.1em; font-size: 15.5px; }
+
+  footer.end { max-width: 800px; margin: 52px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+
+  @media (max-width: 960px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+    nav.toc { position: static; display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+    nav.toc a { white-space: nowrap; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+  }
+  @media (max-width: 680px) {
+    body { font-size: 16px; }
+    .logos, .variants, .swatches, .rules { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .week li { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  }
+</style>
+
+<div class="band" aria-hidden="true"></div>
+
+<header class="top">
+  <p class="eyebrow">Identité et réseaux · Côte d'Ivoire</p>
+  <h1>Le logo, les comptes et les posts pour lancer <em>MYFACE</em></h1>
+  <p class="lede">Trois pistes de logo, les fichiers prêts à l'emploi, les comptes à ouvrir avec leurs textes, les posts à publier, et la méthode pour recruter les premiers photographes partenaires.</p>
+</header>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Sommaire">
+    <a href="#logo">Le logo</a>
+    <a href="#couleurs">Couleurs et typo</a>
+    <a href="#fichiers">Les fichiers</a>
+    <a href="#comptes">Les comptes</a>
+    <a href="#posts">Quoi publier</a>
+    <a href="#photographes">Recruter les photographes</a>
+    <a href="#semaines">Les 4 premières semaines</a>
+    <a href="#regles">À faire, à éviter</a>
+  </nav>
+
+  <main>
+    <section id="logo">
+      <h2>Trois pistes de logo</h2>
+      <p class="intro">Toutes partent de la même idée : le carré de détection qui entoure un visage, celui que l'application dessine quand elle reconnaît quelqu'un. Les couleurs reprennent l'orange et le vert ivoiriens, sans faire drapeau.</p>
+      <div class="logos">
+        <article class="logo-card">
+          <div class="art"><img src="logo/cadre.svg" alt="Logo MYFACE : cadre de détection orange autour d'un visage souriant"></div>
+          <div class="txt">
+            <span class="tag win">Recommandé</span>
+            <h3>Le cadre</h3>
+            <p>Le carré de détection, un visage souriant, un coin en vert. Lisible même en tout petit, reconnaissable en une seconde.</p>
+          </div>
+        </article>
+        <article class="logo-card">
+          <div class="art"><img src="logo/masque.svg" alt="Logo MYFACE : masque ivoirien stylisé dans un cadre de détection"></div>
+          <div class="txt">
+            <span class="tag">Piste 2</span>
+            <h3>Le masque</h3>
+            <p>Un masque stylisé, avec les scarifications verticales. Le plus ivoirien des trois, mais plus chargé et moins lisible en petit.</p>
+          </div>
+        </article>
+        <article class="logo-card">
+          <div class="art"><img src="logo/obturateur.svg" alt="Logo MYFACE : obturateur d'appareil photo avec un visage au centre"></div>
+          <div class="txt">
+            <span class="tag">Piste 3</span>
+            <h3>L'obturateur</h3>
+            <p>L'ouverture de l'appareil photo, un visage au centre. Très « photo », mais moins distinctif : beaucoup de studios l'utilisent.</p>
+          </div>
+        </article>
+      </div>
+      <p><strong>Ma recommandation : « Le cadre ».</strong> C'est le seul qui raconte ce que fait MYFACE et non ce que fait un photographe. Il reste net en photo de profil de 40 pixels, il s'imprime en une seule couleur sur un t-shirt, et le coin vert suffit à donner la touche ivoirienne sans tomber dans le drapeau. « Le masque » ferait un très beau tampon secondaire, sur les affiches ou le cadre des tirages.</p>
+
+      <div class="lockup">
+        <img src="logo/horizontal.svg" alt="Logo horizontal MYFACE avec la signature : un selfie, toutes tes photos">
+      </div>
+      <p class="fine">Version horizontale, pour les affiches, les roll-ups et les en-têtes. La signature « Un selfie. Toutes tes photos. » ne se sépare jamais du logo sur les supports imprimés.</p>
+
+      <h3 style="margin-top:26px">Les déclinaisons</h3>
+      <div class="variants">
+        <div class="variant"><div class="box dark"><img src="logo/cadre.svg" alt="Logo sur fond sombre"></div>Fond sombre</div>
+        <div class="variant"><div class="box light"><img src="logo/cadre-clair.png" alt="Logo sur fond sable"></div>Fond clair</div>
+        <div class="variant"><div class="box orange"><img src="logo/mono-blanc.svg" alt="Logo en une seule couleur sur fond orange"></div>Une couleur</div>
+        <div class="variant"><div class="box light"><img src="logo/avatar.png" alt="Photo de profil MYFACE" style="width:100%;border-radius:16px"></div>Photo de profil</div>
+      </div>
+    </section>
+
+    <section id="couleurs">
+      <h2>Couleurs et typographie</h2>
+      <div class="swatches">
+        <div class="swatch"><div class="chip" style="background:#F26A1B"></div><div class="meta"><b>Orange MYFACE</b><span>#F26A1B</span></div></div>
+        <div class="swatch"><div class="chip" style="background:#0E2429"></div><div class="meta"><b>Encre lagune</b><span>#0E2429</span></div></div>
+        <div class="swatch"><div class="chip" style="background:#F4EFE6"></div><div class="meta"><b>Sable</b><span>#F4EFE6</span></div></div>
+        <div class="swatch"><div class="chip" style="background:#00854B"></div><div class="meta"><b>Vert d'accent</b><span>#00854B</span></div></div>
+      </div>
+      <p>L'orange est la couleur qu'on voit de loin : elle porte les boutons, les titres et le cadre de détection. L'encre lagune remplace le noir, partout. Le sable sert de fond aux affiches et aux documents. Le vert ne sert qu'à une touche par support, jamais plus.</p>
+      <p><strong>Typographie :</strong> <em>Unbounded</em> en gras pour les titres et le mot MYFACE, <em>Public Sans</em> pour tout le reste. Les deux sont gratuites sur Google Fonts. Si elles ne sont pas installées sur un poste, remplacer par Arial Black et Arial : ça ne casse rien.</p>
+    </section>
+
+    <section id="fichiers">
+      <h2>Les fichiers livrés</h2>
+      <p class="intro">Ils sont tous dans le dossier <code>D:\MY FACE\marque</code> sur ton PC — c'est de là que tu les envoies à l'imprimeur. Les liens ci-dessous les ouvrent pour un aperçu.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Fichier</th><th>À quoi ça sert</th></tr></thead>
+          <tbody>
+            <tr><td><a href="logo/avatar.png">avatar 1024 px (PNG)</a></td><td>Photo de profil TikTok, Instagram, Facebook, WhatsApp Business</td></tr>
+            <tr><td><a href="logo/cadre.svg">icône (SVG)</a></td><td>Version vectorielle, pour l'imprimeur : t-shirts, roll-up, chevalets, autocollants</td></tr>
+            <tr><td><a href="logo/horizontal.svg">logo horizontal (SVG)</a></td><td>Affiches, en-têtes de devis et de reçus, bannières</td></tr>
+            <tr><td><a href="logo/mono.svg">version une couleur (SVG)</a></td><td>Tampon, gravure, broderie, impression sur fond coloré</td></tr>
+            <tr><td><a href="logo/masque.svg">masque (SVG)</a> · <a href="logo/obturateur.svg">obturateur (SVG)</a></td><td>Les deux autres pistes, si tu préfères l'une d'elles</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fine">Dis-moi laquelle tu choisis : je génère alors toutes les tailles dont tu auras besoin (photo de profil, favicon du site, bannière de page, cadre des tirages) et je remplace l'icône du site.</p>
+    </section>
+
+    <section id="comptes">
+      <h2>Les comptes à ouvrir</h2>
+      <p class="intro">Cinq comptes, dans cet ordre. Même nom partout pour qu'on te retrouve. Vérifie la disponibilité du nom avant de tout créer : si <code>myface.ci</code> est pris, prends <code>myfaceci</code> et garde-le partout.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Compte</th><th>Nom</th><th>Son rôle</th></tr></thead>
+          <tbody>
+            <tr><td>WhatsApp Business</td><td>Numéro pro dédié</td><td>C'est là que tu vends. Catalogue des offres, statut tous les jours, réponses rapides.</td></tr>
+            <tr><td>TikTok</td><td>@myface.ci</td><td>Se faire connaître des jeunes : vidéos de réaction, diplômes, soirées.</td></tr>
+            <tr><td>Instagram</td><td>@myface.ci</td><td>La vitrine : belles photos d'événements, témoignages, offres.</td></tr>
+            <tr><td>Page Facebook</td><td>MYFACE Côte d'Ivoire</td><td>Le public qui organise mariages et cérémonies, et la publicité ciblée.</td></tr>
+            <tr><td>Fiche Google</td><td>MYFACE — photos d'événement</td><td>Être trouvé sur « photographe mariage Abidjan » et collecter les avis.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="copy">
+        <header><span>Bio Instagram et TikTok</span><button type="button">Copier</button></header>
+        <pre>📸 Tes photos d'événement, retrouvées avec un selfie
+Mariages · Remises de diplômes · Soirées · Entreprises
+Abidjan, Côte d'Ivoire
+👇 Réserve ton événement sur WhatsApp</pre>
+      </div>
+
+      <div class="copy">
+        <header><span>Description de la page Facebook</span><button type="button">Copier</button></header>
+        <pre>MYFACE photographie vos événements et permet à chaque invité de retrouver SES photos en quelques secondes : il fait un selfie, et toutes les photos où il apparaît s'affichent. Il les achète en Mobile Money ou en espèces, les télécharge en qualité d'origine, et peut les imprimer sur place.
+
+Mariages, remises de diplômes, galas d'entreprise, soirées, baptêmes — Abidjan et toute la Côte d'Ivoire.
+
+Réservations et devis : WhatsApp [ton numéro]</pre>
+      </div>
+
+      <div class="copy">
+        <header><span>Message d'accueil automatique WhatsApp Business</span><button type="button">Copier</button></header>
+        <pre>Bonjour et merci d'avoir contacté MYFACE 👋
+Dites-nous : quel type d'événement, quelle date, quel lieu et combien d'invités environ ?
+Nous revenons vers vous avec un devis dans l'heure.</pre>
+      </div>
+    </section>
+
+    <section id="posts">
+      <h2>Quoi publier, concrètement</h2>
+      <p class="intro">Huit formats qui tournent en boucle. Quatre publications par semaine suffisent, à condition qu'il y en ait toujours une tournée en vrai, sur un événement. Les légendes ci-dessous sont à copier telles quelles.</p>
+      <div class="posts">
+        <article class="post">
+          <span class="n">1</span>
+          <h3>La réaction — le format roi</h3>
+          <p>Vidéo verticale : un invité fait son selfie, l'écran affiche ses photos, on filme sa tête. Demande toujours son accord avant de publier.</p>
+          <p class="cap">Elle a fait un selfie. Quelques secondes après, toutes ses photos du mariage étaient là 😭❤️<br>Tes invités méritent ça aussi. Écris-nous.<br>#MYFACE #MariageAbidjan #225 #Abidjan</p>
+        </article>
+        <article class="post">
+          <span class="n">2</span>
+          <h3>Avant / après WhatsApp</h3>
+          <p>Côte à côte : la photo compressée reçue dans le groupe, et l'originale MYFACE. Le format qui explique la valeur en deux secondes.</p>
+          <p class="cap">À gauche : ta photo après trois partages WhatsApp. À droite : la même, chez MYFACE.<br>Ta tenue méritait mieux qu'une photo floue.</p>
+        </article>
+        <article class="post">
+          <span class="n">3</span>
+          <h3>Le mode d'emploi en 15 secondes</h3>
+          <p>Trois étapes filmées : scanner le QR, faire le selfie, télécharger. À épingler en haut du profil.</p>
+          <p class="cap">Comment récupérer tes photos chez MYFACE 👇<br>1. Scanne le QR sur ta table<br>2. Fais un selfie<br>3. Tes photos apparaissent. C'est tout.</p>
+        </article>
+        <article class="post">
+          <span class="n">4</span>
+          <h3>Le témoignage</h3>
+          <p>Les mariés, le major de promo ou le DRH, face caméra, 20 secondes. Une seule question : « qu'est-ce que ça a changé pour vos invités ? »</p>
+          <p class="cap">« On n'a pas eu à envoyer une seule photo. Chacun a pris les siennes. » — Kenza, mariée à Abidjan</p>
+        </article>
+        <article class="post">
+          <span class="n">5</span>
+          <h3>Le récap d'événement</h3>
+          <p>30 secondes des plus belles photos, musique du moment, l'organisateur identifié. C'est ce qu'il partagera à son tour.</p>
+          <p class="cap">Remise de diplômes 🎓 Merci pour cette soirée. Vos photos sont en ligne : scannez, et récupérez les vôtres.</p>
+        </article>
+        <article class="post">
+          <span class="n">6</span>
+          <h3>Les coulisses</h3>
+          <p>La borne qui imprime, l'équipe en t-shirt, le matériel qu'on installe. Ça rassure les organisateurs : on est une vraie équipe.</p>
+          <p class="cap">6 h du matin, on installe. Ce soir, 300 invités repartent avec leurs photos.</p>
+        </article>
+        <article class="post">
+          <span class="n">7</span>
+          <h3>L'appel aux photographes</h3>
+          <p>Une fois par semaine, un post qui parle aux photographes et pas aux invités. Voir la section suivante.</p>
+          <p class="cap">Photographe à Abidjan ? Tu shootes, on s'occupe de vendre tes photos. Tu gardes 70 %. Écris-nous.</p>
+        </article>
+        <article class="post">
+          <span class="n">8</span>
+          <h3>L'offre du moment</h3>
+          <p>Une offre datée, jamais permanente : rentrée, fin d'année, Saint-Valentin. Toujours avec une date de fin.</p>
+          <p class="cap">Galas et soirées de fin d'année : réservez avant le 30 novembre, les tirages sont offerts pour vos invités.</p>
+        </article>
+      </div>
+      <p><strong>Rythme conseillé :</strong> lundi le récap du week-end, mercredi une réaction, vendredi l'offre ou le mode d'emploi, samedi les coulisses en story pendant l'événement. Et chaque statut WhatsApp reprend la publication du jour.</p>
+      <p class="fine">Hashtags : trois ou quatre suffisent. #MYFACE #Abidjan #225 plus celui de l'événement (#MariageAbidjan, #RemiseDeDiplomes, #PhotographeAbidjan).</p>
+    </section>
+
+    <section id="photographes">
+      <h2>Recruter les premiers photographes</h2>
+      <p class="intro">Objectif : cinq partenaires actifs. Ce sont eux qui amènent des événements sans que tu aies à les démarcher un par un. Vise les photographes qui travaillent déjà sur des cérémonies, pas les studios de photo d'identité.</p>
+
+      <h3>Où les trouver</h3>
+      <ul>
+        <li>Instagram et Facebook : cherche <strong>#photographeabidjan</strong>, <strong>#mariageabidjan</strong>, et regarde qui est identifié sur les photos de mariages récents.</li>
+        <li>Sur le terrain : à chaque événement où tu passes, il y a deux ou trois photographes au travail. C'est le meilleur endroit pour parler.</li>
+        <li>Les wedding planners et les salles : demande-leur quels photographes ils recommandent.</li>
+        <li>Les labos d'impression et les boutiques de matériel photo : ils connaissent tout le monde.</li>
+        <li>Les groupes WhatsApp de prestataires d'événements.</li>
+      </ul>
+
+      <h3>Le premier message</h3>
+      <div class="copy">
+        <header><span>Message direct Instagram — court, c'est voulu</span><button type="button">Copier</button></header>
+        <pre>Bonjour [prénom], j'ai vu vos photos du mariage de [lieu / date], très beau travail 👌
+Je suis [ton nom], de MYFACE : on permet aux invités de retrouver leurs photos avec un simple selfie et de les acheter sur place, en Mobile Money ou en espèces.
+On cherche 5 photographes partenaires à Abidjan. Vous shootez, on vend pour vous, vous gardez 70 %.
+Je peux vous montrer en 10 minutes sur votre prochain événement ?</pre>
+      </div>
+
+      <div class="copy">
+        <header><span>Message WhatsApp — quand il répond</span><button type="button">Copier</button></header>
+        <pre>Merci pour votre retour 🙏 Voilà comment ça marche, en clair :
+
+1. Vous photographiez comme d'habitude. Les photos restent les vôtres, vous fixez les prix.
+2. On met vos photos sur MYFACE. Chaque invité fait un selfie et retrouve SES photos en quelques secondes.
+3. Il paie en Mobile Money ou en espèces à la borne. Il peut imprimer sur place.
+4. Vous recevez 70 % des ventes numériques. Versement chaque lundi, avec le détail de chaque commande.
+5. Aucun frais d'entrée, aucun abonnement. La borne, l'imprimante et la connexion, c'est nous.
+
+Les 5 premiers photographes partenaires travaillent avec nous sans commission pendant 3 mois : vous gardez 100 % sur vos trois premiers mois.
+
+On peut tester sur un de vos événements cette semaine ?</pre>
+      </div>
+
+      <h3>Leurs objections, et quoi répondre</h3>
+      <dl class="qa">
+        <dt>« Vous allez me prendre mes clients. »</dt>
+        <dd>Le client reste le vôtre : c'est vous qu'il a réservé, c'est vous qu'il rappellera. MYFACE ne vend jamais de prestation photo à vos clients.</dd>
+        <dt>« Mes clients ne paient pas en ligne. »</dt>
+        <dd>Justement : Mobile Money, et espèces à la borne. La plupart des ventes se font dans la salle, le jour même.</dd>
+        <dt>« Je perds le contrôle de mes photos. »</dt>
+        <dd>Vous gardez les originaux et vous fixez les prix. Les invités ne voient qu'un aperçu marqué tant qu'ils n'ont pas payé.</dd>
+        <dt>« 30 %, c'est beaucoup. »</dt>
+        <dd>C'est 30 % sur des photos que vous ne vendiez pas du tout : aujourd'hui elles partent dans un groupe WhatsApp, gratuitement. Et les trois premiers mois sont à 100 % pour vous.</dd>
+        <dt>« Je n'ai pas le temps d'apprendre un logiciel. »</dt>
+        <dd>Vous déposez vos photos dans un dossier, le reste est automatique. La prise en main prend 20 minutes.</dd>
+      </dl>
+
+      <h3>Ce qu'il faut préparer avant de démarcher</h3>
+      <ul>
+        <li>Un événement déjà couvert à montrer, en vrai, sur ton téléphone. Une démonstration vaut tous les arguments.</li>
+        <li>Une page d'offre partenaire d'une seule page, envoyable sur WhatsApp.</li>
+        <li>Un accord simple d'une page : partage des recettes, versement le lundi, propriété des photos, durée d'essai.</li>
+        <li>Un groupe WhatsApp « Photographes MYFACE » pour les annonces et l'entraide.</li>
+      </ul>
+      <p><strong>Le rythme :</strong> cinq contacts par jour, relance à trois jours, puis une démonstration en vrai. Sur vingt photographes contactés, compte deux ou trois partenaires vraiment actifs — c'est normal, et c'est suffisant pour commencer.</p>
+    </section>
+
+    <section id="semaines">
+      <h2>Les quatre premières semaines</h2>
+      <ol class="week">
+        <li><span class="w">Semaine 1</span><div><h3>Ouvrir la boutique</h3><p>Choisir le logo, ouvrir les cinq comptes avec les textes ci-dessus, publier le mode d'emploi et les coulisses. Commander t-shirts, chevalets QR et roll-up avec les fichiers du dossier marque.</p></div></li>
+        <li><span class="w">Semaine 2</span><div><h3>Prouver</h3><p>Couvrir un premier événement vitrine, offert contre le droit de filmer. En sortir cinq vidéos de réaction, un récap et un témoignage. Demander un avis Google.</p></div></li>
+        <li><span class="w">Semaine 3</span><div><h3>Recruter</h3><p>Contacter vingt photographes avec les messages ci-dessus, faire au moins cinq démonstrations. Publier l'appel aux photographes deux fois dans la semaine.</p></div></li>
+        <li><span class="w">Semaine 4</span><div><h3>Vendre</h3><p>Lancer la publicité sur la meilleure vidéo, 3 000 à 5 000 FCFA par jour. Démarcher wedding planners et salles avec les chiffres du premier événement. Préparer l'offre de fin d'année pour les entreprises.</p></div></li>
+      </ol>
+    </section>
+
+    <section id="regles">
+      <h2>À faire, à éviter</h2>
+      <div class="rules">
+        <div class="yes">
+          <h3>À faire</h3>
+          <ul>
+            <li>Demander l'accord avant de publier le visage de quelqu'un.</li>
+            <li>Répondre sur WhatsApp en moins d'une heure : c'est là que se décident les réservations.</li>
+            <li>Mettre le même logo et le même nom partout.</li>
+            <li>Filmer à chaque événement, même avec le téléphone.</li>
+            <li>Republier ce que les clients publient : c'est la meilleure preuve.</li>
+          </ul>
+        </div>
+        <div class="no">
+          <h3>À éviter</h3>
+          <ul>
+            <li>Publier des photos d'invités sans autorisation écrite pour une publicité.</li>
+            <li>Promettre un accès « à vie » aux photos : ce n'est pas vrai tant que le site dépend du PC.</li>
+            <li>Parler de reconnaissance faciale dans les publicités avant l'accord de l'ARTCI.</li>
+            <li>Vingt hashtags par publication.</li>
+            <li>Des slogans festifs sur un événement de deuil.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <footer class="end">
+      Logos, couleurs et textes préparés le 27 septembre 2026. Les fichiers sources sont dans <code>D:\MY FACE\marque</code>. Choisis une piste de logo et je décline tout le reste : icône du site, cadre des tirages, affiche, en-tête de reçu.
+    </footer>
+  </main>
+</div>
+
+<script>
+  document.querySelectorAll('.copy').forEach(function (block) {
+    var btn = block.querySelector('button');
+    var pre = block.querySelector('pre');
+    if (!btn || !pre) return;
+    btn.addEventListener('click', function () {
+      var txt = pre.innerText;
+      var done = function () { btn.textContent = 'Copié'; setTimeout(function () { btn.textContent = 'Copier'; }, 1800); };
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(done, function () { fallback(txt, done); });
+        } else { fallback(txt, done); }
+      } catch (e) { fallback(txt, done); }
+    });
+    function fallback(txt, done) {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = txt; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta); done();
+      } catch (e) { btn.textContent = 'Sélectionne le texte'; setTimeout(function () { btn.textContent = 'Copier'; }, 2200); }
+    }
+  });
+</script>

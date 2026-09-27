@@ -29,9 +29,12 @@ le modele de reconnaissance faciale se charge dans la carte graphique.
 ---------------------------------------------------------------------
 
 Pour les invites (telephones), QR codes, affiches, SMS :
-    https://myface.tail715f81.ts.net
-    -> cette adresse ne change plus jamais.
+    https://myfaceci.online
+    -> notre nom de domaine, achete le 27/09/2026 chez Porkbun, DNS chez
+       Cloudflare. Cette adresse ne change plus.
     -> elle ne marche que si le PC est allume et MYFACE demarre.
+    -> ancienne adresse de secours, toujours active :
+       https://myface.tail715f81.ts.net
 
 Sur ce PC (le plus rapide, pour toi) :
     http://localhost

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="MYFACE">
+  <rect width="512" height="512" rx="116" fill="#F4EFE6"/>
+  <path d="M256,92 C334,92 366,148 366,232 C366,322 314,404 256,428 C198,404 146,322 146,232 C146,148 178,92 256,92 Z" fill="#0E2429"/>
+  <path d="M196,232 Q220,206 244,232 Q220,258 196,232 Z" fill="#F4EFE6"/>
+  <path d="M268,232 Q292,206 316,232 Q292,258 268,232 Z" fill="#F4EFE6"/>
+  <line x1="256" y1="120" x2="256" y2="398" stroke="#F26A1B" stroke-width="12" stroke-linecap="round"/>
+  <line x1="196" y1="292" x2="196" y2="330" stroke="#F4EFE6" stroke-width="8" stroke-linecap="round" opacity="0.75"/><line x1="216" y1="292" x2="216" y2="330" stroke="#F4EFE6" stroke-width="8" stroke-linecap="round" opacity="0.75"/><line x1="296" y1="292" x2="296" y2="330" stroke="#F4EFE6" stroke-width="8" stroke-linecap="round" opacity="0.75"/><line x1="316" y1="292" x2="316" y2="330" stroke="#F4EFE6" stroke-width="8" stroke-linecap="round" opacity="0.75"/>
+  <path d="M104,166 L104,108 L162,108 M350,108 L408,108 L408,166 M408,354 L408,412 L350,412 M162,412 L104,412 L104,354" fill="none" stroke="#F26A1B" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

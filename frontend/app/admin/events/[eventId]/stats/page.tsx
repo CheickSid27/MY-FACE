@@ -101,7 +101,7 @@ function StatsContent() {
                   <XAxis dataKey="date" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip formatter={(value: number) => [`${value} ${stats.currency}`, "Revenu"]} />
-                  <Bar dataKey="revenu" fill="#c9a15a" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="revenu" fill="#f26a1b" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

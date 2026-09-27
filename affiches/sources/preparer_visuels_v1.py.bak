@@ -1,0 +1,260 @@
+# -*- coding: utf-8 -*-
+"""Prepare les visuels fournis par l'utilisateur pour les affiches.
+
+1. La borne : decoupee de la planche du fournisseur (fond orange + tapis),
+   marque du fabricant effacee, ecran remplace par l'interface MYFACE.
+2. Le telephone : mockup sur fond vert, on incruste l'ecran de l'application
+   en se servant du vert comme masque (les coins arrondis sont respectes).
+
+    python sources/preparer_visuels.py
+  -> sources/borne.png et sources/telephone.png
+"""
+
+from pathlib import Path
+
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
+BASE = Path(__file__).resolve().parent
+SRC_IMAGES = Path(r"C:\Users\cheic\AppData\Local\Temp\claude\D--MY-FACE"
+                  r"\bcf1b7a6-912f-4f82-8d22-cca915f93b35\images")
+
+INK = (14, 36, 41)
+SAND = (244, 239, 230)
+ORANGE = (242, 106, 27)
+GREEN = (0, 133, 75)
+F_DISPLAY = "C:/Windows/Fonts/ariblk.ttf"
+F_BODY = "C:/Windows/Fonts/segoeui.ttf"
+F_BODY_B = "C:/Windows/Fonts/segoeuib.ttf"
+
+_fc: dict = {}
+
+
+def font(p, s):
+    k = (p, max(8, int(s)))
+    if k not in _fc:
+        _fc[k] = ImageFont.truetype(*k)
+    return _fc[k]
+
+
+def larg(d, t, f):
+    b = d.textbbox((0, 0), t, font=f)
+    return b[2] - b[0]
+
+
+def haut(d, t, f):
+    b = d.textbbox((0, 0), t, font=f)
+    return b[3] - b[1]
+
+
+def remplir_lignes(masque: np.ndarray) -> np.ndarray:
+    """Bouche les trous : pour chaque ligne, tout ce qui est entre le premier
+    et le dernier pixel du masque devient du masque."""
+    plein = np.zeros_like(masque)
+    for y in range(masque.shape[0]):
+        xs = np.where(masque[y])[0]
+        if xs.size:
+            plein[y, xs.min():xs.max() + 1] = True
+    return plein
+
+
+def coins(masque: np.ndarray):
+    ys, xs = np.where(masque)
+    s, d = xs + ys, xs - ys
+    return [(int(xs[s.argmin()]), int(ys[s.argmin()])),   # haut gauche
+            (int(xs[d.argmax()]), int(ys[d.argmax()])),   # haut droite
+            (int(xs[s.argmax()]), int(ys[s.argmax()])),   # bas droite
+            (int(xs[d.argmin()]), int(ys[d.argmin()]))]   # bas gauche
+
+
+def calque_perspective(taille, ecran: Image.Image, quad) -> Image.Image:
+    """Renvoie un calque de `taille` avec `ecran` deforme dans le quad."""
+    dst = [(float(x), float(y)) for x, y in quad]
+    src = [(0.0, 0.0), (float(ecran.width), 0.0),
+           (float(ecran.width), float(ecran.height)), (0.0, float(ecran.height))]
+    A, B = [], []
+    for (X, Y), (u, v) in zip(dst, src):
+        A.append([X, Y, 1, 0, 0, 0, -u * X, -u * Y]); B.append(u)
+        A.append([0, 0, 0, X, Y, 1, -v * X, -v * Y]); B.append(v)
+    coeffs = np.linalg.solve(np.array(A), np.array(B))
+    return ecran.convert("RGBA").transform(taille, Image.PERSPECTIVE, coeffs, Image.BICUBIC)
+
+
+# --------------------------------------------------------------------------
+# Les deux ecrans MYFACE
+# --------------------------------------------------------------------------
+def ecran_borne(w: int, h: int) -> Image.Image:
+    im = Image.new("RGB", (w, h), INK)
+    d = ImageDraw.Draw(im)
+
+    cw = int(w * 0.5)
+    cx0 = (w - cw) // 2
+    cy0 = int(h * 0.17)
+    arm = int(cw * 0.3)
+    lw = max(3, int(w * 0.02))
+    for a, b, col in [((cx0, cy0 + arm), (cx0, cy0), ORANGE), ((cx0, cy0), (cx0 + arm, cy0), ORANGE),
+                      ((cx0 + cw - arm, cy0), (cx0 + cw, cy0), ORANGE), ((cx0 + cw, cy0), (cx0 + cw, cy0 + arm), ORANGE),
+                      ((cx0, cy0 + cw - arm), (cx0, cy0 + cw), ORANGE), ((cx0, cy0 + cw), (cx0 + arm, cy0 + cw), ORANGE),
+                      ((cx0 + cw, cy0 + cw - arm), (cx0 + cw, cy0 + cw), GREEN), ((cx0 + cw, cy0 + cw), (cx0 + cw - arm, cy0 + cw), GREEN)]:
+        d.line([a[0], a[1], b[0], b[1]], fill=col, width=lw)
+    r = int(cw * 0.055)
+    for ox in (0.33, 0.67):
+        d.ellipse([cx0 + int(cw * ox) - r, cy0 + int(cw * 0.36) - r,
+                   cx0 + int(cw * ox) + r, cy0 + int(cw * 0.36) + r], fill=SAND)
+    d.arc([cx0 + int(cw * 0.26), cy0 + int(cw * 0.4), cx0 + int(cw * 0.74), cy0 + int(cw * 0.8)],
+          start=20, end=160, fill=SAND, width=max(3, int(cw * 0.055)))
+
+    f1 = font(F_DISPLAY, int(w * 0.075))
+    f2 = font(F_BODY, int(w * 0.048))
+    t1 = "Touchez l'écran"
+    t2 = "et retrouvez vos photos"
+    d.text(((w - larg(d, t1, f1)) // 2, int(h * 0.6)), t1, font=f1, fill=SAND)
+    d.text(((w - larg(d, t2, f2)) // 2, int(h * 0.69)), t2, font=f2, fill=(150, 170, 175))
+
+    fl = font(F_DISPLAY, int(w * 0.052))
+    x = (w - larg(d, "MYFACE", fl)) // 2
+    y = int(h * 0.85)
+    d.text((x, y), "MY", font=fl, fill=SAND)
+    d.text((x + larg(d, "MY", fl), y), "FACE", font=fl, fill=ORANGE)
+    return im
+
+
+def ecran_telephone(w: int, h: int) -> Image.Image:
+    import sys
+    sys.path.insert(0, str(BASE.parent))
+    from generer_affiches import photo_synthetique
+
+    im = Image.new("RGB", (w, h), (9, 22, 26))
+    d = ImageDraw.Draw(im)
+    pad = int(w * 0.07)
+
+    d.text((pad, int(h * 0.028)), "20:24", font=font(F_BODY_B, int(w * 0.058)), fill=SAND)
+    d.text((pad, int(h * 0.1)), "Mes photos", font=font(F_BODY_B, int(w * 0.095)), fill=SAND)
+    d.text((pad, int(h * 0.165)), "14 photos trouvées",
+           font=font(F_BODY, int(w * 0.055)), fill=(150, 170, 175))
+
+    cols, gap = 3, int(w * 0.025)
+    tile = (w - 2 * pad - gap * (cols - 1)) // cols
+    gy = int(h * 0.225)
+    for i in range(9):
+        r_, c_ = divmod(i, cols)
+        tx = pad + c_ * (tile + gap)
+        ty = gy + r_ * (tile + gap)
+        vign = photo_synthetique(tile, graine=i + 1)
+        masque = Image.new("L", (tile, tile), 0)
+        ImageDraw.Draw(masque).rounded_rectangle([0, 0, tile - 1, tile - 1],
+                                                 radius=int(tile * 0.12), fill=255)
+        im.paste(vign, (tx, ty), masque)
+        if i in (1, 4, 6):
+            m = int(tile * 0.16)
+            d.rounded_rectangle([tx + m, ty + m, tx + tile - m, ty + tile - m],
+                                radius=int(tile * 0.06), outline=ORANGE,
+                                width=max(2, int(tile * 0.05)))
+
+    by = gy + 3 * (tile + gap) + int(h * 0.028)
+    bh = int(h * 0.07)
+    d.rounded_rectangle([pad, by, w - pad, by + bh], radius=bh // 2, fill=ORANGE)
+    fb = font(F_BODY_B, int(w * 0.065))
+    lbl = "Télécharger mes photos"
+    d.text(((w - larg(d, lbl, fb)) // 2, by + (bh - haut(d, lbl, fb)) // 2 - int(h * 0.006)),
+           lbl, font=fb, fill=(255, 255, 255))
+    fp = font(F_BODY, int(w * 0.055))
+    pan = "Panier · 3 photos · 1 350 F"
+    d.text(((w - larg(d, pan, fp)) // 2, by + bh + int(h * 0.022)), pan, font=fp, fill=(150, 170, 175))
+
+    hw, hh = int(w * 0.34), max(3, int(h * 0.005))
+    d.rounded_rectangle([(w - hw) // 2, h - int(h * 0.028), (w + hw) // 2, h - int(h * 0.028) + hh],
+                        radius=hh // 2, fill=(120, 140, 145))
+    return im
+
+
+# --------------------------------------------------------------------------
+def preparer_borne():
+    im = Image.open(SRC_IMAGES / "1.png").convert("RGB")
+    crop = im.crop((336, 30, 660, 830))          # la borne, sans le reflet du sol
+    a = np.asarray(crop).astype(int)
+    h, w = a.shape[:2]
+
+    # 1. fond : orange de la planche + tapis rouge
+    def proche(couleur, tol):
+        return np.abs(a - np.array(couleur)).sum(axis=2) < tol
+
+    fond = proche((211, 123, 52), 90) | proche((183, 64, 47), 110) | proche((156, 44, 36), 110)
+    alpha = Image.fromarray(((~fond) * 255).astype(np.uint8), "L").filter(ImageFilter.GaussianBlur(0.7))
+    decoupe = crop.convert("RGBA")
+    decoupe.putalpha(alpha)
+
+    # 2. ecran du fournisseur : zone coloree/sombre dans le chassis
+    zone = np.zeros((h, w), dtype=bool)
+    zone[195:490, 45:250] = True
+    mx, mn = a.max(axis=2), a.min(axis=2)
+    ecr = zone & (((mx - mn) > 28) | (mx < 115))
+    ecr = remplir_lignes(ecr)
+    ys, xs = np.where(ecr)
+    print(f"  ecran fournisseur : x {xs.min()}-{xs.max()}  y {ys.min()}-{ys.max()}")
+    quad = coins(ecr)
+    print("  coins :", quad)
+
+    lw = int(max(q[0] for q in quad) - min(q[0] for q in quad))
+    lh = int(max(q[1] for q in quad) - min(q[1] for q in quad))
+    ui = ecran_borne(lw * 3, lh * 3)
+    calque = calque_perspective(decoupe.size, ui, quad)
+    masque_ecran = Image.fromarray((ecr * 255).astype(np.uint8), "L").filter(ImageFilter.MaxFilter(3))
+    decoupe.paste(calque, (0, 0), masque_ecran)
+
+    # 3. marque du fabricant sur le chassis : on la couvre en blanc local
+    zone2 = np.zeros((h, w), dtype=bool)
+    zone2[184:208, 172:252] = True
+    texte = zone2 & (mn < 205)
+    ys2, xs2 = np.where(texte)
+    if xs2.size:
+        print(f"  marque fabricant effacee : x {xs2.min()}-{xs2.max()} y {ys2.min()}-{ys2.max()}")
+        masque_texte = Image.fromarray((texte * 255).astype(np.uint8), "L")
+        masque_texte = masque_texte.filter(ImageFilter.MaxFilter(5))
+        blanc_chassis = Image.new("RGBA", decoupe.size, (249, 249, 249, 255))
+        decoupe.paste(blanc_chassis, (0, 0), masque_texte)
+
+    decoupe = decoupe.crop(decoupe.getbbox())
+    decoupe.save(BASE / "borne.png")
+    print("  -> borne.png", decoupe.size)
+
+
+def preparer_telephone():
+    brut = Image.open(SRC_IMAGES / "2.png").convert("RGBA")
+    # le PNG fourni a un fond transparent : on le pose sur du blanc pour le
+    # detourage, puis on combine les deux transparences
+    facteur = 3
+    grand_rgba = brut.resize((brut.width * facteur, brut.height * facteur), Image.LANCZOS)
+    grand = Image.new("RGB", grand_rgba.size, (255, 255, 255))
+    grand.paste(grand_rgba, (0, 0), grand_rgba)
+    alpha_source = grand_rgba.split()[3]
+    a = np.asarray(grand).astype(int)
+
+    vert = (a[:, :, 1] > 130) & (a[:, :, 0] < 130) & (a[:, :, 2] < 130)
+    vert = remplir_lignes(vert)
+    quad = coins(vert)
+    ys, xs = np.where(vert)
+    print(f"  ecran vert : x {xs.min()}-{xs.max()} y {ys.min()}-{ys.max()}")
+
+    # fond blanc du mockup -> transparent
+    blanc = np.abs(a - 255).sum(axis=2) < 45
+    alpha = np.minimum(((~blanc) * 255).astype(np.uint8), np.asarray(alpha_source))
+    alpha = Image.fromarray(alpha, "L").filter(ImageFilter.GaussianBlur(1.0))
+    decoupe = grand.convert("RGBA")
+    decoupe.putalpha(alpha)
+
+    lw = int(xs.max() - xs.min())
+    lh = int(ys.max() - ys.min())
+    ui = ecran_telephone(lw, lh)
+    calque = calque_perspective(decoupe.size, ui, quad)
+    masque_ecran = Image.fromarray((vert * 255).astype(np.uint8), "L").filter(ImageFilter.MaxFilter(5))
+    decoupe.paste(calque, (0, 0), masque_ecran)
+
+    decoupe = decoupe.crop(decoupe.getbbox())
+    decoupe.save(BASE / "telephone.png")
+    print("  -> telephone.png", decoupe.size)
+
+
+if __name__ == "__main__":
+    preparer_borne()
+    preparer_telephone()

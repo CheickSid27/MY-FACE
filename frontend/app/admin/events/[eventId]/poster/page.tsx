@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import RequireAuth from "@/components/admin/RequireAuth";
+import MyfaceLogo from "@/components/brand/Logo";
 import { PrinterIcon } from "@/components/icons";
 import { api } from "@/lib/api-client";
 import type { Event } from "@/types/api";
@@ -54,6 +55,8 @@ function PosterContent() {
       </div>
 
       <main className="mx-auto flex max-w-[190mm] flex-col items-center gap-8 bg-white px-8 py-10 text-center text-ink-900 shadow-card print:shadow-none">
+        <MyfaceLogo size={62} />
+
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-accent">Vos photos</p>
           <h1 className="mt-3 font-display text-4xl font-semibold uppercase tracking-wide">
@@ -85,6 +88,14 @@ function PosterContent() {
         </ol>
 
         <p className="break-all text-xs text-ink-500">{event.guest_url}</p>
+
+        <div className="flex items-center gap-2 border-t border-ink-900/10 pt-5">
+          <MyfaceLogo size={24} />
+          <span className="text-sm font-bold text-ink-900">
+            MY<span className="text-[#F26A1B]">FACE</span>
+          </span>
+          <span className="text-sm text-ink-500">&middot; Un selfie. Toutes tes photos.</span>
+        </div>
       </main>
     </>
   );

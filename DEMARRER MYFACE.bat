@@ -39,8 +39,8 @@ echo [4/5] Redemarrage de nginx...
 docker restart myface-nginx-1 >nul
 
 echo [5/5] Ouverture de l'acces public...
-"C:\Program Files\Tailscale\tailscale.exe" funnel --bg 80 >nul 2>&1
-echo       Lien public actif dans 1 a 2 minutes.
+docker compose --profile domaine up -d tunnel-domaine >nul 2>&1
+echo       Tunnel Cloudflare demarre.
 
 echo.
 echo ============================================
@@ -48,7 +48,7 @@ echo   MYFACE EST EN LIGNE
 echo.
 echo   Sur ce PC       : http://localhost
 echo   Administration  : http://localhost/admin/login
-echo   Depuis dehors   : https://myface.tail715f81.ts.net
+echo   Depuis dehors   : https://myfaceci.online
 echo ============================================
 echo.
 start "" http://localhost

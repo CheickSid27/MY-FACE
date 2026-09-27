@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import MyfaceLogo from "@/components/brand/Logo";
 import FramedPhoto from "@/components/photo/FramedPhoto";
 import ScanDialog from "@/components/scan/ScanDialog";
 import { api } from "@/lib/api-client";
@@ -129,6 +130,13 @@ export default function EventHomePage() {
         >
           Scanner mon visage
         </button>
+      </div>
+
+      <div className="relative z-10 mt-14 flex items-center gap-2 opacity-60">
+        <MyfaceLogo size={22} tone="light" />
+        <span className="text-xs font-semibold tracking-wide text-white">
+          MY<span className="text-[#F26A1B]">FACE</span>
+        </span>
       </div>
 
       <ScanDialog eventId={eventId} open={scanOpen} onClose={() => setScanOpen(false)} />

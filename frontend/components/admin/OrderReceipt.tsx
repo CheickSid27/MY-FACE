@@ -1,4 +1,5 @@
 import { PrinterIcon } from "@/components/icons";
+import MyfaceLogo from "@/components/brand/Logo";
 import { METHOD_LABELS } from "@/components/payments/MethodIcon";
 import { ORDER_STATUS_LABELS, orderStatusBadgeClass } from "@/lib/order-labels";
 import type { OrderDetail } from "@/types/api";
@@ -24,12 +25,15 @@ export default function OrderReceipt({ order }: { order: OrderDetail }) {
   return (
     <div className="text-left text-ink-900">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-ink-900/10 pb-4">
-        <div>
+        <div className="flex items-start gap-3">
+          <MyfaceLogo size={38} />
+          <div>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-brand-accent">MYFACE &middot; Recu de commande</p>
           <h2 className="mt-1 text-lg font-bold">{order.event_name}</h2>
           <p className="text-xs text-ink-500">
             Evenement du {new Date(order.event_date).toLocaleDateString("fr-FR")}
           </p>
+          </div>
         </div>
         <div className="text-right">
           <p className="font-mono text-sm font-bold">N&deg; {order.id.slice(0, 8).toUpperCase()}</p>

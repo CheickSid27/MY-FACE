@@ -1,0 +1,331 @@
+<title>Fiche de publication MYFACE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #F4EFE6; --surface: #FFFFFF; --fill: #EAE3D6; --ink: #0E2429;
+    --ink-soft: #33484D; --muted: #5E7378; --line: #D8CEBE; --orange: #F26A1B;
+    --orange-ink: #B34A08; --orange-soft: #FCE3D1; --green: #00854B;
+    --green-soft: #D2EDDF; --on-orange: #FFFFFF;
+    --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+    --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0B1A1E; --surface: #122A30; --fill: #17343B; --ink: #EFE7DA;
+      --ink-soft: #CBD8D7; --muted: #91A6A9; --line: #27454D; --orange: #FF8A3D;
+      --orange-ink: #FFAB70; --orange-soft: #3B2413; --green: #3FC489;
+      --green-soft: #113828; --on-orange: #1C0D03;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0B1A1E; --surface: #122A30; --fill: #17343B; --ink: #EFE7DA;
+    --ink-soft: #CBD8D7; --muted: #91A6A9; --line: #27454D; --orange: #FF8A3D;
+    --orange-ink: #FFAB70; --orange-soft: #3B2413; --green: #3FC489;
+    --green-soft: #113828; --on-orange: #1C0D03;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { background: var(--ground); color: var(--ink); font: 400 17px/1.6 var(--body); }
+  a { color: var(--orange-ink); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+
+  .band { height: 14px; background:
+      radial-gradient(circle at 50% 50%, var(--orange) 0 2.5px, transparent 3px) 0 0 / 14px 14px,
+      conic-gradient(from 45deg at 50% 50%, var(--ink) 0 25%, transparent 0 50%, var(--ink) 0 75%, transparent 0) 0 0 / 14px 14px,
+      var(--ground); }
+
+  header.top { max-width: 1060px; margin: 0 auto; padding: 44px 22px 24px; display: grid; gap: 14px; }
+  .eyebrow { margin: 0; font: 600 12px/1.4 var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 0; font: 700 clamp(28px, 4.2vw, 44px)/1.1 var(--display); letter-spacing: -.012em; text-wrap: balance; max-width: 20ch; }
+  h1 em { font-style: normal; color: var(--orange); }
+  .lede { margin: 0; max-width: 62ch; font-size: 19px; color: var(--ink-soft); }
+
+  main { max-width: 1060px; margin: 0 auto; padding: 0 22px 88px; }
+  section { padding-top: 50px; }
+  h2 { margin: 0 0 12px; font: 600 clamp(21px, 2.4vw, 27px)/1.2 var(--display); text-wrap: balance; }
+  h3 { margin: 22px 0 6px; font: 650 17px/1.35 var(--body); }
+  p { margin: 0 0 13px; max-width: 66ch; }
+  .intro { color: var(--ink-soft); }
+  ul, ol { margin: 0 0 13px; padding-left: 1.2em; }
+  li { margin: 0 0 7px; }
+  .fine { font-size: 14px; color: var(--muted); }
+  code { font: 500 14px/1.4 var(--mono); background: var(--fill); padding: 1px 5px; border-radius: 4px; }
+
+  .regles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 18px 0 6px; }
+  .regle { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 6px; align-content: start; }
+  .regle b { font: 600 15px/1.3 var(--display); }
+  .regle span { font-size: 15px; color: var(--ink-soft); }
+  .regle .num { font: 700 26px/1 var(--display); color: var(--orange); }
+
+  .table-wrap { overflow-x: auto; margin: 16px 0 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 660px; font-size: 15px; }
+  th { font: 600 11.5px/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 11px 13px; background: var(--fill); border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 11px 13px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .f { font: 500 13.5px/1.4 var(--mono); color: var(--orange-ink); }
+
+  .tactiques { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 18px 0 6px; }
+  .colonne { display: grid; gap: 10px; align-content: start; }
+  .colonne > h3 { margin: 0 0 2px; font: 600 12px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .tac { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 15px 17px; }
+  .tac b { display: block; margin-bottom: 3px; }
+  .tac span { font-size: 15px; color: var(--ink-soft); }
+  .tac.fort { border-color: var(--orange); }
+  .tac.fort b::after { content: " · le plus rentable"; font: 600 11px/1 var(--mono); color: var(--orange-ink); letter-spacing: .04em; }
+
+  .copy { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin: 14px 0; overflow: hidden; }
+  .copy header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px 8px 14px; background: var(--fill); border-bottom: 1px solid var(--line); }
+  .copy header span { font: 600 11px/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .copy button { font: 600 12px/1 var(--body); padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .copy button:hover { background: var(--orange); color: var(--on-orange); border-color: var(--orange); }
+  .copy pre { margin: 0; padding: 13px 16px; white-space: pre-wrap; font: 400 15px/1.55 var(--body); }
+
+  .todo { list-style: none; padding: 0; margin: 16px 0 6px; counter-reset: t; }
+  .todo li { counter-increment: t; border-top: 1px solid var(--line); }
+  .todo li:last-child { border-bottom: 1px solid var(--line); }
+  .todo label { display: grid; grid-template-columns: 22px 26px minmax(0, 1fr); gap: 10px; align-items: start; padding: 12px 0; cursor: pointer; font-size: 16px; }
+  .todo label::before { content: counter(t); grid-column: 2; grid-row: 1; font: 600 14px/1.6 var(--mono); color: var(--muted); text-align: right; }
+  .todo input { grid-column: 1; grid-row: 1; width: 18px; height: 18px; margin: 3px 0 0; accent-color: var(--orange); }
+  .todo span { grid-column: 3; grid-row: 1; }
+  .todo input:checked ~ span { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+
+  .rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0 6px; }
+  .rules div { border-radius: 12px; padding: 18px 20px; }
+  .rules .yes { background: var(--green-soft); }
+  .rules .no { background: var(--orange-soft); }
+  .rules ul { margin: 0; padding-left: 1.1em; font-size: 15.5px; }
+  .rules h3 { margin: 0 0 8px; }
+
+  footer.end { margin: 46px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+
+  @media (max-width: 860px) {
+    .regles, .tactiques, .rules { grid-template-columns: minmax(0, 1fr); }
+    body { font-size: 16px; }
+  }
+</style>
+
+<div class="band" aria-hidden="true"></div>
+
+<header class="top">
+  <p class="eyebrow">Fiche pratique · à garder ouverte chaque semaine</p>
+  <h1>Quoi poster, où, et comment <em>se faire voir</em></h1>
+  <p class="lede">Les 22 affiches sont prêtes dans <code>D:\MY FACE\affiches</code>. Cette fiche dit quoi en faire : le planning de la semaine, le rôle de chaque réseau, et les façons d'être vu sans dépenser — puis avec un petit budget quand ça marche.</p>
+</header>
+
+<main>
+  <section id="regles">
+    <h2>Trois règles avant tout le reste</h2>
+    <div class="regles">
+      <div class="regle"><span class="num">1</span><b>La régularité bat la perfection</b><span>Quatre publications correctes chaque semaine valent mieux qu'une parfaite par mois. Les réseaux montrent ceux qui publient souvent.</span></div>
+      <div class="regle"><span class="num">2</span><b>Une affiche, un message</b><span>On ne mélange pas les prix, la borne et le recrutement des photographes dans le même post. Chaque affiche a un seul rôle.</span></div>
+      <div class="regle"><span class="num">3</span><b>Répondre vite vaut mieux que publier</b><span>Un message WhatsApp sans réponse pendant deux heures, c'est un événement perdu. La boîte passe avant le contenu.</span></div>
+    </div>
+  </section>
+
+  <section id="semaine">
+    <h2>La semaine type</h2>
+    <p class="intro">Quatre publications, un statut WhatsApp tous les jours. Les noms de fichiers renvoient aux dossiers <code>post\</code> et <code>story\</code>.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Jour</th><th>Quoi publier</th><th>Où</th><th>Ce que ça doit provoquer</th></tr></thead>
+        <tbody>
+          <tr><td>Lundi</td><td><span class="f">A9-en-4-ecrans</span><br>ou le récap du week-end</td><td>Instagram, Facebook, statut</td><td>Comprendre en dix secondes que c'est simple et rapide</td></tr>
+          <tr><td>Mardi</td><td><span class="f">B7-organisateurs</span> ou <span class="f">C3-entreprises</span></td><td>LinkedIn, Facebook</td><td>Faire écrire un organisateur ou une entreprise</td></tr>
+          <tr><td>Mercredi</td><td><span class="f">A6-photographes</span> + messages privés</td><td>Instagram, TikTok, DM</td><td>Recruter un photographe partenaire</td></tr>
+          <tr><td>Jeudi</td><td><span class="f">A4-avant-apres</span> ou <span class="f">B3-recherche-visage</span></td><td>TikTok, story, statut</td><td>Faire réagir : « c'est exactement mon problème »</td></tr>
+          <tr><td>Vendredi</td><td><span class="f">C1-organisateurs-forfait</span> ou <span class="f">A7-offre-datee</span></td><td>Instagram, Facebook, statut</td><td>Déclencher une demande de devis avant le week-end</td></tr>
+          <tr><td>Samedi</td><td>Les coulisses de l'événement en direct</td><td>Stories et statut, toute la journée</td><td>Montrer qu'on travaille, rassurer</td></tr>
+          <tr><td>Dimanche</td><td>Repos, ou <span class="f">A1-signature</span> si la semaine a été vide</td><td>Statut</td><td>Rester présent sans forcer</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="fine">Après chaque événement réel, tout ce planning passe au second plan : les photos et les réactions du jour sont toujours le meilleur contenu.</p>
+  </section>
+
+  <section id="canaux">
+    <h2>Chaque réseau, son rôle</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Réseau</th><th>À quoi il sert</th><th>Ce qu'on y met</th><th>Rythme</th></tr></thead>
+        <tbody>
+          <tr><td>Statut WhatsApp</td><td>Vendre à ceux qui te connaissent déjà</td><td>Une affiche par jour, les coulisses, les photos d'événement (avec accord)</td><td>Tous les jours, 12h ou 19h</td></tr>
+          <tr><td>WhatsApp Business</td><td>Recevoir et convertir</td><td>Catalogue des offres, réponses rapides enregistrées, devis</td><td>Réponse en moins d'une heure</td></tr>
+          <tr><td>Instagram</td><td>Crédibilité, vitrine</td><td>Affiches, récaps d'événements, témoignages, stories</td><td>3 posts + stories</td></tr>
+          <tr><td>TikTok</td><td>Notoriété chez les 18–30 ans</td><td>Avant/après, réactions filmées, coulisses de la borne</td><td>3 à 4 vidéos</td></tr>
+          <tr><td>Facebook</td><td>Toucher ceux qui organisent</td><td>Mêmes affiches, plus les groupes locaux</td><td>3 posts</td></tr>
+          <tr><td>LinkedIn</td><td>Entreprises et institutions</td><td>Cas concrets, chiffres, offre séminaires</td><td>1 post</td></tr>
+          <tr><td>Fiche Google</td><td>Être trouvé quand on cherche</td><td>Photos, horaires, lien WhatsApp, avis clients</td><td>Un avis demandé après chaque événement</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="visibilite">
+    <h2>Se faire voir sans payer</h2>
+    <p class="intro">Douze leviers, classés par où ils se jouent. Les deux marqués en orange rapportent le plus en Côte d'Ivoire, et ne coûtent rien d'autre que de la discipline.</p>
+    <div class="tactiques">
+      <div class="colonne">
+        <h3>En ligne</h3>
+        <div class="tac fort"><b>Le statut WhatsApp quotidien</b><span>Tes contacts le regardent tous les jours. Une affiche par jour, et ton numéro finit par être associé aux photos d'événement.</span></div>
+        <div class="tac"><b>Les groupes Facebook locaux</b><span>« Mariage Côte d'Ivoire », groupes d'entraide d'Abidjan, groupes de prestataires. On apporte une réponse utile, on ne balance pas une pub.</span></div>
+        <div class="tac"><b>Les commentaires utiles</b><span>Sous les publications des salles, traiteurs et pages d'événements : être présent, jamais spammer.</span></div>
+        <div class="tac"><b>La fiche Google</b><span>Gratuite, et c'est elle qui sort sur « photographe mariage Abidjan ». Chaque avis compte double.</span></div>
+      </div>
+      <div class="colonne">
+        <h3>Sur le terrain</h3>
+        <div class="tac fort"><b>Le MC annonce MYFACE</b><span>Trois annonces au micro touchent 300 personnes d'un coup, pour zéro franc. C'est la meilleure publicité que tu puisses avoir.</span></div>
+        <div class="tac"><b>Les affiches chez les partenaires</b><span><span class="f">A8-pagne-qr</span> et <span class="f">C2-evenement-photographie</span> en A4 chez les salles, boutiques de tenues, traiteurs, salons de coiffure.</span></div>
+        <div class="tac"><b>Les chevalets sur les tables</b><span><span class="f">A2-mode-emploi</span> imprimé : chaque table devient une affiche, et le QR fait le reste.</span></div>
+        <div class="tac"><b>L'équipe en t-shirt</b><span>On te voit travailler, on te demande ton numéro. Simple, et ça marche à chaque événement.</span></div>
+      </div>
+      <div class="colonne">
+        <h3>Par les autres</h3>
+        <div class="tac"><b>Identifier tous les prestataires</b><span>Dans chaque récap, tague la salle, le traiteur, le DJ, la déco, le planner. Ils repartagent : leur audience est exactement la tienne.</span></div>
+        <div class="tac"><b>Les invités qui republient</b><span>Sur la page de téléchargement, demande-leur de mentionner MYFACE quand ils publient leurs photos.</span></div>
+        <div class="tac"><b>Les photographes partenaires</b><span>Chaque partenaire parle de toi à ses clients. Cinq partenaires, c'est cinq vendeurs.</span></div>
+        <div class="tac"><b>Le parrainage</b><span>Un invité qui ramène un organisateur gagne une réduction. À brancher dans l'appli quand tu voudras.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="payant">
+    <h2>Quand payer, et combien</h2>
+    <p class="intro">On ne paie jamais pour un contenu neuf. On paie pour pousser celui qui a déjà marché tout seul.</p>
+    <ol>
+      <li>Publie normalement pendant deux semaines.</li>
+      <li>Regarde lequel a reçu le plus de messages WhatsApp — pas le plus de mentions « j'aime ».</li>
+      <li>Mets <strong>3 000 à 5 000 FCFA par jour</strong> derrière celui-là, pendant une semaine.</li>
+      <li>Ciblage : Abidjan, 22–45 ans, et les centres d'intérêt mariage, événementiel, entreprise.</li>
+      <li>Objectif de la campagne : <strong>les messages</strong>, pas les vues. Le bouton doit ouvrir WhatsApp.</li>
+      <li>Si une semaine ne ramène aucune demande de devis, on coupe et on teste une autre affiche.</li>
+    </ol>
+    <p>Compte environ <strong>90 000 à 150 000 FCFA par mois</strong> si tu maintiens la publicité tous les jours. Tant qu'on n'a pas dix événements derrière nous, le terrain et les partenaires rapportent plus que la publicité.</p>
+  </section>
+
+  <section id="details">
+    <h2>Les détails qui changent les résultats</h2>
+    <h3>Les heures</h3>
+    <p>À Abidjan, les deux bons créneaux sont <strong>12h–13h30</strong> et <strong>19h–22h</strong>. Le samedi soir, tout le monde est en fête : c'est le moment des stories en direct, pas des publications de vente.</p>
+    <h3>Les hashtags</h3>
+    <p>Trois ou quatre suffisent, jamais vingt.</p>
+    <div class="copy">
+      <header><span>Hashtags · à coller sous chaque publication</span><button type="button">Copier</button></header>
+      <pre>#MYFACE #Abidjan #225 #MariageAbidjan #PhotographeAbidjan</pre>
+    </div>
+    <h3>La légende passe-partout</h3>
+    <p>Quand tu n'as pas d'idée, celle-ci fonctionne avec presque toutes les affiches.</p>
+    <div class="copy">
+      <header><span>Légende</span><button type="button">Copier</button></header>
+      <pre>Tes invités cherchent leurs photos dans le groupe WhatsApp ? Chez MYFACE, un selfie suffit : chacun retrouve les siennes et les télécharge en qualité d'origine.
+Mariages, remises de diplômes, galas, soirées — Abidjan.
+Écris-nous pour un devis 👇</pre>
+    </div>
+    <h3>Le message qui accompagne un partage dans un groupe</h3>
+    <div class="copy">
+      <header><span>Message de groupe</span><button type="button">Copier</button></header>
+      <pre>Bonjour à tous 👋 Pour celles et ceux qui organisent bientôt un événement : on installe une borne photo qui permet à chaque invité de retrouver SES photos avec un simple selfie, et de les imprimer sur place. Si ça peut servir à quelqu'un, écrivez-moi en privé.</pre>
+    </div>
+  </section>
+
+  <section id="suivi">
+    <h2>Ce qu'on note chaque semaine</h2>
+    <p class="intro">Cinq lignes dans un cahier ou un fichier, tous les dimanches. Sans ça, on publie dans le vide.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>À noter</th><th>Où le trouver</th><th>Bon signe</th></tr></thead>
+        <tbody>
+          <tr><td>Messages WhatsApp reçus</td><td>WhatsApp Business</td><td>En hausse chaque semaine</td></tr>
+          <tr><td>Devis envoyés</td><td>Ton cahier</td><td>Au moins 3 par semaine</td></tr>
+          <tr><td>Événements signés</td><td>Ton cahier</td><td>1 sur 5 devis</td></tr>
+          <tr><td>Publication la plus vue</td><td>Statistiques du réseau</td><td>On la republie et on la booste</td></tr>
+          <tr><td>Nouveaux partenaires</td><td>Ton cahier</td><td>1 par semaine au début</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="cesoir">
+    <h2>À faire ce soir, avant de publier quoi que ce soit</h2>
+    <ol class="todo">
+      <li><label><input type="checkbox" data-key="p1"><span>Mettre le logo en photo de profil partout et vérifier que le même nom est pris sur les quatre réseaux.</span></label></li>
+      <li><label><input type="checkbox" data-key="p2"><span>Remplacer « [ton numéro] » par ton vrai numéro WhatsApp sur les affiches concernées, puis relancer <code>python generer_affiches.py</code>.</span></label></li>
+      <li><label><input type="checkbox" data-key="p3"><span>Enregistrer trois réponses rapides dans WhatsApp Business : tarifs, disponibilité, comment ça marche.</span></label></li>
+      <li><label><input type="checkbox" data-key="p4"><span>Publier <span class="f">A1-signature</span> et l'épingler en haut du profil.</span></label></li>
+      <li><label><input type="checkbox" data-key="p5"><span>Publier <span class="f">A9-en-4-ecrans</span> : c'est l'affiche qui explique tout.</span></label></li>
+      <li><label><input type="checkbox" data-key="p6"><span>Mettre <span class="f">A2-mode-emploi</span> en statut WhatsApp.</span></label></li>
+      <li><label><input type="checkbox" data-key="p7"><span>Envoyer le message de groupe ci-dessus dans deux groupes WhatsApp où tu es déjà.</span></label></li>
+      <li><label><input type="checkbox" data-key="p8"><span>Écrire à cinq photographes repérés sur Instagram avec le message du kit de lancement.</span></label></li>
+    </ol>
+  </section>
+
+  <section id="erreurs">
+    <h2>À faire, à éviter</h2>
+    <div class="rules">
+      <div class="yes">
+        <h3>À faire</h3>
+        <ul>
+          <li>Publier même quand il n'y a pas eu d'événement cette semaine : les affiches servent à ça.</li>
+          <li>Répondre à tous les commentaires, même « 🔥 ».</li>
+          <li>Demander l'accord avant de publier le visage de quelqu'un.</li>
+          <li>Republier tes meilleures affiches tous les deux mois : personne ne s'en souvient.</li>
+          <li>Garder une trace de qui t'a écrit, et relancer au bout de trois jours.</li>
+        </ul>
+      </div>
+      <div class="no">
+        <h3>À éviter</h3>
+        <ul>
+          <li>Mettre un QR code sur une publication Instagram : impossible à scanner depuis son propre téléphone.</li>
+          <li>Publier trois fois dans la même journée puis disparaître deux semaines.</li>
+          <li>Acheter des abonnés : ils ne commandent jamais et ils cassent la portée.</li>
+          <li>Parler de reconnaissance faciale dans une publicité avant l'accord de l'ARTCI.</li>
+          <li>Promettre un accès aux photos « à vie » tant que le site dépend du PC.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer class="end">
+    Fiche établie le 27 septembre 2026, à partir des 22 affiches du dossier <code>affiches</code> et du kit de lancement. À revoir après les dix premiers événements : à ce moment-là, ce sont tes propres chiffres qui décident du planning.
+  </footer>
+</main>
+
+<script>
+  document.querySelectorAll('.copy').forEach(function (block) {
+    var btn = block.querySelector('button');
+    var pre = block.querySelector('pre');
+    if (!btn || !pre) return;
+    btn.addEventListener('click', function () {
+      var txt = pre.innerText;
+      var done = function () { btn.textContent = 'Copié'; setTimeout(function () { btn.textContent = 'Copier'; }, 1800); };
+      function fallback() {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); document.body.removeChild(ta); done();
+        } catch (e) { btn.textContent = 'Sélectionne le texte'; setTimeout(function () { btn.textContent = 'Copier'; }, 2200); }
+      }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(done, fallback);
+        } else { fallback(); }
+      } catch (e) { fallback(); }
+    });
+  });
+  (function () {
+    var store = null;
+    try { store = window.localStorage; } catch (e) { store = null; }
+    document.querySelectorAll('.todo input[type="checkbox"]').forEach(function (box) {
+      var key = 'myface-fiche-' + box.dataset.key;
+      try { if (store && store.getItem(key) === '1') box.checked = true; } catch (e) {}
+      box.addEventListener('change', function () {
+        try { if (store) store.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+      });
+    });
+  })();
+</script>
