@@ -11,7 +11,7 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   // "checking" pendant la validation reelle du token, puis "ok"/"denied".
   // Se contenter de la presence d'un token (ancien comportement) laissait un
   // admin dont le token a expire (et le refresh aussi) coince sur un ecran
-  // casse — chaque appel API echouait silencieusement en arriere-plan sans
+  // casse, chaque appel API echouait silencieusement en arriere-plan sans
   // jamais renvoyer vers /admin/login. Ici on verifie activement auprès du
   // serveur (GET /auth/me, qui declenche le meme refresh automatique que
   // n'importe quel autre appel via lib/api-client.ts) avant d'afficher quoi

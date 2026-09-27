@@ -48,7 +48,8 @@ echo   MYFACE EST EN LIGNE
 echo.
 echo   Sur ce PC       : http://localhost
 echo   Administration  : http://localhost/admin/login
-echo   Depuis dehors   : https://myfaceci.online
+echo   Application     : https://app.myfaceci.online
+echo   Site vitrine    : https://myfaceci.online
 echo ============================================
 echo.
 start "" http://localhost

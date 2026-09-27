@@ -95,7 +95,7 @@ class Settings(BaseSettings):
     mtn_money_subscription_key: str = ""
     moov_money_api_key: str = ""
 
-    # --- GeniusPay (passerelle tierce, en test sandbox — voir
+    # --- GeniusPay (passerelle tierce, en test sandbox, voir
     # services/geniuspay.py et routers/geniuspay.py) : chemin de paiement
     # ISOLE du flux QR marchand + confirmation manuelle deja en place
     # (services/payments.py, event_payment_methods). Ne remplace rien tant
@@ -105,12 +105,12 @@ class Settings(BaseSettings):
     geniuspay_webhook_secret: str = ""
     geniuspay_base_url: str = "https://geniuspay.ci/api/v1/merchant"
 
-    # SMS (Africa's Talking) — non configure par defaut, voir services/sms.py
+    # SMS (Africa's Talking), non configure par defaut, voir services/sms.py
     africastalking_username: str = ""
     africastalking_api_key: str = ""
     africastalking_sender_id: str = ""
 
-    # Notifications push (PWA admin) — voir services/push_notifications.py.
+    # Notifications push (PWA admin), voir services/push_notifications.py.
     # Si vide, l'envoi est simplement ignore (pas d'erreur), meme logique que
     # sms.py quand aucun credential n'est configure.
     vapid_public_key: str = ""
@@ -129,7 +129,7 @@ class Settings(BaseSettings):
     watched_folder_poll_seconds: float = 5.0
     # Chemin cote PC hote correspondant (purement informatif : le conteneur ne
     # voit jamais ce chemin, seulement /watched via le bind-mount de
-    # docker-compose.yml) — affiche a l'organisateur pour qu'il sache ou
+    # docker-compose.yml), affiche a l'organisateur pour qu'il sache ou
     # deposer les photos depuis la carte SD de l'appareil.
     watched_folder_host_display_path: str = "watched-photos"
 

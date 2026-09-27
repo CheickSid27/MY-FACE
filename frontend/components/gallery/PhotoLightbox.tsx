@@ -54,7 +54,7 @@ export default function PhotoLightbox({
   // Chargement progressif : la miniature (deja en cache depuis la grille)
   // s'affiche immediatement, sans aucune attente visible. La version
   // "preview" (plus grande, plus nette) charge silencieusement par-dessus
-  // en arriere-plan et prend le relais en fondu des qu'elle est prete —
+  // en arriere-plan et prend le relais en fondu des qu'elle est prete
   // aucun spinner, aucune latence percue, juste une nettete qui s'ameliore.
   const [previewLoaded, setPreviewLoaded] = useState(false);
 

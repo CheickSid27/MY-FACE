@@ -174,7 +174,7 @@ export default function GalleryPage() {
   // rapide de plusieurs photos accumule leurs IDs ici, et une seule requete
   // /cart/add-bulk part apres un court debounce (ou immediatement si on va
   // au panier ou qu'on utilise "tout selectionner") au lieu d'une requete
-  // sequentielle par photo — sur une base distante (~0.5-1s l'aller-retour),
+  // sequentielle par photo, sur une base distante (~0.5-1s l'aller-retour),
   // dix clics rapides attendaient auparavant dix aller-retours l'un derriere
   // l'autre avant que "voir le panier" ne parte reellement.
   const FLUSH_DEBOUNCE_MS = 500;
@@ -309,7 +309,7 @@ export default function GalleryPage() {
   // avant que le lot en attente (et les suppressions en cours) n'aient
   // reellement ete confirmes cote serveur faisait atterrir sur un panier
   // incomplet (corrige seulement au rafraichissement, une fois tout arrive
-  // en arriere-plan) — on force donc un flush immediat et on attend tout ce
+  // en arriere-plan), on force donc un flush immediat et on attend tout ce
   // qui est encore en vol avant de naviguer.
   const [goingToCart, setGoingToCart] = useState(false);
   async function goToCart() {

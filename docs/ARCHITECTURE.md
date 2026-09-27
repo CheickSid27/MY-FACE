@@ -46,9 +46,9 @@ etape :
 Point d'entree unique partage entre l'upload manuel (`routers/photos.py`) et le dossier surveille
 (`services/folder_watcher.py`) : validation (type MIME, taille max 25 Mo), generation de la
 miniature de grille (400px, qualite 80), de la preview plein ecran (1600px, qualite 88) et de sa
-copie filigranee (`services/watermark.py`) via Pillow — calculs executes dans un thread — puis
+copie filigranee (`services/watermark.py`) via Pillow, calculs executes dans un thread, puis
 upload des quatre variantes en parallele, creation de la ligne `Photo`. **L'original n'est jamais
-recompresse ni redimensionne** — garantie de non-degradation demandee explicitement.
+recompresse ni redimensionne**, garantie de non-degradation demandee explicitement.
 
 **Orientation EXIF** : un telephone enregistre souvent les pixels "couches" + un tag Orientation.
 Les derives sont generes apres `ImageOps.exif_transpose` (`thumbnails.open_oriented`), comme le
@@ -56,7 +56,7 @@ fait OpenCV cote detection : miniatures droites et vignettes-visages recadrees a
 
 ### 2. Indexation faciale (`services/face_indexing.py`, `services/face_recognition.py`)
 
-Tache de fond declenchee apres upload (`index_photos_faces`, parallelisme borne — voir
+Tache de fond declenchee apres upload (`index_photos_faces`, parallelisme borne, voir
 [#parallelisme-de-lindexation](#parallelisme-de-lindexation-ci-dessous)). Pour chaque photo :
 telechargement de l'original, decodage OpenCV, detection via InsightFace (`buffalo_l`, GPU si
 disponible sinon CPU automatique), un embedding 512-d normalise par visage detecte au-dessus du
@@ -72,7 +72,7 @@ photo et peut relancer les echecs (`POST /events/{id}/reindex`). Un registre en 
 programmer deux fois la meme photo.
 
 **Concurrence critique** : InsightFace/onnxruntime n'est pas garanti thread-safe pour des appels
-concurrents sur la meme session partagee — un verrou global asyncio serialise strictement les
+concurrents sur la meme session partagee, un verrou global asyncio serialise strictement les
 appels d'inference (`_inference_lock` dans `face_recognition.py`). Tout le reste (telechargement
 storage, ecritures DB) n'est **pas** derriere ce verrou et peut se chevaucher entre photos.
 
@@ -171,7 +171,7 @@ renouvelle avant expiration si elle reste ouverte). Chaque photo a son lien de t
 (afficher les originaux faisait telecharger des dizaines de Mo au telephone rien que pour la
 liste). Le zip est genere et envoye photo par photo (`StreamingResponse`, une seule photo en
 memoire), nginx le transmet sans tampon. Un QR code permanent pointe toujours vers la meme page de
-telechargement — utile si le client n'a pas pu finir de telecharger et revient plus tard.
+telechargement, utile si le client n'a pas pu finir de telecharger et revient plus tard.
 
 ## Tirages papier (systeme d'impression)
 
@@ -223,7 +223,7 @@ des le premier client. Le jeton est retire de la barre d'adresse une fois memori
 ## Dossier surveille (ingestion automatique)
 
 `services/folder_watcher.py` : boucle de polling (pas d'evenements filesystem type inotify/watchdog
-— un bind-mount Docker Desktop sur Windows ne propage pas toujours fiablement ces evenements). Scan
+un bind-mount Docker Desktop sur Windows ne propage pas toujours fiablement ces evenements). Scan
 periodique de `WATCHED_FOLDER_PATH/<event_id>/`, un sous-dossier par evenement (cree
 automatiquement a la creation de l'evenement). Un fichier n'est ingere que lorsque sa taille est
 stable entre deux scans consecutifs (evite de lire un fichier encore en cours de copie). Etat
@@ -250,7 +250,7 @@ abonnements expires (reponse 404/410 du service push) sont nettoyes automatiquem
 Exigence explicite : une photo ne doit **jamais** etre degradee entre la prise et le telechargement
 client. Concretement : `original_key` pointe vers les bytes exacts recus a l'upload, sans
 recompression ni redimensionnement a aucune etape ; seuls `thumbnail_key` (400px) et `preview_key`
-(1600px) — des derives generes en plus, jamais en remplacement — sont compresses, et uniquement
+(1600px), des derives generes en plus, jamais en remplacement, sont compresses, et uniquement
 utilises pour l'affichage galerie/apercu, jamais pour le telechargement post-achat
 (`routers/download.py` sert toujours `original_key`).
 
@@ -260,7 +260,7 @@ utilises pour l'affichage galerie/apercu, jamais pour le telechargement post-ach
   plusieurs milliers de photos sans degrader les performances de rendu.
 - **Chargement progressif** (`components/gallery/PhotoLightbox.tsx`) : la miniature (deja en cache
   depuis la grille) s'affiche instantanement ; la preview (plus grande, plus nette) charge en
-  arriere-plan et prend le relais en fondu des qu'elle est prete — jamais de spinner visible.
+  arriere-plan et prend le relais en fondu des qu'elle est prete, jamais de spinner visible.
 - **Mise a jour optimiste + file serialisee** (galerie, scan, panier) : l'UI reagit au clic sans
   attendre le reseau, tout en garantissant l'ordre des mutations serveur via une chaine de
   promesses par composant.

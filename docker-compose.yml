@@ -102,6 +102,10 @@ services:
       - frontend
     ports:
       - "80:80"
+    volumes:
+      # Site vitrine servi tel quel sur le nom de domaine principal
+      # (voir le premier bloc server de nginx/nginx.conf).
+      - ./site-vitrine:/usr/share/nginx/vitrine:ro
 
   # Tunnel "quick" Cloudflare (aucun compte requis) : expose l'app (nginx)
   # sur une URL publique https://xxxx.trycloudflare.com. Solution retenue

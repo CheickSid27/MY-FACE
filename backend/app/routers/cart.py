@@ -204,7 +204,7 @@ async def update_cart_item(
     storage: StorageService = Depends(get_storage_service),
 ) -> CartRead:
     """Bascule le tirage papier pour UNE photo du panier (voir
-    CartItem.print_requested) — utilise par la case a cocher "+ Imprimer" du
+    CartItem.print_requested), utilise par la case a cocher "+ Imprimer" du
     panier, uniquement a la borne : cocher un tirage exige le kiosk_token de
     l'evenement (verifie serveur, pas seulement masque cote frontend).
     Decocher reste toujours possible."""

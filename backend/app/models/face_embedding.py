@@ -28,7 +28,7 @@ class FaceEmbedding(Base):
     # Nettete du visage (variance du Laplacien sur le crop, voir
     # face_recognition.py) : le score de confiance de detection (confidence)
     # ne dit rien sur le flou (un visage flou en mode portrait/bokeh peut
-    # avoir un det_score eleve) — utilise pour rejeter les visages trop flous
+    # avoir un det_score eleve), utilise pour rejeter les visages trop flous
     # avant meme de creer leur embedding (peu fiable pour le matching et
     # perturbe le clustering). Nullable : NULL pour les lignes creees avant
     # cette colonne.

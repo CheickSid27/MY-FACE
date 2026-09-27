@@ -290,7 +290,7 @@ export default function CartPage() {
                 })}
                 {/* Especes : uniquement sur la borne, jamais propose sur le
                     telephone personnel d'un invite (personne physiquement la
-                    pour recevoir l'argent) — voir Event.cash_enabled. */}
+                    pour recevoir l'argent), voir Event.cash_enabled. */}
                 {showCashOption && (
                   <button
                     type="button"

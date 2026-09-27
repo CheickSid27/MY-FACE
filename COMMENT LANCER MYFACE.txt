@@ -29,7 +29,8 @@ le modele de reconnaissance faciale se charge dans la carte graphique.
 ---------------------------------------------------------------------
 
 Pour les invites (telephones), QR codes, affiches, SMS :
-    https://myfaceci.online
+    https://app.myfaceci.online
+    -> l'application. Le site vitrine, lui, est sur https://myfaceci.online
     -> notre nom de domaine, achete le 27/09/2026 chez Porkbun, DNS chez
        Cloudflare. Cette adresse ne change plus.
     -> elle ne marche que si le PC est allume et MYFACE demarre.

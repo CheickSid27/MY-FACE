@@ -119,7 +119,7 @@ function ClustersContent() {
             >
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="font-semibold text-ink-900">
-                  Personne {selectedCluster.cluster_id} &mdash; {selectedCluster.photo_count} photo(s)
+                  Personne {selectedCluster.cluster_id}, {selectedCluster.photo_count} photo(s)
                 </h2>
                 <button
                   type="button"

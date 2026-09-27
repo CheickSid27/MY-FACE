@@ -4,7 +4,7 @@ clique "J'ai paye", voir routers/payments.py mark_paid), sans dependre d'une
 app mobile separee ni d'un service tiers payant.
 
 Si aucune cle VAPID n'est configuree (voir core/config.py), l'envoi est
-silencieusement ignore — meme logique que services/sms.py quand Africa's
+silencieusement ignore, meme logique que services/sms.py quand Africa's
 Talking n'est pas configure : ne jamais faire echouer le flux metier
 (paiement) a cause d'une fonctionnalite annexe non configuree.
 """

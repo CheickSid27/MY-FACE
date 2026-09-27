@@ -7,7 +7,7 @@
 // On garde le jeton lui-meme (et pas un simple drapeau "borne = oui") :
 // - la page d'accueil le re-verifie aupres du serveur a chaque retour (reset
 //   d'inactivite compris) au lieu de perdre le mode borne faute de ?kiosk=
-//   dans l'URL — bug corrige : apres le premier reset, la borne redevenait
+//   dans l'URL, bug corrige : apres le premier reset, la borne redevenait
 //   un simple telephone (plus d'especes, plus d'impression, plus de reset) ;
 // - il est transmis aux appels publics (galerie, scan, visages) pour que le
 //   serveur serve les apercus nets, sans filigrane, a la borne uniquement.

@@ -33,7 +33,7 @@ class FaceCluster(BaseModel):
     # Photos completes (pas juste des IDs) : evite au frontend de devoir
     # re-recuperer les photos via une liste paginee a part (qui tronquait
     # silencieusement les clusters au-dela des 200 premieres photos de
-    # l'evenement — voir historique). Le backend a deja chaque Photo en main
+    # l'evenement, voir historique). Le backend a deja chaque Photo en main
     # ici (meme jointure que pour le clustering), donc aucun cout supplementaire.
     photos: list[PhotoRead]
 

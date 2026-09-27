@@ -15,7 +15,7 @@ une machine avec GPU (acceleration InsightFace), Postgres gere (Neon) et stockag
    ```
 
    ⚠️ **Piege connu** : l'endpoint `-pooler` de Neon (PgBouncer en mode transaction) est
-   incompatible avec les requetes preparees cote serveur qu'asyncpg utilise par defaut — erreur
+   incompatible avec les requetes preparees cote serveur qu'asyncpg utilise par defaut, erreur
    `InvalidSchemaNameError: no schema has been selected to create in` sur des requetes pourtant
    valides. Le backend garde de toute facon son propre pool de connexions SQLAlchemy : le pooler de
    Neon n'apporte rien ici.
@@ -103,7 +103,7 @@ docker restart myface-nginx-1
 ## 5. Notifications push (VAPID)
 
 Generez une paire de cles VAPID unique pour votre deploiement (ne jamais la regenerer sans
-supprimer aussi les abonnements existants en base — ils deviendraient invalides silencieusement) :
+supprimer aussi les abonnements existants en base, ils deviendraient invalides silencieusement) :
 
 ```bash
 docker compose exec backend python3 -c "
@@ -148,7 +148,7 @@ docker compose exec backend alembic upgrade head
 ```
 
 Appliquee automatiquement au demarrage du conteneur `backend` (voir la commande `CMD` dans
-`backend/Dockerfile`) — a executer manuellement uniquement si besoin de reappliquer hors demarrage.
+`backend/Dockerfile`), a executer manuellement uniquement si besoin de reappliquer hors demarrage.
 
 ## 7 bis. Redemarrages, mises a jour et logs
 
@@ -158,13 +158,13 @@ Appliquee automatiquement au demarrage du conteneur `backend` (voir la commande 
   demande `docker compose build frontend` puis `docker compose up -d --no-deps frontend`.
 - **nginx** : `nginx.conf` est copie dans l'image (`docker compose build nginx`) ; le redemarrer
   apres toute recreation de `backend`/`frontend` (cache DNS, voir section 4).
-- **Logs applicatifs** : `docker logs -f myface-backend-1` affiche les messages `myface.*` —
+- **Logs applicatifs** : `docker logs -f myface-backend-1` affiche les messages `myface.*`
   provider GPU utilise, indexation, dossier surveille, rattrapages au demarrage (commandes
   expirees, indexations reprises, filigranes generes, groupes de visages pre-calcules).
 
 ## 8. Sauvegarde / donnees sensibles
 
-- `.env` n'est **jamais** commite (voir `.gitignore`) — il contient toutes les cles secretes
+- `.env` n'est **jamais** commite (voir `.gitignore`), il contient toutes les cles secretes
   (base de donnees, stockage, VAPID, SMS).
 - `watched-photos/` est local a chaque poste et exclu du depot.
 - Les originaux photo restent uniquement dans le stockage objet configure (R2/MinIO/Supabase) :

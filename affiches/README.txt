@@ -61,7 +61,7 @@ CE QU'IL FAUT CHANGER AVANT DE PUBLIER
      remplacer par une photo de NOTRE borne des qu'on l'a, et a verifier
      qu'il autorise la reutilisation de ses images.
   4. A8 et C2 : le QR pointe vers l'evenement de demonstration
-     (https://myfaceci.online/event/af3cfb3c-...). A changer quand tu
+     (https://app.myfaceci.online/event/af3cfb3c-...). A changer quand tu
      auras un evenement vitrine dedie.
 
 LES IMAGES NE SONT PAS DES PHOTOS DE CLIENTS

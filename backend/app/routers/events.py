@@ -125,7 +125,7 @@ async def get_event_public(
     """Vue publique pour l'ecran Accueil borne/invite : pas d'authentification.
 
     `kiosk_token` (optionnel) est compare cote serveur au token reel de
-    l'evenement pour determiner `is_kiosk` — jamais le vrai token n'est
+    l'evenement pour determiner `is_kiosk`, jamais le vrai token n'est
     renvoye ici (voir EventPublicRead), donc un client ne peut pas le
     deviner en inspectant les reponses reseau. Sans ce param ou avec un token
     invalide, `is_kiosk` vaut simplement False (comportement invite normal)."""
@@ -422,7 +422,7 @@ async def delete_event(
     tous ses fichiers du stockage (originaux, miniatures, apercus, QR...).
 
     Refuse si une commande est deja payee : la suppression effacerait aussi
-    (cascade) la commande du client et son acces au telechargement — meme
+    (cascade) la commande du client et son acces au telechargement, meme
     regle que pour la suppression d'une photo vendue (routers/photos.py)."""
     event = await get_manageable_event(event_id, current_user, db)
 

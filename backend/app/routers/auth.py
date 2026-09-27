@@ -74,7 +74,7 @@ async def change_password(
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """Permet a un utilisateur deja authentifie de changer son propre mot de
-    passe — notamment le mot de passe admin initial, seede automatiquement
+    passe, notamment le mot de passe admin initial, seede automatiquement
     depuis INITIAL_ADMIN_PASSWORD (voir scripts/seed_admin.py) et qu'il n'y
     avait auparavant aucun moyen de changer sans modifier la base a la main."""
     if not verify_password(payload.current_password, current_user.hashed_password):

@@ -46,7 +46,7 @@ async def ingest_photo(
 ) -> Photo:
     """Valide et importe une photo, l'ajoute a la session `db` (non commit).
 
-    Leve ValueError / InvalidImageError si le fichier est invalide — a
+    Leve ValueError / InvalidImageError si le fichier est invalide, a
     l'appelant de decider comment reporter l'erreur (reponse HTTP, log, ...)."""
     if content_type not in ALLOWED_CONTENT_TYPES:
         raise ValueError(f"Type de fichier non supporte: {content_type}")

@@ -6,7 +6,7 @@ Sur Windows + Docker Desktop, un dossier hote monte en bind-mount ne propage
 pas toujours fiablement les evenements filesystem au conteneur ; le polling
 est plus lent mais marche partout, sans dependance supplementaire.
 
-Structure attendue : {settings.watched_folder_path}/<event_id>/*.jpg — un
+Structure attendue : {settings.watched_folder_path}/<event_id>/*.jpg, un
 sous-dossier par evenement (cree automatiquement a la creation de
 l'evenement, voir routers/events.py). Chaque fichier image y apparaissant est
 ingere automatiquement des que sa taille est stable entre deux scans

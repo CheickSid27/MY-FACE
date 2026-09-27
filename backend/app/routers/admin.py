@@ -168,7 +168,7 @@ async def get_order_detail(
 ) -> OrderDetailRead:
     """Fiche d'une commande (sert de recu) : liste nominative des photos
     achetees, tirages papier demandes, detail du prix et lien de
-    telechargement du client — pour savoir ce qu'on valide, quoi imprimer, et
+    telechargement du client, pour savoir ce qu'on valide, quoi imprimer, et
     repondre a un client qui revient avec un probleme."""
     order = await _get_owned_order(order_id, current_user, db)
     event = await db.get(Event, order.event_id)
@@ -228,7 +228,7 @@ async def confirm_order(
     l'organisateur (paiement Mobile Money hors-app via QR ou especes).
 
     - Valider : possible depuis tout statut non paye, y compris une commande
-      expiree/annulee ou rejetee — cas reel d'un client qui a bien paye mais
+      expiree/annulee ou rejetee, cas reel d'un client qui a bien paye mais
       n'a jamais clique "J'ai paye", ou trop tard. L'organisateur, qui voit
       le transfert arriver sur son compte, doit pouvoir la valider.
     - Rejeter : le paiement annonce n'est jamais arrive."""

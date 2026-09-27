@@ -1,4 +1,4 @@
-"""Generation de QR code (lien de telechargement) — aucun credential requis."""
+"""Generation de QR code (lien de telechargement), aucun credential requis."""
 
 import io
 

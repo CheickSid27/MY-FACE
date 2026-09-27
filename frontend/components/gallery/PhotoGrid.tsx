@@ -89,12 +89,12 @@ export default function PhotoGrid({
   // (React.createElement(children, {...})), pas comme un simple callback.
   // Si cette fonction change de reference d'un rendu a l'autre, React voit
   // un type different a chaque cellule et la DEMONTE/REMONTE entierement,
-  // meme avec une key stable ("rowIndex:columnIndex") — c'etait le cas ici
+  // meme avec une key stable ("rowIndex:columnIndex"), c'etait le cas ici
   // avec une fonction inline recreee au moindre changement d'etat du parent
   // (ex: selectionner UNE photo), rendant impossible d'en selectionner
   // plusieurs a la suite (la grille se "reconstruisait" sous le doigt entre
   // deux clics). Solution : un composant Cell stable au niveau module (type
-  // fixe pour toujours) qui lit ses donnees via la prop `itemData` de Grid —
+  // fixe pour toujours) qui lit ses donnees via la prop `itemData` de Grid
   // seule cette donnee change de reference, jamais le composant lui-meme.
   const itemData = useMemo<CellData>(
     () => ({ photos, columnCount, selectedPhotoIds, addingPhotoId, onPhotoOpen, onToggleSelect }),

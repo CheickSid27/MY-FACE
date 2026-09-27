@@ -173,7 +173,7 @@ function ClusterLightbox({
         >
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="font-semibold text-ink-900">
-              Personne {cluster.cluster_id} &mdash; {cluster.photo_count} photo(s)
+              Personne {cluster.cluster_id}, {cluster.photo_count} photo(s)
             </h3>
             <button
               type="button"
@@ -199,7 +199,7 @@ function ClusterLightbox({
                   {/* Bouton pleine vignette = ouvrir la visionneuse. Bouton
                       distinct en coin = selectionner/deselectionner sans
                       quitter la grille (stopPropagation pour ne pas aussi
-                      ouvrir la visionneuse) — l'un remplacait l'autre avant
+                      ouvrir la visionneuse), l'un remplacait l'autre avant
                       ce correctif, rendant la selection individuelle
                       impossible depuis cette vue. */}
                   <button type="button" onClick={() => setIndex(i)} className="block h-full w-full">

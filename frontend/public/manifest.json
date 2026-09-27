@@ -1,7 +1,7 @@
 {
   "name": "MYFACE Admin",
   "short_name": "MYFACE",
-  "description": "Administration MYFACE — commandes, evenements, notifications",
+  "description": "Administration MYFACE, commandes, evenements, notifications",
   "start_url": "/admin/events",
   "display": "standalone",
   "background_color": "#0e2429",

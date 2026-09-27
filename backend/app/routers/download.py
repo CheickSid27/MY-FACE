@@ -146,7 +146,7 @@ def _unique_name(name: str, used: dict[str, int]) -> str:
 async def _zip_stream(photos: list[Photo], storage: StorageService) -> AsyncIterator[bytes]:
     """Zip genere et envoye photo par photo : la memoire ne contient jamais
     plus d'une photo a la fois (auparavant, toute la commande etait
-    assemblee en RAM avant l'envoi du premier octet — plusieurs centaines de
+    assemblee en RAM avant l'envoi du premier octet, plusieurs centaines de
     Mo pour une grosse commande d'originaux)."""
     sink = _ChunkSink()
     used_names: dict[str, int] = {}

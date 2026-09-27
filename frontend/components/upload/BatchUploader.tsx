@@ -141,7 +141,7 @@ export default function BatchUploader({ eventId, onUploaded }: BatchUploaderProp
           <ul className="list-disc pl-5">
             {errors.map((err, i) => (
               <li key={`${err.filename}-${i}`}>
-                {err.filename} — {err.error}
+                {err.filename}, {err.error}
               </li>
             ))}
           </ul>

@@ -14,7 +14,7 @@ Legende : 🔒 = JWT organisateur requis (`Authorization: Bearer <token>`) · �
 jeton borne de l'evenement en parametre ; s'il est valide, les apercus grand format sont servis
 nets, sinon filigranes (telephone d'un invite).
 
-## Auth — `/auth`
+## Auth, `/auth`
 
 | Methode | Route | Description |
 |---|---|---|
@@ -23,7 +23,7 @@ nets, sinon filigranes (telephone d'un invite).
 | GET 🔒 | `/auth/me` | Profil de l'utilisateur connecte |
 | POST 🔒 | `/auth/password` | Change son propre mot de passe (`current_password`, `new_password` >= 8 caracteres) |
 
-## Evenements — `/events`
+## Evenements, `/events`
 
 | Methode | Route | Description |
 |---|---|---|
@@ -58,7 +58,7 @@ Grille tarifaire (`pricing`) :
 Lots : `count` >= 2, tailles uniques. Remises : `min_quantity` >= 2, `0 < percent < 100`, seuils
 uniques. Les lots s'appliquent d'abord (plus grand en premier), puis la meilleure remise.
 
-## Photos — racine + `/events/{id}/photos`
+## Photos, racine + `/events/{id}/photos`
 
 | Methode | Route | Description |
 |---|---|---|
@@ -66,14 +66,14 @@ uniques. Les lots s'appliquent d'abord (plus grand en premier), puis la meilleur
 | GET 🌐 | `/events/{id}/photos` | Liste paginee (`page`, `page_size` <= 200, `kiosk_token`) |
 | DELETE 🔒 | `/photos/{id}` | Supprime une photo et tous ses fichiers derives (409 si deja vendue) |
 
-## Reconnaissance faciale — `/faces`
+## Reconnaissance faciale, `/faces`
 
 | Methode | Route | Description |
 |---|---|---|
 | POST 🌐 | `/faces/scan?event_id=` | Selfie (+ `consent=true`), renvoie les photos correspondantes triees (`kiosk_token`) |
 | GET 🌐 | `/faces/status/{photo_id}` | Statut d'indexation d'une photo (`pending`/`processing`/`done`/`failed`) |
 
-## Panier — `/cart`
+## Panier, `/cart`
 
 | Methode | Route | Description |
 |---|---|---|
@@ -83,7 +83,7 @@ uniques. Les lots s'appliquent d'abord (plus grand en premier), puis la meilleur
 | PATCH 🌐 | `/cart/{item_id}` | Coche/decoche le tirage papier (`print_requested`) ; cocher exige `kiosk_token` (403 sinon) |
 | DELETE 🌐 | `/cart/{item_id}` | Retire un item du panier |
 
-## Paiement — `/payments`
+## Paiement, `/payments`
 
 | Methode | Route | Description |
 |---|---|---|
@@ -112,7 +112,7 @@ Statuts de commande : `pending` (a payer) → `awaiting_confirmation` (le client
 (`ORDER_PENDING_TTL_MINUTES`) ou annulee par l'organisateur. `processing` : historique (ancien repli
 supprime).
 
-## Telechargement — `/download`
+## Telechargement, `/download`
 
 | Methode | Route | Description |
 |---|---|---|
@@ -121,13 +121,13 @@ supprime).
 | GET 🌐 | `/download/{order_id}/qr.png` | QR code permanent vers la page de telechargement |
 | POST 🌐/🔒 | `/download/{order_id}/printed` | Enregistre l'impression des tirages (`printed_at`) : `kiosk_token` de la borne ou organisateur connecte |
 
-## Donnees de reference — `/meta`
+## Donnees de reference, `/meta`
 
 | Methode | Route | Description |
 |---|---|---|
-| GET 🌐 | `/meta/phone-countries` | Pays acceptes (indicatif, format du numero national, exemple, aide) — Cote d'Ivoire en premier |
+| GET 🌐 | `/meta/phone-countries` | Pays acceptes (indicatif, format du numero national, exemple, aide), Cote d'Ivoire en premier |
 
-## Notifications push — `/notifications`
+## Notifications push, `/notifications`
 
 | Methode | Route | Description |
 |---|---|---|
@@ -135,7 +135,7 @@ supprime).
 | POST 🔒 | `/notifications/subscribe` | Enregistre un abonnement Web Push pour l'organisateur connecte |
 | POST 🔒 | `/notifications/unsubscribe` | Retire un abonnement |
 
-## Administration — `/admin`
+## Administration, `/admin`
 
 | Methode | Route | Description |
 |---|---|---|

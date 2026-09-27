@@ -59,7 +59,7 @@ export default function OrderReceipt({ order }: { order: OrderDetail }) {
         </div>
         <div>
           <dt className="text-xs text-ink-500">Reference</dt>
-          <dd className="break-all font-mono text-xs">{order.payment_reference ?? "—"}</dd>
+          <dd className="break-all font-mono text-xs">{order.payment_reference ?? "-"}</dd>
         </div>
       </dl>
 
@@ -94,7 +94,7 @@ export default function OrderReceipt({ order }: { order: OrderDetail }) {
                       <PrinterIcon /> {money(item.print_price ?? 0, order.currency)}
                     </span>
                   ) : (
-                    <span className="text-ink-300">—</span>
+                    <span className="text-ink-300">-</span>
                   )}
                 </td>
               </tr>

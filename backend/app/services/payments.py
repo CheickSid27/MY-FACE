@@ -16,7 +16,7 @@ bloquees en production). /payments/init exige desormais un moyen de paiement
 reel (QR marchand configure ou especes a la borne). Le provider global
 (PAYMENT_PROVIDER dans .env) ne sert plus qu'a verifier la signature HMAC du
 webhook operateur generique (POST /payments/webhook), en attendant qu'une
-vraie API Mobile Money soit branchee — jamais de fallback silencieux vers
+vraie API Mobile Money soit branchee, jamais de fallback silencieux vers
 MANUAL si un autre provider est demande sans etre configure : dans ce cas on
 leve une erreur claire.
 """

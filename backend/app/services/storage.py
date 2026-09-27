@@ -80,7 +80,7 @@ class LocalS3StorageService(StorageService):
     head, delete) est execute dans un thread via asyncio.to_thread. Appele
     directement depuis une fonction `async`, il bloquait toute la boucle
     d'evenements le temps de l'aller-retour R2 (mesure : /health passait de
-    9 ms a 8,8 s pendant un calcul de groupes de visages) — plus aucune
+    9 ms a 8,8 s pendant un calcul de groupes de visages), plus aucune
     requete n'etait servie pendant ce temps, pour aucun utilisateur. Les
     clients boto3 sont thread-safe ; seule la signature d'URL (calcul local,
     sans reseau) reste executee directement."""

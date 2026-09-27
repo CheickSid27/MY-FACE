@@ -1,5 +1,5 @@
 """payment_method.geniuspay : nouvelle valeur enum pour la passerelle GeniusPay
-(chemin de paiement isole, en test sandbox — voir routers/geniuspay.py)
+(chemin de paiement isole, en test sandbox, voir routers/geniuspay.py)
 
 Revision ID: 0009
 Revises: 0008

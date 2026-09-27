@@ -103,7 +103,7 @@ async def init_payment(
     if payload.payment_method == PaymentMethod.CASH:
         # Especes remises en main propre au staff a cote de la borne : pas de
         # QR/numero a configurer, et pas d'etape "j'ai paye" cote client
-        # (c'est le staff qui sait en temps reel que l'argent a ete recu) —
+        # (c'est le staff qui sait en temps reel que l'argent a ete recu)
         # la commande part directement en attente de confirmation, comme
         # apres un mark-paid QR classique.
         if not event.cash_enabled:
@@ -131,7 +131,7 @@ async def init_payment(
             event.organizer_id,
             db,
             title="Nouvelle commande a confirmer (especes)",
-            body=f"{order.total_amount:.0f} {order.currency} — {order.contact_phone}",
+            body=f"{order.total_amount:.0f} {order.currency}, {order.contact_phone}",
             url=f"{settings.app_base_url}/admin/events/{event.id}/payments",
         )
 
@@ -245,7 +245,7 @@ async def mark_paid(
             event.organizer_id,
             db,
             title="Nouvelle commande a confirmer",
-            body=f"{order.total_amount:.0f} {order.currency} — {order.contact_phone}",
+            body=f"{order.total_amount:.0f} {order.currency}, {order.contact_phone}",
             url=f"{settings.app_base_url}/admin/events/{event.id}/payments",
         )
 

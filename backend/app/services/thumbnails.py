@@ -25,7 +25,7 @@ def open_oriented(image_bytes: bytes) -> Image.Image:
     l'affichage. Pillow ignore ce tag par defaut, et le JPEG re-encode ne le
     conserve pas : sans cette correction, miniatures et apercus sortaient
     couches, alors qu'OpenCV (donc InsightFace et les coordonnees des
-    visages) applique bien l'orientation — d'ou aussi des vignettes-visages
+    visages) applique bien l'orientation, d'ou aussi des vignettes-visages
     recadrees au mauvais endroit. L'original, lui, n'est jamais modifie."""
     try:
         img = Image.open(io.BytesIO(image_bytes))

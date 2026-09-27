@@ -1,4 +1,4 @@
-"""Chemin de paiement GeniusPay — ISOLE du flux QR marchand + confirmation
+"""Chemin de paiement GeniusPay, ISOLE du flux QR marchand + confirmation
 manuelle (routers/payments.py). En test sandbox : rien ici ne modifie le
 comportement existant, ces endpoints sont un ajout pur.
 
@@ -85,7 +85,7 @@ async def init_geniuspay_payment(
     try:
         result = await geniuspay.init_payment(
             amount=breakdown.total,
-            description=f"MYFACE — commande {order.id}",
+            description=f"MYFACE, commande {order.id}",
             contact_phone=payload.contact_phone,
             order_id=str(order.id),
             success_url=return_url,

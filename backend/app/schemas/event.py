@@ -96,7 +96,7 @@ class EventRead(BaseModel):
 class EventPublicRead(BaseModel):
     """Vue publique (invite/borne) : pas de kiosk_token ni organizer_id.
     `is_kiosk` est calcule cote serveur a partir d'un `kiosk_token` fourni en
-    query param (voir routers/events.py, get_event_public) — jamais le vrai
+    query param (voir routers/events.py, get_event_public), jamais le vrai
     token n'est renvoye dans cette reponse, seulement ce booleen, pour qu'un
     client ne puisse pas le deviner en inspectant le reseau."""
 

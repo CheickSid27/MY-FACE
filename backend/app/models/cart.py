@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 class CartSession(Base):
     """Panier invite, identifie par un token opaque stocke cote client
-    (localStorage) — pas de compte invite, conforme au parcours sans
+    (localStorage), pas de compte invite, conforme au parcours sans
     inscription decrit au cahier des charges."""
 
     __tablename__ = "cart_sessions"
