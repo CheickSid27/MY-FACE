@@ -1,0 +1,15 @@
+V01|fr|Des milliers de photos...
+V02|fr|Et toi, t'es où ?
+V03|en|My Face.
+V04|fr|Scanne.
+V05|fr|Un QR code, et toutes les photos de la fête.
+V06|fr|Retrouve.
+V07|fr|Parcours la galerie,
+V08|fr|ou touche ton visage : tes photos, regroupées.
+V09|fr|Ou prends un selfie. En quelques secondes, tes dix photos sont là.
+V10|fr|Repars avec.
+V11|fr|Plus tu en prends, moins tu paies.
+V12|fr|Pas de téléphone ? La borne.
+V13|fr|Coche l'impression, et paie en espèces.
+V14|fr|Et ta photo sort en vingt secondes.
+V15|en|My Face.

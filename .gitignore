@@ -49,3 +49,5 @@ motion-design/sources/
 # Films rendus (lourds, montrent les photos de la demo) : se refont avec
 # python motion-design/rendre_film.py
 motion-design/*.mp4
+motion-design/*.wav
+motion-design/voix/*.wav

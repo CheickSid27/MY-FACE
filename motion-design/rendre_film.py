@@ -7,9 +7,10 @@ impression et especes), puis le tirage sort de la borne. Suit le prompt
 maitre de fiches/sources-html/motion-design-myface.html.
 
     python motion-design/preparer_motion.py   (le kit, une fois)
-    python motion-design/rendre_film.py       -> motion-design/myface-motion-design.mp4
-
-Video muette : la musique (120 BPM) s'ajoute dans CapCut.
+    python motion-design/rendre_film.py       -> motion-design/myface-motion-design.mp4 (muet)
+    python motion-design/sons.py              -> la bande son (musique, bruitages, voix off)
+    powershell -ExecutionPolicy Bypass -File motion-design/assembler.ps1
+                                              -> myface-motion-design-son.mp4 (+ version legere)
 """
 
 import math
@@ -368,7 +369,7 @@ class Film:
     def titre(self, mot):
         def scene(t):
             img = self.fond()
-            self.titre_acte(img, mot, t, 0.6)
+            self.titre_acte(img, mot, t, 0.5)
             return img
         return scene
 
@@ -588,11 +589,13 @@ class Film:
         return img
 
     def scenes(self):
+        # durees en demi-secondes : a 120 BPM, chaque coupe tombe sur un temps
+        # (les sons de sons.py reprennent ce decoupage)
         return [
-            (2.2, self.accroche), (1.4, self.logo), (0.6, self.titre("Scanne.")), (2.9, self.accueil),
-            (0.6, self.titre("Retrouve.")), (3.1, self.galerie), (4.4, self.visages), (5.1, self.selfie),
-            (0.6, self.titre("Repars avec.")), (3.9, self.panier), (2.2, self.borne_monte),
-            (4.0, self.borne_gros_plan), (2.2, self.tirage_sort), (3.6, self.fin),
+            (2.0, self.accroche), (1.5, self.logo), (0.5, self.titre("Scanne.")), (3.0, self.accueil),
+            (0.5, self.titre("Retrouve.")), (3.0, self.galerie), (4.5, self.visages), (5.0, self.selfie),
+            (0.5, self.titre("Repars avec.")), (4.0, self.panier), (2.0, self.borne_monte),
+            (4.0, self.borne_gros_plan), (2.0, self.tirage_sort), (3.5, self.fin),
         ]
 
 
