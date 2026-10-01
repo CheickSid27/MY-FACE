@@ -47,6 +47,12 @@ LARGEUR_ECRAN = 640  # largeur de l'ecran du telephone dans l'image
 
 CAPTURES = RACINE / "captures" / "iphone"
 ACCUEIL_BORNE = RACINE / "captures" / "borne" / "01-accueil.png"
+# Les autres ecrans de la borne, en gros plan : le panier avec l'impression
+# cochee et le paiement en especes (points touches, en part de l'ecran).
+ECRANS_BORNE = {
+    "impression": (RACINE / "captures" / "borne" / "02-panier-impression.png", (0.18, 0.758)),
+    "especes": (RACINE / "captures" / "borne" / "03-paiement-especes.png", (0.28, 0.766)),
+}
 SOURCES = ICI / "sources"
 DEMO = RACINE / "watched-photos" / "6b3391d9-e2eb-4942-990b-ac1353cd170e"
 PHOTO_TIRAGE = DEMO / "pexels-joshua-j-lewis-1577020288-27333351.jpg"
@@ -80,8 +86,10 @@ PLANS = [
     ("P12", "telephone-10-scan-resultats", (0.74, 0.794), "Touche « Voir le panier »"),
     ("P13", "telephone-12-panier-paiement", (0.29, 0.656), "Touche « Wave »"),
     ("P14", "borne-gros-plan-accueil", "borne", "Touche « Scanner mon visage » sur la borne"),
-    ("P15", "borne-34-tirage", "fente", "Tire la photo hors de la fente"),
-    ("P16", "tirage-10x15", "tirage", "Lève le tirage vers la caméra"),
+    ("P15", "borne-gros-plan-impression", "impression", "Touche « Imprimer » sur une photo"),
+    ("P16", "borne-gros-plan-especes", "especes", "Touche « Espèces »"),
+    ("P17", "borne-34-tirage", "fente", "Tire la photo hors de la fente"),
+    ("P18", "tirage-10x15", "tirage", "Lève le tirage vers la caméra"),
 ]
 
 # La fente d'impression sur la photo de trois quarts (4.jpg, en pixels).
@@ -646,8 +654,16 @@ def main():
         sauver(poser_borne(dec, quad, ui, e, dec_xy, None, ecran="vide")[0], "detoure", f"{nom}-cadre")
         if nom == "borne-gros-plan":
             points["P14"] = projeter(hm, sx, sy)
+            for (cle, (fichier, (fx, fy))), pid in zip(ECRANS_BORNE.items(), ("P15", "P16")):
+                autre = Image.open(fichier).convert("RGB")
+                autre.save(DOSSIERS["ecrans"] / f"borne-{cle}.png")
+                for dossier, fond in (("fond-vert", VERT), ("detoure", None)):
+                    img, hm2 = poser_borne(dec, quad, autre, e, dec_xy, fond)
+                    sauver(img, dossier, f"borne-gros-plan-{cle}")
+                cadres[f"borne-gros-plan-{cle}"] = poser_borne(dec, quad, autre, e, dec_xy, VERT)[0]
+                points[pid] = projeter(hm2, fx * autre.width, fy * autre.height)
         if nom == "borne-34":
-            points["P15"] = (FENTE_34[0] * e + dec_xy[0], FENTE_34[1] * e + dec_xy[1])
+            points["P17"] = (FENTE_34[0] * e + dec_xy[0], FENTE_34[1] * e + dec_xy[1])
         print(f"  {nom} (agrandie x{e:.2f})")
 
     # le tirage seul
@@ -655,7 +671,7 @@ def main():
         img, prise = poser_tirage(fond)
         sauver(img, dossier, "tirage-10x15")
     cadres["tirage-10x15"] = poser_tirage(VERT)[0]
-    points["P16"] = prise
+    points["P18"] = prise
     print("  tirage-10x15")
 
     elements()

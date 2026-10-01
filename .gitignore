@@ -45,3 +45,7 @@ motion-design/ecrans/
 motion-design/elements/
 motion-design/guides/
 motion-design/sources/
+
+# Films rendus (lourds, montrent les photos de la demo) : se refont avec
+# python motion-design/rendre_film.py
+motion-design/*.mp4

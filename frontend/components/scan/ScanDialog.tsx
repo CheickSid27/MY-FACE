@@ -330,13 +330,13 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
               <h2 className="text-xl font-bold">Scanner mon visage</h2>
             </div>
             <p className="text-sm leading-relaxed text-ink-300">
-              Pour retrouver vos photos, nous analysons temporairement votre visage sur cet
-              appareil et le comparons aux photos de l&apos;evenement. Aucune image de votre
-              selfie n&apos;est conservee au-dela de cette recherche.
+              Pour retrouver vos photos, votre selfie est envoye de facon securisee a notre
+              serveur, qui le compare aux visages des photos de l&apos;evenement. Il n&apos;est
+              jamais enregistre : il est efface des la fin de la recherche.
             </p>
             <p className="text-sm leading-relaxed text-ink-300">
-              Vous pouvez a tout moment demander la suppression des donnees biometriques
-              associees. Cette fonctionnalite est optionnelle.
+              Ce scan est facultatif : vous pouvez aussi parcourir la galerie. Pour faire
+              retirer vos photos ou vos donnees, ecrivez a contact@myfaceci.online.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <button type="button" onClick={startCamera} className="btn-accent flex-1">
