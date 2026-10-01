@@ -845,13 +845,13 @@ def rendre(nom, blocs, W, H, fond="sand", deco=None):
 # --------------------------------------------------------------------------
 # Les affiches
 # --------------------------------------------------------------------------
-SIG = "Un selfie. Toutes tes photos."
+SIG = "Scanne. Retrouve. Repars avec."
 
 AFFICHES = [
     # ---------------- Serie A : la marque et le principe ----------------
     dict(nom="A1-signature", formats=["post", "story"], fond="ink", deco="cadre", blocs=[
         b_logo(0.07), b_spacer(),
-        b_title("Un selfie.\nToutes\ntes photos.", 0.125),
+        b_title("Scanne.\nRetrouve.\nRepars avec.", 0.118),
         b_spacer(),
         b_body("Mariages · Remises de diplômes · Soirées · Entreprises\nAbidjan, Côte d'Ivoire", 0.032),
     ]),
@@ -994,7 +994,7 @@ AFFICHES = [
     dict(nom="C1-organisateurs-forfait", formats=["post", "a4"], fond="sand", deco="wax", blocs=[
         b_logo(0.07), b_spacer(),
         b_title("Offrez leurs photos\nà vos invités.", 0.076), b_gap(0.035),
-        b_body("Un forfait, et chaque invité repart avec ses photos sans rien payer. Le cadeau dont on parle encore la semaine suivante.", 0.035),
+        b_body("Un forfait, et chaque invité emporte ses photos sans rien payer. Le cadeau dont on parle encore la semaine suivante.", 0.035),
         b_gap(0.02),
         b_prices([("Jusqu'à 150 invités", "150 000 F"),
                   ("Jusqu'à 300 invités", "250 000 F"),

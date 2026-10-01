@@ -1,0 +1,237 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vidéo IA MYFACE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --ground: #F4EFE6; --surface: #FFFFFF; --fill: #EAE3D6; --ink: #0E2429;
+    --ink-soft: #33484D; --muted: #5E7378; --line: #D8CEBE; --orange: #F26A1B;
+    --orange-ink: #B34A08; --orange-soft: #FCE3D1; --green: #00854B; --green-soft: #D2EDDF;
+    --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+    --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0B1A1E; --surface: #122A30; --fill: #17343B; --ink: #EFE7DA;
+      --ink-soft: #CBD8D7; --muted: #91A6A9; --line: #27454D; --orange: #FF8A3D;
+      --orange-ink: #FFAB70; --orange-soft: #3B2413; --green: #3FC489; --green-soft: #113828;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0B1A1E; --surface: #122A30; --fill: #17343B; --ink: #EFE7DA;
+    --ink-soft: #CBD8D7; --muted: #91A6A9; --line: #27454D; --orange: #FF8A3D;
+    --orange-ink: #FFAB70; --orange-soft: #3B2413; --green: #3FC489; --green-soft: #113828;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 400 17px/1.62 var(--body); }
+  .band { height: 14px; background:
+      radial-gradient(circle at 50% 50%, var(--orange) 0 2.5px, transparent 3px) 0 0 / 14px 14px,
+      conic-gradient(from 45deg at 50% 50%, var(--ink) 0 25%, transparent 0 50%, var(--ink) 0 75%, transparent 0) 0 0 / 14px 14px,
+      var(--ground); }
+  header.top { max-width: 1000px; margin: 0 auto; padding: 44px 22px 18px; display: grid; gap: 14px; }
+  .eyebrow { margin: 0; font: 600 12px/1.4 var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 0; font: 700 clamp(28px, 4.2vw, 44px)/1.12 var(--display); letter-spacing: -.014em; max-width: 22ch; text-wrap: balance; }
+  h1 em { font-style: normal; color: var(--orange); }
+  .lede { margin: 0; max-width: 62ch; font-size: 19px; color: var(--ink-soft); }
+  main { max-width: 1000px; margin: 0 auto; padding: 0 22px 80px; }
+  section { padding-top: 44px; }
+  h2 { margin: 0 0 12px; font: 600 clamp(21px, 2.4vw, 27px)/1.22 var(--display); text-wrap: balance; }
+  h3 { margin: 22px 0 6px; font: 650 17px/1.35 var(--body); }
+  p { margin: 0 0 13px; max-width: 68ch; }
+  .intro { color: var(--ink-soft); }
+  ul, ol { margin: 0 0 13px; padding-left: 1.2em; max-width: 68ch; }
+  li { margin: 0 0 7px; }
+  .fine { font-size: 14px; color: var(--muted); }
+  code { font: 500 14px/1.4 var(--mono); background: var(--fill); padding: 1px 5px; border-radius: 4px; }
+
+  .table-wrap { overflow-x: auto; margin: 16px 0 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 15px; }
+  th { font: 600 11.5px/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 11px 13px; background: var(--fill); border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 11px 13px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td:first-child { font-weight: 600; }
+
+  .plan { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); margin: 16px 0; overflow: hidden; }
+  .plan .tete { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px 12px 18px; background: var(--fill); border-bottom: 1px solid var(--line); }
+  .plan .num { font: 700 15px/1 var(--display); color: #fff; background: var(--orange); width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; }
+  .plan .titre { font-weight: 650; }
+  .plan .duree { font: 600 12px/1 var(--mono); color: var(--muted); }
+  .plan button { margin-left: auto; font: 600 12px/1 var(--body); padding: 8px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .plan button:hover { background: var(--orange); color: #fff; border-color: var(--orange); }
+  .plan .fr { padding: 14px 18px 4px; margin: 0; color: var(--ink-soft); font-size: 16px; }
+  .plan pre { margin: 10px 18px 16px; padding: 14px 16px; background: var(--fill); border-radius: 10px; white-space: pre-wrap; font: 400 14.5px/1.6 var(--mono); }
+
+  .alerte { border-radius: 12px; padding: 18px 22px; margin: 16px 0; background: var(--orange-soft); }
+  .alerte h3 { margin: 0 0 6px; color: var(--orange-ink); }
+  .alerte p { margin: 0; }
+  .ok { background: var(--green-soft); }
+  .ok h3 { color: var(--green); }
+
+  footer.end { margin: 44px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+</style>
+
+<div class="band" aria-hidden="true"></div>
+
+<header class="top">
+  <p class="eyebrow">Étape 1 · Vidéo de démonstration à générer par IA</p>
+  <h1>Une vidéo qui montre <em>ce qu'eux ne peuvent pas montrer</em></h1>
+  <p class="lede">Leur vidéo raconte un téléphone. La nôtre raconte une salle de fête ivoirienne, une borne, et une photo qu'on repart tenir dans la main. Six plans, les consignes prêtes à coller dans l'outil, et comment tout assembler.</p>
+</header>
+
+<main>
+  <section id="leur-video">
+    <h2>Ce que fait leur vidéo</h2>
+    <p class="intro">22 secondes, en 16:9, entièrement générée par IA. Nous l'avons découpée image par image.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Moment</th><th>Ce qu'on voit</th></tr></thead>
+        <tbody>
+          <tr><td>0 à 5 s</td><td>Une réception chic, style salle de bal européenne, lustres. Un photographe mitraille avec un Canon. Une invitée sourit.</td></tr>
+          <tr><td>6 à 10 s</td><td>Un téléphone scanne un QR code posé sur une table. L'écran demande un selfie et une adresse e-mail. L'invitée se prend en photo.</td></tr>
+          <tr><td>11 à 17 s</td><td>Sa galerie de photos s'affiche sur le téléphone. Elle sourit en faisant défiler, dans la salle.</td></tr>
+          <tr><td>18 à 22 s</td><td>Fondu vers un écran vert : logo Fokevani, « Un selfie, toutes vos photos », fokevani.ci.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>Ce qu'elle ne montre pas, et c'est notre angle</h3>
+    <ul>
+      <li><strong>Aucun problème</strong> : on ne voit jamais la galère d'avant. Rien ne donne envie de changer.</li>
+      <li><strong>Aucune borne</strong>, aucune impression, aucun paiement en espèces, personne sur place.</li>
+      <li><strong>Un décor qui pourrait être à Paris</strong> : rien d'ivoirien dans la salle ni dans les tenues.</li>
+      <li><strong>Tout se passe dans un téléphone</strong>, avec un e-mail à saisir.</li>
+    </ul>
+  </section>
+
+  <section id="notre-idee">
+    <h2>Notre vidéo : « Plus personne ne fouille »</h2>
+    <p class="intro">Une histoire en trois temps. Le problème que tout le monde a vécu, la borne qui le règle, et la photo imprimée qu'on serre dans la main. Format vertical 9:16, 30 secondes, pour les statuts, TikTok et Reels.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Plan</th><th>Durée</th><th>Ce qu'on raconte</th></tr></thead>
+        <tbody>
+          <tr><td>1. Le tas</td><td>5 s</td><td>Des tirages étalés sur une table, des mains qui fouillent, des invités accroupis. La galère.</td></tr>
+          <tr><td>2. La borne</td><td>4 s</td><td>L'héroïne remarque la borne blanche au fond de la salle, la lumière annulaire allumée.</td></tr>
+          <tr><td>3. Le selfie</td><td>5 s</td><td>Elle se place devant l'écran, la lumière éclaire son visage : elle est reconnue.</td></tr>
+          <tr><td>4. Ses photos</td><td>5 s</td><td>Ses photos s'affichent, elle choisit du doigt. Son amie paie avec son téléphone.</td></tr>
+          <tr><td>5. Le tirage</td><td>5 s</td><td>La photo sort de la borne. Elle la prend, la regarde, la montre. C'est le moment fort.</td></tr>
+          <tr><td>6. La salle</td><td>4 s</td><td>Plan large : une file joyeuse à la borne, d'autres scannent le QR à leur table.</td></tr>
+          <tr><td>Fin</td><td>3 s</td><td>Carte de fin faite au montage, pas par l'IA : logo, phrase, adresse du site.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="regles">
+    <h2>Trois règles pour que ça ressemble à une vraie vidéo</h2>
+    <div class="alerte ok">
+      <h3>1. Toujours la même héroïne et la même borne</h3>
+      <p>Les outils d'IA inventent un nouveau visage à chaque plan. On colle donc <strong>exactement la même description</strong> dans chaque consigne. Encore mieux : fabriquer d'abord une image de référence de l'héroïne, puis animer à partir d'elle (« image vers vidéo »). Pour la borne, sers-toi de notre visuel déjà prêt, <code>affiches/sources/borne-face.png</code>, comme image de départ.</p>
+    </div>
+    <div class="alerte ok">
+      <h3>2. Aucun texte, aucun logo, aucun écran généré par l'IA</h3>
+      <p>L'IA déforme les lettres et invente des interfaces. On lui demande des écrans lumineux sans contenu lisible, puis au montage on pose par-dessus nos vrais écrans (<code>affiches/sources/ecran-1</code> à <code>ecran-4</code>) et notre carte de fin. Le logo MYFACE ne doit jamais sortir de l'IA.</p>
+    </div>
+    <div class="alerte ok">
+      <h3>3. Des plans de 5 secondes, assemblés ensuite</h3>
+      <p>Aucun outil ne fait 30 secondes cohérentes d'un coup. On génère chaque plan séparément, on garde la meilleure version de chacun, et on assemble dans CapCut.</p>
+    </div>
+    <div class="alerte">
+      <h3>À ne jamais faire</h3>
+      <p>Présenter ces personnages comme de vrais clients, ni dire « tourné lors d'un mariage ». C'est une reconstitution : on peut l'écrire discrètement en bas de la publication.</p>
+    </div>
+  </section>
+
+  <section id="consignes">
+    <h2>Les six consignes, prêtes à coller</h2>
+    <p class="intro">En anglais : tous ces outils comprennent mieux l'anglais. Le paragraphe en français au-dessus de chaque consigne dit ce qu'elle doit produire. Outils conseillés : Kling, Veo, Runway ou Hailuo, en 9:16.</p>
+
+    <article class="plan">
+      <div class="tete"><span class="num">0</span><span class="titre">La description à garder partout</span><button type="button">Copier</button></div>
+      <p class="fr">À coller au début de chaque consigne, ou à utiliser pour fabriquer l'image de référence de l'héroïne. Sa robe reprend nos couleurs : orange et bleu très foncé.</p>
+      <pre>HEROINE: a Black Ivorian woman in her late twenties, warm dark skin, short natural hair with a thin gold headband, gold hoop earrings, wearing an elegant fitted wax-print dress in bright orange and deep teal, subtle makeup, joyful and natural.
+VENUE: a festive wedding reception hall in Abidjan, Côte d'Ivoire, warm evening light, round tables with white cloths and orange flowers, string lights, guests in colorful wax-print outfits, gele headwraps and elegant suits.
+KIOSK: a sleek white free-standing photo kiosk about 1.7 meters tall, a round white ring light on top, a small camera below the ring light, a large vertical touchscreen glowing softly, a horizontal print slot at waist height.
+STYLE: cinematic, realistic, 35mm lens, shallow depth of field, natural skin tones for dark skin, warm golden palette with orange accents, vertical 9:16. No text, no letters, no logos, no watermark.</pre>
+    </article>
+
+    <article class="plan">
+      <div class="tete"><span class="num">1</span><span class="titre">Le tas de photos</span><span class="duree">5 secondes</span><button type="button">Copier</button></div>
+      <p class="fr">Gros plan sur des dizaines de tirages étalés sur une table, des mains qui fouillent et mélangent, puis la caméra remonte sur des invités agacés, accroupis ou penchés. On doit sentir la galère.</p>
+      <pre>Close-up of dozens of printed event photos scattered in a messy pile on a table at a wedding reception in Abidjan. Several hands rummage through the pile at the same time, shuffling and bending the prints. The camera slowly tilts up to show frustrated guests in colorful wax-print outfits leaning over the table, one woman crouching to pick a photo from the floor. Busy, slightly chaotic mood, warm evening light, cinematic, realistic, shallow depth of field, vertical 9:16. No text, no logos.</pre>
+    </article>
+
+    <article class="plan">
+      <div class="tete"><span class="num">2</span><span class="titre">Elle remarque la borne</span><span class="duree">4 secondes</span><button type="button">Copier</button></div>
+      <p class="fr">L'héroïne, un peu lasse devant le tas, lève les yeux et aperçoit la borne blanche au fond de la salle, la lumière annulaire allumée. Son visage s'éclaire.</p>
+      <pre>[HEROINE] stands near a table covered with scattered photos, looking tired. She looks up and notices, across the festive reception hall, [KIOSK] glowing with its ring light turned on. Her expression changes to curiosity and a smile. Slow push-in on her face, the kiosk softly out of focus in the background. [VENUE] [STYLE]</pre>
+    </article>
+
+    <article class="plan">
+      <div class="tete"><span class="num">3</span><span class="titre">Le selfie à la borne</span><span class="duree">5 secondes</span><button type="button">Copier</button></div>
+      <p class="fr">Elle se place devant la borne. La lumière annulaire éclaire son visage d'un halo doux. Elle regarde la caméra de la borne et sourit. L'écran s'allume. Au montage, on posera notre écran avec le cadre orange qui se referme.</p>
+      <pre>[HEROINE] steps in front of [KIOSK] and faces its camera. The ring light softly illuminates her face with a beautiful even glow. She smiles naturally at the kiosk. The touchscreen glows with a bright, plain, unreadable screen. Medium shot from slightly behind the kiosk, her face well lit, the party blurred behind her. [VENUE] [STYLE]</pre>
+    </article>
+
+    <article class="plan">
+      <div class="tete"><span class="num">4</span><span class="titre">Ses photos, et le paiement</span><span class="duree">5 secondes</span><button type="button">Copier</button></div>
+      <p class="fr">Elle touche l'écran du doigt pour choisir ses photos, visiblement ravie. Son amie à côté tend son téléphone comme pour payer par Mobile Money. On posera au montage notre écran « Mes photos » puis l'écran de paiement.</p>
+      <pre>Over-the-shoulder shot: [HEROINE] taps the glowing touchscreen of [KIOSK] with her finger, selecting items, delighted. Next to her, a friend in a green and gold wax-print outfit holds up her smartphone toward the kiosk as if paying by mobile money, both laughing. The screens show only soft bright light, no readable content. [VENUE] [STYLE]</pre>
+    </article>
+
+    <article class="plan">
+      <div class="tete"><span class="num">5</span><span class="titre">La photo sort de la borne</span><span class="duree">5 secondes</span><button type="button">Copier</button></div>
+      <p class="fr">Le moment fort. Gros plan sur la fente : un tirage 10×15 sort lentement. Elle le prend entre ses doigts, le regarde, le serre contre elle, puis le montre à son amie. Émotion vraie.</p>
+      <pre>Extreme close-up of the print slot of [KIOSK]: a glossy 10x15 cm photo print slowly slides out. [HEROINE]'s hand gently takes it. Cut to her face: she looks at the printed photo with genuine emotion, holds it against her chest, then turns it to show her friend, both smiling warmly. The photo content is soft and not clearly visible. [VENUE] [STYLE]</pre>
+    </article>
+
+    <article class="plan">
+      <div class="tete"><span class="num">6</span><span class="titre">La salle entière</span><span class="duree">4 secondes</span><button type="button">Copier</button></div>
+      <p class="fr">Plan large et joyeux : une petite file de convives devant la borne, certains tiennent déjà leur photo imprimée, d'autres scannent le QR code posé sur leur table avec leur téléphone. La fête continue.</p>
+      <pre>Wide establishing shot of the festive wedding reception hall in Abidjan: a small cheerful queue of guests in colorful wax-print outfits and gele headwraps waits in front of [KIOSK], some already holding printed photos and laughing. At nearby round tables, guests scan a small table card with their smartphones. Dancing in the background, warm string lights, celebratory atmosphere. Slow drone-like pull back. [VENUE] [STYLE]</pre>
+    </article>
+  </section>
+
+  <section id="montage">
+    <h2>L'assemblage dans CapCut</h2>
+    <ol>
+      <li>Importe les six plans dans l'ordre, format 9:16, et coupe chacun à la durée prévue.</li>
+      <li>Sur les plans 3 et 4, pose nos vrais écrans par-dessus l'écran de la borne (<code>ecran-2</code> pour le selfie, <code>ecran-3</code> pour les photos, <code>ecran-4</code> pour le paiement), avec l'outil de suivi de mouvement de CapCut.</li>
+      <li>Ajoute trois textes courts, en blanc, dans nos polices : « Avant, on fouillait. » sur le plan 1 · « Maintenant, un selfie suffit. » sur le plan 3 · « Et tu repars avec ta photo. » sur le plan 5.</li>
+      <li>Termine par notre carte de fin : logo MYFACE, la nouvelle phrase du site, <code>myfaceci.online</code> et le numéro WhatsApp. On peut reprendre la dernière scène de nos vidéos déjà faites.</li>
+      <li>Musique : un instrumental afro-pop de la bibliothèque TikTok ou CapCut, qui monte au plan 5.</li>
+      <li>Exporte en 1080×1920, et une version plus légère pour le statut WhatsApp.</li>
+    </ol>
+    <p class="fine">Budget indicatif : la plupart de ces outils offrent des crédits gratuits ou un mois d'essai. Compte deux à trois essais par plan pour garder le meilleur.</p>
+  </section>
+
+  <footer class="end">
+    Préparé le 30 septembre 2026, après analyse image par image de la vidéo de Fokevani. La carte de fin utilise la nouvelle phrase du site, « Retrouver SES photos n'a jamais été aussi facile », et la nouvelle signature, « Scanne. Retrouve. Repars avec. »
+  </footer>
+</main>
+
+<script>
+  document.querySelectorAll('.plan').forEach(function (bloc) {
+    var btn = bloc.querySelector('button');
+    var pre = bloc.querySelector('pre');
+    if (!btn || !pre) return;
+    btn.addEventListener('click', function () {
+      var txt = pre.innerText;
+      var done = function () { btn.textContent = 'Copié'; setTimeout(function () { btn.textContent = 'Copier'; }, 1800); };
+      function fallback() {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); document.body.removeChild(ta); done();
+        } catch (e) { btn.textContent = 'Sélectionne le texte'; setTimeout(function () { btn.textContent = 'Copier'; }, 2200); }
+      }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(done, fallback);
+        } else { fallback(); }
+      } catch (e) { fallback(); }
+    });
+  });
+</script>

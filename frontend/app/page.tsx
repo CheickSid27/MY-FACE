@@ -8,7 +8,7 @@ export default function RootPage() {
       <h1 className="text-3xl font-bold">
         MY<span className="text-[#F26A1B]">FACE</span>
       </h1>
-      <p className="-mt-3 text-sm text-gray-400">Un selfie. Toutes tes photos.</p>
+      <p className="-mt-3 text-sm text-gray-400">Scanne. Retrouve. Repars avec.</p>
       <p className="max-w-md text-gray-300">
         Cette application se consulte via le lien specifique a un evenement
         (borne ou QR code), ou via l&apos;espace organisateur.

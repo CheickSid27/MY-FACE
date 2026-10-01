@@ -223,7 +223,7 @@ def scene_logo(img, t, duree, W, H, R):
     d.text((x, y), "MY", font=f1, fill=tuple(SAND) + (int(255 * a2),))
     d.text((x + larg(d, "MY", f1), y), "FACE", font=f1, fill=tuple(ORANGE) + (int(255 * a2),))
     a3 = sortie(fenetre(t, 1.1, 0.6))
-    texte_centre(d, "Un selfie. Toutes tes photos.", f2, W, y + int(W * 0.15), SAND, a3)
+    texte_centre(d, "Scanne. Retrouve. Repars avec.", f2, W, y + int(W * 0.15), SAND, a3)
 
 
 def scene_probleme(img, t, duree, W, H, R):

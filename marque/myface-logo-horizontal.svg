@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320" role="img" aria-label="MYFACE - Un selfie, toutes tes photos">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320" role="img" aria-label="MYFACE - Scanne. Retrouve. Repars avec.">
   <g transform="translate(24,34) scale(0.492)">
     <rect width="512" height="512" rx="116" fill="#0E2429"/>
     <path d="M120,190 L120,124 L186,124" fill="none" stroke="#F26A1B" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/><path d="M326,124 L392,124 L392,190" fill="none" stroke="#F26A1B" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/><path d="M392,330 L392,396 L326,396" fill="none" stroke="#00A05A" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/><path d="M186,396 L120,396 L120,330" fill="none" stroke="#F26A1B" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/><circle cx="208" cy="226" r="15" fill="#F4EFE6"/><circle cx="304" cy="226" r="15" fill="#F4EFE6"/><polyline points="308.3,281.6 305.0,285.3 301.4,288.7 297.6,291.9 293.5,294.8 289.3,297.3 284.9,299.6 280.3,301.5 275.6,303.1 270.8,304.4 265.9,305.3 261.0,305.8 256.0,306.0 251.0,305.8 246.1,305.3 241.2,304.4 236.4,303.1 231.7,301.5 227.1,299.6 222.7,297.3 218.5,294.8 214.4,291.9 210.6,288.7 207.0,285.3 203.7,281.6" fill="none" stroke="#F4EFE6" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
   <text x="300" y="176" font-family="Unbounded, 'Arial Black', Impact, sans-serif" font-weight="700" font-size="108" letter-spacing="-2" fill="#0E2429">MY<tspan fill="#F26A1B">FACE</tspan></text>
-  <text x="304" y="232" font-family="'Public Sans', 'Segoe UI', Arial, sans-serif" font-size="38" font-weight="500" fill="#0E2429" opacity="0.72">Un selfie. Toutes tes photos.</text>
+  <text x="304" y="232" font-family="'Public Sans', 'Segoe UI', Arial, sans-serif" font-size="38" font-weight="500" fill="#0E2429" opacity="0.72">Scanne. Retrouve. Repars avec.</text>
 </svg>

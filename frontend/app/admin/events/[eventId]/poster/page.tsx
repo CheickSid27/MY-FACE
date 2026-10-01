@@ -94,7 +94,7 @@ function PosterContent() {
           <span className="text-sm font-bold text-ink-900">
             MY<span className="text-[#F26A1B]">FACE</span>
           </span>
-          <span className="text-sm text-ink-500">&middot; Un selfie. Toutes tes photos.</span>
+          <span className="text-sm text-ink-500">&middot; Scanne. Retrouve. Repars avec.</span>
         </div>
       </main>
     </>
