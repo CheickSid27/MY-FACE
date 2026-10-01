@@ -61,13 +61,34 @@ async def _startup_jobs() -> None:
         logger.exception("Rattrapages au demarrage : echec")
 
 
+async def _garder_base_eveillee(intervalle: int) -> None:
+    """Requete minimale a intervalle regulier : Neon ne se met pas en veille
+    tant que l'application tourne, et le pool garde des connexions vivantes.
+    Une erreur passagere est journalisee puis on reessaie au tour suivant."""
+    from sqlalchemy import text
+
+    from app.core.database import engine
+
+    while True:
+        await asyncio.sleep(intervalle)
+        try:
+            async with engine.connect() as conn:
+                await conn.execute(text("select 1"))
+        except Exception:
+            logger.warning("Maintien en eveil de la base : echec, nouvel essai dans %s s", intervalle)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await preload_face_analysis()
     folder_watcher.start()
     startup_task = asyncio.create_task(_startup_jobs())
+    intervalle = get_settings().db_keepalive_seconds
+    eveil_task = asyncio.create_task(_garder_base_eveillee(intervalle)) if intervalle > 0 else None
     yield
     startup_task.cancel()
+    if eveil_task:
+        eveil_task.cancel()
     await folder_watcher.stop()
 
 

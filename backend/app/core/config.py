@@ -70,6 +70,14 @@ class Settings(BaseSettings):
     # qu'une photo de l'evenement est indexee/supprimee : ce delai n'est
     # qu'un filet de securite (ex: modification faite directement en base).
     face_cluster_cache_ttl_seconds: int = 600
+    # Neon met sa base en veille apres ~5 min sans activite et ferme alors les
+    # connexions : le premier visiteur tombait sur « connection is closed ».
+    # - les connexions de plus de N secondes sont remplacees avant usage ;
+    # - une requete minimale toutes les N secondes garde la base eveillee tant
+    #   que l'application tourne (0 = desactive). Pas de pool_pre_ping : il
+    #   ajouterait un aller-retour de ~190 ms a CHAQUE requete.
+    db_pool_recycle_seconds: int = 240
+    db_keepalive_seconds: int = 240
 
     # Panier invite
     cart_session_ttl_hours: int = 24

@@ -7,7 +7,13 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
-engine = create_async_engine(settings.database_url, echo=settings.environment == "development")
+engine = create_async_engine(
+    settings.database_url,
+    echo=settings.environment == "development",
+    # Voir db_pool_recycle_seconds dans config.py : Neon ferme les connexions
+    # inactives, on ne les garde donc jamais assez longtemps pour tomber dessus.
+    pool_recycle=settings.db_pool_recycle_seconds,
+)
 
 AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
 
