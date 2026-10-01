@@ -1047,6 +1047,81 @@ AFFICHES = [
         b_spacer(),
         b_body("Dossiers d'inscription, concours, badges. WhatsApp 07 58 50 94 03", 0.031, bold=True),
     ]),
+
+    # ---------------- Serie D : les remises ----------------
+    # Prix d'exemple, les memes que l'application sait calculer : prix a la
+    # photo, lots (5 photos = 2 000 F) et remise en pourcentage par palier
+    # (Event.pricing). Rien d'autre : pas de promesse que le panier ne tient pas.
+    dict(nom="D1-plus-tu-en-prends", formats=["post", "story", "a4"], fond="sand", blocs=[
+        b_logo(0.07), b_spacer(),
+        b_title("Plus tu en prends,\nmoins tu paies.", 0.078), b_gap(0.045),
+        b_prices([("1 photo", "450 F"),
+                  ("Lot de 5 photos", "2 000 F"),
+                  ("10 photos, -10 %", "3 600 F"),
+                  ("20 photos, -20 %", "6 400 F")], 0.04),
+        b_gap(0.025),
+        b_body("La remise se calcule toute seule dans le panier, au moment où tu ajoutes tes photos.", 0.03),
+        b_spacer(),
+        b_body(SIG, 0.032, bold=True),
+    ]),
+    dict(nom="D2-moins-10", formats=["post", "story", "a4"], fond="ink", deco="cadre", blocs=[
+        b_logo(0.07), b_spacer(),
+        b_title("-10 %", 0.25, color=ORANGE), b_gap(0.02),
+        b_title("dès 10 photos", 0.075), b_gap(0.04),
+        b_body("10 photos : 3 600 F au lieu de 4 500 F.", 0.04, bold=True),
+        b_body("Toi, ta famille, tes amis : choisissez ensemble sur le même téléphone.", 0.032),
+        b_spacer(),
+        b_body(SIG, 0.03, bold=True),
+    ]),
+    dict(nom="D3-lot-de-5", formats=["post", "story", "a4"], fond="sand", deco="wax", blocs=[
+        b_logo(0.07), b_spacer(),
+        b_title("Le lot de 5", 0.1), b_gap(0.015),
+        b_title("2 000 F", 0.17, color=ORANGE), b_gap(0.03),
+        b_body("Soit 400 F la photo au lieu de 450 F. Prends tes 5 préférées, le prix baisse tout seul.", 0.036),
+        b_spacer(),
+        b_body("Wave · Orange · MTN · Moov · espèces à la borne", 0.03, bold=True),
+    ]),
+    dict(nom="D4-moins-20", formats=["post", "story", "a4"], fond="ink", blocs=[
+        b_logo(0.07), b_spacer(),
+        b_title("-20 %", 0.25, color=ORANGE), b_gap(0.02),
+        b_title("dès 20 photos", 0.075), b_gap(0.04),
+        b_prices([("20 photos au prix normal", "9 000 F"),
+                  ("Avec les lots et -20 %", "6 400 F"),
+                  ("Tu économises", "2 600 F")], 0.038),
+        b_spacer(),
+        b_body("Toute la soirée dans ta poche, à 320 F la photo.", 0.034, bold=True),
+    ]),
+    dict(nom="D5-famille", formats=["post", "story", "a4"], fond="sand", blocs=[
+        b_logo(0.07), b_spacer(),
+        b_title("Achetez en famille,\npayez moins.", 0.075), b_gap(0.04),
+        b_steps([("Un seul téléphone", "Chacun trouve ses photos : galerie, visage ou selfie."),
+                 ("Un seul panier", "Toutes les photos s'additionnent."),
+                 ("Une seule remise", "Dès 10 photos, -10 % sur tout le panier.")], 0.033),
+        b_spacer(),
+        b_body(SIG, 0.032, bold=True),
+    ]),
+    dict(nom="D6-tirage", formats=["post", "story", "a4"], fond="ink", deco="cadre", blocs=[
+        b_logo(0.07), b_spacer(),
+        b_title("La photo\net le papier.", 0.09), b_gap(0.04),
+        b_prices([("La photo numérique", "450 F"),
+                  ("Le tirage 10×15, en plus", "500 F"),
+                  ("Lots et remises", "sur les photos")], 0.038),
+        b_gap(0.02),
+        b_body("Imprimée sur place en 20 secondes. Les remises s'appliquent sur les photos, le tirage reste à 500 F.", 0.03),
+        b_spacer(),
+        b_body(SIG, 0.03, bold=True),
+    ]),
+    dict(nom="D7-organisateurs-remises", formats=["post", "a4"], fond="sand", blocs=[
+        b_logo(0.07), b_gap(0.045),
+        b_title("Vos prix,\nvos remises.", 0.085), b_gap(0.04),
+        b_bullets(["Prix à la photo, fixé par vous",
+                   "Lots : 5 photos, 10 photos, au prix que vous voulez",
+                   "Remises en % par palier (ex. -10 % dès 10 photos)",
+                   "Prix du tirage papier à part",
+                   "Tout se calcule seul dans le panier de l'invité"], 0.033),
+        b_spacer(),
+        b_body("Photographes, organisateurs : 07 58 50 94 03", 0.03, bold=True),
+    ]),
 ]
 
 
