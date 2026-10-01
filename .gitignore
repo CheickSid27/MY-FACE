@@ -36,3 +36,12 @@ Thumbs.db
 .idea/
 .env.bak*
 captures/
+
+# Kit motion design : images generees (photos de la demo) et photos fournies.
+# Se regenerent avec : python motion-design/preparer_motion.py
+motion-design/fond-vert/
+motion-design/detoure/
+motion-design/ecrans/
+motion-design/elements/
+motion-design/guides/
+motion-design/sources/

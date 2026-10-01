@@ -109,6 +109,7 @@ def imprimer(exe: str, html: Path, pdf: Path) -> None:
 
 
 FICHES = [
+    ("motion-design-myface.html", "Motion design MYFACE.pdf"),
     ("linkedin-myface.html", "LinkedIn MYFACE.pdf"),
     ("video-ia-myface.html", "Video IA MYFACE.pdf"),
     ("comment-marche-myface.html", "Comment fonctionne MYFACE.pdf"),
