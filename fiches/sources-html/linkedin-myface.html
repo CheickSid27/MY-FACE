@@ -1,0 +1,237 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LinkedIn MYFACE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --ground: #F4EFE6; --surface: #FFFFFF; --fill: #EAE3D6; --ink: #0E2429;
+    --ink-soft: #33484D; --muted: #5E7378; --line: #D8CEBE; --orange: #F26A1B;
+    --orange-ink: #B34A08; --orange-soft: #FCE3D1; --green: #00854B; --green-soft: #D2EDDF;
+    --li: #0A66C2;
+    --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+    --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0B1A1E; --surface: #122A30; --fill: #17343B; --ink: #EFE7DA;
+      --ink-soft: #CBD8D7; --muted: #91A6A9; --line: #27454D; --orange: #FF8A3D;
+      --orange-ink: #FFAB70; --orange-soft: #3B2413; --green: #3FC489; --green-soft: #113828; --li: #70B5F9;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0B1A1E; --surface: #122A30; --fill: #17343B; --ink: #EFE7DA;
+    --ink-soft: #CBD8D7; --muted: #91A6A9; --line: #27454D; --orange: #FF8A3D;
+    --orange-ink: #FFAB70; --orange-soft: #3B2413; --green: #3FC489; --green-soft: #113828; --li: #70B5F9;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 400 17px/1.62 var(--body); }
+  .band { height: 14px; background:
+      radial-gradient(circle at 50% 50%, var(--orange) 0 2.5px, transparent 3px) 0 0 / 14px 14px,
+      conic-gradient(from 45deg at 50% 50%, var(--ink) 0 25%, transparent 0 50%, var(--ink) 0 75%, transparent 0) 0 0 / 14px 14px,
+      var(--ground); }
+  header.top { max-width: 940px; margin: 0 auto; padding: 44px 22px 18px; display: grid; gap: 14px; }
+  .eyebrow { margin: 0; font: 600 12px/1.4 var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 0; font: 700 clamp(28px, 4.2vw, 42px)/1.12 var(--display); letter-spacing: -.014em; max-width: 22ch; text-wrap: balance; }
+  h1 em { font-style: normal; color: var(--orange); }
+  .lede { margin: 0; max-width: 62ch; font-size: 19px; color: var(--ink-soft); }
+  main { max-width: 940px; margin: 0 auto; padding: 0 22px 80px; }
+  section { padding-top: 42px; }
+  h2 { margin: 0 0 12px; font: 600 clamp(21px, 2.4vw, 26px)/1.22 var(--display); text-wrap: balance; }
+  h3 { margin: 22px 0 6px; font: 650 17px/1.35 var(--body); }
+  p { margin: 0 0 13px; max-width: 66ch; }
+  .intro { color: var(--ink-soft); }
+  ul, ol { margin: 0 0 13px; padding-left: 1.2em; max-width: 66ch; }
+  li { margin: 0 0 7px; }
+  .fine { font-size: 14px; color: var(--muted); }
+
+  .post { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; margin: 16px 0; }
+  .post .tete { display: flex; align-items: center; gap: 12px; padding: 12px 14px 12px 18px; border-bottom: 1px solid var(--line); background: var(--fill); }
+  .post .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--ink); display: grid; place-items: center; color: var(--orange); font: 800 13px/1 var(--display); flex: 0 0 auto; }
+  .post .qui b { display: block; font-size: 15px; }
+  .post .qui span { font-size: 13px; color: var(--muted); }
+  .post button { margin-left: auto; font: 600 12px/1 var(--body); padding: 8px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .post button:hover { background: var(--li); color: #fff; border-color: var(--li); }
+  .post pre { margin: 0; padding: 18px 20px; white-space: pre-wrap; font: 400 16px/1.62 var(--body); }
+  .post .pied { padding: 10px 20px 14px; font: 500 12.5px/1.4 var(--mono); color: var(--muted); border-top: 1px solid var(--line); }
+
+  .conseils { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
+  .conseils div { border-radius: 12px; padding: 18px 20px; }
+  .conseils .oui { background: var(--green-soft); }
+  .conseils .non { background: var(--orange-soft); }
+  .conseils h3 { margin: 0 0 8px; }
+  .conseils ul { margin: 0; padding-left: 1.1em; font-size: 15.5px; }
+  @media (max-width: 760px) { .conseils { grid-template-columns: minmax(0, 1fr); } }
+
+  footer.end { margin: 44px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+</style>
+
+<div class="band" aria-hidden="true"></div>
+
+<header class="top">
+  <p class="eyebrow">Étape 3 · LinkedIn</p>
+  <h1>Raconter un an de travail <em>sur MYFACE</em></h1>
+  <p class="lede">Le post principal, une version courte, le premier commentaire avec le lien, la description de la page entreprise, et comment publier pour être lu.</p>
+</header>
+
+<main>
+  <section id="principal">
+    <h2>Le post principal</h2>
+    <p class="intro">Il raconte une scène avant de parler de produit. Sur LinkedIn, seules les deux premières lignes s'affichent avant « voir plus » : elles doivent donner envie de cliquer.</p>
+    <article class="post">
+      <div class="tete">
+        <span class="avatar">MY</span>
+        <span class="qui"><b>Cheick Sidibé</b><span>Fondateur de MYFACE</span></span>
+        <button type="button">Copier</button>
+      </div>
+      <pre>Tu es allé à une cérémonie, et à la fin, les photos étaient étalées par terre.
+
+On a tous vu cette scène en Côte d'Ivoire. Le photographe pose ses tirages sur une table ou à même le sol, et tout le monde s'accroupit pour fouiller dans le tas. On mélange, on abîme, on cherche son visage parmi deux cents autres. Beaucoup finissent par partir sans leurs photos.
+
+Et celles qui restent ? Personne ne sait vraiment ce qu'elles deviennent.
+
+Le lendemain, c'est le groupe WhatsApp qui prend le relais : des centaines d'images compressées, en vrac, qu'il faut faire défiler pendant des minutes pour se retrouver.
+
+Il y a un an, on s'est dit que ce n'était pas une fatalité.
+
+Pendant douze mois, on a construit MYFACE.
+
+Le principe est simple. Pendant l'événement, une borne est installée dans la salle. L'invité passe son visage devant l'écran, et toutes les photos où il apparaît s'affichent, les siennes et seulement les siennes. Il choisit, il paie en Mobile Money ou en espèces, et il repart avec un lien personnel pour télécharger ses photos en qualité d'origine.
+
+Et s'il veut un souvenir dans la main, son tirage sort de la borne en quelques secondes.
+
+Pour ceux qui ne veulent pas faire la queue, un QR code à l'entrée ouvre exactement la même chose sur leur téléphone.
+
+Ce qu'on a appris en chemin :
+• Le vrai sujet n'est pas la technologie, c'est l'émotion d'un jour où l'on s'est préparé.
+• Les espèces restent indispensables dans une salle de fête.
+• Une photo imprimée vaut encore plus qu'un fichier pour beaucoup de familles.
+
+Aujourd'hui, MYFACE est en ligne et a déjà tourné en conditions réelles lors d'une remise de diplômes à Abidjan.
+
+On cherche maintenant :
+→ des mariages, remises de diplômes et événements d'entreprise pour nos prochaines dates,
+→ des photographes qui veulent vendre leurs photos sans les trier,
+→ des salles et des organisateurs qui veulent offrir quelque chose de nouveau à leurs invités.
+
+Si tu organises quelque chose d'ici la fin de l'année, ou si tu connais quelqu'un qui le fait, écris-moi.
+
+Scanne. Retrouve. Repars avec.
+
+#Abidjan #CôteDIvoire #Événementiel #Startup #Photographie</pre>
+      <div class="pied">Environ 1 900 caractères · à publier avec la vidéo carrée ou le carrousel</div>
+    </article>
+  </section>
+
+  <section id="court">
+    <h2>La version courte</h2>
+    <p class="intro">Pour une deuxième publication quelques jours après, ou si tu préfères aller droit au but.</p>
+    <article class="post">
+      <div class="tete">
+        <span class="avatar">MY</span>
+        <span class="qui"><b>Cheick Sidibé</b><span>Fondateur de MYFACE</span></span>
+        <button type="button">Copier</button>
+      </div>
+      <pre>À la fin d'une cérémonie, chacun fouille dans un tas de tirages pour se retrouver. Souvent, on repart sans rien.
+
+Depuis un an, on construit la réponse : MYFACE.
+
+Une borne dans la salle. L'invité passe son visage devant l'écran, ses photos s'affichent, il paie en Mobile Money ou en espèces, et son tirage sort sur place.
+
+C'est en ligne. On cherche nos prochains événements à Abidjan : mariages, remises de diplômes, galas d'entreprise.
+
+Scanne. Retrouve. Repars avec.
+
+#Abidjan #Événementiel #Startup</pre>
+      <div class="pied">Environ 560 caractères</div>
+    </article>
+  </section>
+
+  <section id="commentaire">
+    <h2>Le premier commentaire, avec le lien</h2>
+    <p class="intro">LinkedIn montre moins les publications qui contiennent un lien. On le met donc dans un commentaire, publié juste après le post.</p>
+    <article class="post">
+      <div class="tete">
+        <span class="avatar">MY</span>
+        <span class="qui"><b>Cheick Sidibé</b><span>Premier commentaire</span></span>
+        <button type="button">Copier</button>
+      </div>
+      <pre>Pour voir comment ça marche : myfaceci.online
+Et pour me parler d'un événement : WhatsApp au 07 58 50 94 03.</pre>
+    </article>
+  </section>
+
+  <section id="page">
+    <h2>La page entreprise</h2>
+    <p class="intro">À créer depuis ton profil, rubrique « Créer une page entreprise ». Le logo est dans <code>marque/myface-avatar-1024.png</code>, la bannière peut reprendre l'affiche A1.</p>
+    <article class="post">
+      <div class="tete">
+        <span class="avatar">MY</span>
+        <span class="qui"><b>MYFACE</b><span>Description de la page</span></span>
+        <button type="button">Copier</button>
+      </div>
+      <pre>MYFACE installe une borne photo dans vos événements. Chaque invité passe son visage devant l'écran et retrouve en quelques secondes toutes les photos où il apparaît. Il les paie en Mobile Money ou en espèces, les télécharge en qualité d'origine, et peut repartir avec son tirage imprimé sur place.
+
+Mariages, remises de diplômes, galas et séminaires d'entreprise, soirées. Abidjan, Côte d'Ivoire.
+
+Scanne. Retrouve. Repars avec.</pre>
+    </article>
+    <p class="fine">Slogan de la page (champ court) : « Scanne. Retrouve. Repars avec. » · Secteur : Services photographiques · Taille : 2 à 10 employés · Site : myfaceci.online</p>
+  </section>
+
+  <section id="publier">
+    <h2>Comment publier pour être lu</h2>
+    <div class="conseils">
+      <div class="oui">
+        <h3>À faire</h3>
+        <ul>
+          <li>Publier un mardi, mercredi ou jeudi, entre 8 h et 10 h</li>
+          <li>Joindre la vidéo carrée <code>myface-parcours-1x1.mp4</code> : une vidéo est bien plus vue qu'un texte seul</li>
+          <li>Répondre à chaque commentaire dans la première heure</li>
+          <li>Demander à 5 proches de commenter dès la publication, pas seulement d'aimer</li>
+          <li>Repartager le post depuis la page entreprise une fois créée</li>
+        </ul>
+      </div>
+      <div class="non">
+        <h3>À éviter</h3>
+        <ul>
+          <li>Mettre le lien du site dans le post lui-même</li>
+          <li>Citer l'école de la remise de diplômes sans son accord</li>
+          <li>Mettre en avant les mots « reconnaissance faciale » tant que le dossier ARTCI n'est pas déposé : « un selfie suffit » dit la même chose</li>
+          <li>Plus de cinq hashtags</li>
+          <li>Publier la même chose le même jour sur ta page et ton profil</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer class="end">
+    Préparé le 1er octobre 2026. Le nom affiché est un exemple : remplace-le par ton nom tel qu'il apparaît sur ton profil.
+  </footer>
+</main>
+
+<script>
+  document.querySelectorAll('.post').forEach(function (bloc) {
+    var btn = bloc.querySelector('button');
+    var pre = bloc.querySelector('pre');
+    if (!btn || !pre) return;
+    btn.addEventListener('click', function () {
+      var txt = pre.innerText;
+      var done = function () { btn.textContent = 'Copié'; setTimeout(function () { btn.textContent = 'Copier'; }, 1800); };
+      function fallback() {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); document.body.removeChild(ta); done();
+        } catch (e) { btn.textContent = 'Sélectionne le texte'; setTimeout(function () { btn.textContent = 'Copier'; }, 2200); }
+      }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(done, fallback);
+        } else { fallback(); }
+      } catch (e) { fallback(); }
+    });
+  });
+</script>
