@@ -50,6 +50,9 @@ class PaymentMethod(str, enum.Enum):
     # frontend/lib/kiosk.ts) : jamais sur le telephone personnel d'un client,
     # qui n'a personne physiquement a qui remettre l'argent.
     CASH = "cash"
+    # Photos offertes par l'organisateur (Event.pricing["offert"]) : commande
+    # a 0, payee d'office, sans page de paiement (voir POST /payments/offert).
+    OFFERT = "offert"
 
 
 class Order(Base):

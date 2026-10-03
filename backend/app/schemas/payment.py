@@ -26,6 +26,20 @@ class PaymentInitRequest(BaseModel):
         return normalize_phone(value)
 
 
+class FreeOrderRequest(BaseModel):
+    """Photos offertes : pas de moyen de paiement, juste le panier et le
+    numero du client (garde avec la commande)."""
+
+    session_id: uuid.UUID
+    contact_phone: str = Field(min_length=6, max_length=32)
+    kiosk_token: str | None = None
+
+    @field_validator("contact_phone")
+    @classmethod
+    def _valid_phone(cls, value: str) -> str:
+        return normalize_phone(value)
+
+
 class PaymentInitResponse(BaseModel):
     order_id: uuid.UUID
     status: OrderStatus

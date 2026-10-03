@@ -27,6 +27,8 @@ class DownloadResponse(BaseModel):
     # Derniere impression des tirages papier (page d'impression : evite
     # d'imprimer deux fois par erreur).
     printed_at: datetime | None = None
+    # Photos offertes par l'organisateur (pas de « paiement confirme »)
+    offert: bool = False
 
 
 class PrintedResponse(BaseModel):

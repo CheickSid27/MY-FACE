@@ -14,7 +14,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.deps import get_optional_user
 from app.models.event import Event
-from app.models.order import Order, OrderItem, OrderStatus
+from app.models.order import Order, OrderItem, OrderStatus, PaymentMethod
 from app.models.photo import Photo
 from app.models.user import User
 from app.schemas.download import DownloadPhoto, DownloadResponse, PrintedResponse
@@ -77,6 +77,7 @@ async def get_download_links(
         photos=download_photos,
         expires_in=ttl,
         printed_at=order.printed_at,
+        offert=order.payment_method == PaymentMethod.OFFERT,
     )
 
 

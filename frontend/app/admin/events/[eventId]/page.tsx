@@ -173,6 +173,7 @@ function PricingEditor({ event, onSaved }: { event: Event; onSaved: (event: Even
   const [unitPrice, setUnitPrice] = useState(String(event.pricing.unit_price));
   const [printPrice, setPrintPrice] = useState(initialPrint);
   const [bundlePrice, setBundlePrice] = useState(initialBundle);
+  const [offert, setOffert] = useState(Boolean(event.pricing.offert));
   const [cashEnabled, setCashEnabled] = useState(event.cash_enabled);
   const [packs, setPacks] = useState<PackRow[]>(initialPacks);
   const [discounts, setDiscounts] = useState<DiscountRow[]>(initialDiscounts);
@@ -183,6 +184,7 @@ function PricingEditor({ event, onSaved }: { event: Event; onSaved: (event: Even
     unitPrice !== String(event.pricing.unit_price) ||
     printPrice !== initialPrint ||
     bundlePrice !== initialBundle ||
+    offert !== Boolean(event.pricing.offert) ||
     cashEnabled !== event.cash_enabled ||
     JSON.stringify(packs) !== JSON.stringify(initialPacks) ||
     JSON.stringify(discounts) !== JSON.stringify(initialDiscounts);
@@ -192,7 +194,7 @@ function PricingEditor({ event, onSaved }: { event: Event; onSaved: (event: Even
   // Meme regles que le serveur (schemas/event.py), verifiees avant l'envoi
   // pour un message precis plutot qu'un refus generique.
   function validate(): string | null {
-    if (!Number.isFinite(unit) || unit <= 0) return "Le prix par photo doit être supérieur à 0.";
+    if (!offert && (!Number.isFinite(unit) || unit <= 0)) return "Le prix par photo doit être supérieur à 0.";
     if (printPrice.trim() && (!Number.isFinite(Number(printPrice)) || Number(printPrice) < 0)) {
       return "Le prix d'impression est invalide.";
     }
@@ -233,7 +235,8 @@ function PricingEditor({ event, onSaved }: { event: Event; onSaved: (event: Even
       // etaient envoyes, ce qui effacait les lots et remises existants.
       const updated = await api.updateEvent(event.id, {
         pricing: {
-          unit_price: unit,
+          unit_price: offert ? (Number.isFinite(unit) && unit > 0 ? unit : 0) : unit,
+          offert,
           currency,
           print_unit_price: printPrice.trim() ? Number(printPrice) : null,
           print_bundle_price: bundlePrice.trim() ? Number(bundlePrice) : null,
@@ -253,7 +256,20 @@ function PricingEditor({ event, onSaved }: { event: Event; onSaved: (event: Even
   return (
     <div className="glass mb-6 rounded-2xl p-5">
       <h2 className="mb-3 text-sm font-semibold text-ink-900">Tarifs et paiement en espèces</h2>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <label className="mb-4 flex items-start gap-3 rounded-xl border border-ink-900/10 bg-white/60 px-3.5 py-3 text-sm text-ink-700">
+        <input
+          type="checkbox"
+          checked={offert}
+          onChange={(e) => setOffert(e.target.checked)}
+          className="mt-0.5 h-4 w-4 accent-brand-accent"
+        />
+        <span>
+          <span className="font-medium text-ink-900">Photos offertes par l&apos;organisateur</span>
+          <br />
+          Les invités téléchargent leurs photos sans payer. Les prix ci-dessous ne s&apos;appliquent pas.
+        </span>
+      </label>
+      <div className={`grid gap-3 sm:grid-cols-2 ${offert ? "opacity-50" : ""}`}>
         <label className="text-xs font-medium text-ink-500">
           Prix par photo ({currency})
           <input
@@ -776,7 +792,7 @@ function AdminEventDetailContent() {
               {new Date(event.date).toLocaleDateString("fr-FR")} &middot; {event.location}
             </p>
             <p className="mt-1 text-sm text-ink-500">
-              Prix unitaire : {event.pricing.unit_price.toLocaleString("fr-FR")} {event.pricing.currency}
+              {event.pricing.offert ? "Photos offertes par l&apos;organisateur" : `Prix unitaire : ${event.pricing.unit_price.toLocaleString("fr-FR")} ${event.pricing.currency}`}
             </p>
           </div>
           <button

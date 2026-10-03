@@ -104,7 +104,9 @@ export default function DownloadPage() {
         <div className="glass-pill mx-auto mb-4 flex h-16 w-16 items-center justify-center text-3xl !bg-emerald-500/15 text-emerald-600">
           <CheckIcon />
         </div>
-        <h1 className="text-2xl font-bold text-brand">Paiement confirmé !</h1>
+        <h1 className="text-2xl font-bold text-brand">
+          {data.offert ? "Vos photos offertes sont prêtes !" : "Paiement confirmé !"}
+        </h1>
         <p className="mx-auto mt-1 max-w-md text-ink-500">
           {data.photos.length > 1 ? `Vos ${data.photos.length} photos` : "Votre photo"} en qualité originale{" "}
           {data.photos.length > 1 ? "sont prêtes" : "est prête"}. Elles restent

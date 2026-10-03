@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
 from app.core.config import get_settings
 
@@ -21,7 +21,8 @@ class PricingDiscount(BaseModel):
 
 
 class PricingConfig(BaseModel):
-    unit_price: float = Field(gt=0)
+    # 0 accepte seulement quand les photos sont offertes (voir `offert`)
+    unit_price: float = Field(ge=0)
     currency: str = "XOF"
     packs: list[PricingPack] = Field(default_factory=list, max_length=20)
     discounts: list[PricingDiscount] = Field(default_factory=list, max_length=20)
@@ -34,6 +35,15 @@ class PricingConfig(BaseModel):
     # Ces photos ne comptent pas dans les lots ni dans les remises. None/0 =
     # pas de prix combine (on retombe sur prix photo + print_unit_price).
     print_bundle_price: float | None = Field(default=None, ge=0)
+    # Photos offertes par l'organisateur : les invites telechargent sans
+    # payer, il n'y a pas de page de paiement (voir POST /payments/offert).
+    offert: bool = False
+
+    @model_validator(mode="after")
+    def _prix_si_payant(self) -> "PricingConfig":
+        if not self.offert and self.unit_price <= 0:
+            raise ValueError("Le prix par photo doit etre superieur a 0")
+        return self
 
     @field_validator("packs")
     @classmethod

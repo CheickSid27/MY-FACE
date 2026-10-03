@@ -14,6 +14,7 @@ from app.models.event import Event
 from app.models.event_payment_method import EventPaymentMethod
 from app.models.order import Order, OrderItem, OrderStatus, PaymentMethod
 from app.schemas.payment import (
+    FreeOrderRequest,
     PaymentInitRequest,
     PaymentInitResponse,
     PaymentStatusResponse,
@@ -23,6 +24,7 @@ from app.services.orders import expire_order_if_stale, set_order_status
 from app.services.payments import PaymentProvider, get_payment_provider
 from app.services.pricing import calculate_total, item_prices
 from app.services.push_notifications import send_push_to_user
+from app.services.sms import get_sms_service
 from app.services.storage import StorageService, get_storage_service
 
 router = APIRouter(prefix="/payments", tags=["payments"])
@@ -35,6 +37,7 @@ settings = get_settings()
 _NOT_INITIABLE_HERE = {
     PaymentMethod.MANUAL: "Choisissez un moyen de paiement propose par l'organisateur",
     PaymentMethod.GENIUSPAY: "GeniusPay se lance via /payments/geniuspay/init",
+    PaymentMethod.OFFERT: "Les photos offertes se recuperent via /payments/offert",
 }
 
 
@@ -70,6 +73,69 @@ def _create_order_from_cart(
         for item in cart.items
     ]
     return order
+
+
+@router.post("/offert", response_model=PaymentInitResponse, status_code=status.HTTP_201_CREATED)
+async def claim_free_photos(
+    payload: FreeOrderRequest,
+    db: AsyncSession = Depends(get_db),
+) -> PaymentInitResponse:
+    """Photos offertes par l'organisateur : commande a 0, payee d'office, le
+    client part directement sur la page de telechargement. Refuse si
+    l'evenement n'est pas en mode offert (verifie serveur)."""
+    result = await db.execute(
+        select(CartSession)
+        .where(CartSession.id == payload.session_id)
+        .options(selectinload(CartSession.items))
+    )
+    cart = result.scalar_one_or_none()
+    if cart is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panier introuvable")
+    if cart.expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Panier expire")
+    if not cart.items:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Panier vide")
+
+    event = await db.get(Event, cart.event_id)
+    if not event.pricing.get("offert"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Les photos de cet evenement ne sont pas offertes",
+        )
+
+    order = Order(
+        event_id=cart.event_id,
+        contact_phone=payload.contact_phone,
+        total_amount=0.0,
+        currency=event.pricing.get("currency", "XOF"),
+        status=OrderStatus.SUCCESS,
+        payment_method=PaymentMethod.OFFERT,
+        payment_reference=f"OFFERT-{secrets.token_hex(8)}",
+    )
+    # pas de tirage papier offert : il faudrait quelqu'un pour l'encaisser
+    order.items = [
+        OrderItem(photo_id=item.photo_id, unit_price=0.0, print_requested=False, print_price=None)
+        for item in cart.items
+    ]
+    db.add(order)
+    await db.commit()
+    await db.refresh(order)
+
+    sms = get_sms_service()
+    await sms.send_sms(
+        order.contact_phone,
+        f"MYFACE: vos photos offertes sont pretes. Telechargez-les ici : "
+        f"{settings.app_base_url}/order/{order.id}/download",
+    )
+
+    return PaymentInitResponse(
+        order_id=order.id,
+        status=order.status,
+        payment_method=order.payment_method,
+        total_amount=0.0,
+        currency=order.currency,
+        instructions="Vos photos sont offertes par l'organisateur.",
+    )
 
 
 @router.post("/init", response_model=PaymentInitResponse, status_code=status.HTTP_201_CREATED)

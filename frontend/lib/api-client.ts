@@ -50,6 +50,7 @@ export interface PricingPayload {
   discounts?: PricingDiscount[];
   print_unit_price?: number | null;
   print_bundle_price?: number | null;
+  offert?: boolean;
 }
 
 async function refreshAccessToken(): Promise<string | null> {
@@ -355,6 +356,13 @@ export const api = {
 
   /** `contactPhone` au format international (+225...), voir PhoneInput.
    * Le paiement en especes exige le jeton de la borne (verifie serveur). */
+  claimFreePhotos(sessionId: string, contactPhone: string, kioskToken?: string | null): Promise<PaymentInitResponse> {
+    return request<PaymentInitResponse>("/payments/offert", {
+      method: "POST",
+      body: JSON.stringify({ session_id: sessionId, contact_phone: contactPhone, kiosk_token: kioskToken ?? null }),
+    });
+  },
+
   initPayment(
     sessionId: string,
     contactPhone: string,

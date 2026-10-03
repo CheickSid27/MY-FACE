@@ -30,6 +30,8 @@ export interface PricingConfig {
   discounts: PricingDiscount[];
   print_unit_price: number | null;
   print_bundle_price?: number | null;
+  // Photos offertes par l'organisateur : pas de paiement pour les invités
+  offert?: boolean;
 }
 
 export interface Event {
@@ -174,7 +176,8 @@ export type PaymentMethod =
   | "moov_money"
   | "manual"
   | "cash"
-  | "geniuspay";
+  | "geniuspay"
+  | "offert";
 
 export interface PaymentInitResponse {
   order_id: string;
@@ -254,6 +257,7 @@ export interface DownloadResponse {
   photos: DownloadPhoto[];
   expires_in: number;
   printed_at: string | null;
+  offert?: boolean;
 }
 
 export interface DailySales {

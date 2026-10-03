@@ -45,6 +45,9 @@ def calculate_total(pricing: dict, photo_count: int, print_count: int = 0) -> Pr
 
     if photo_count <= 0:
         return PricingBreakdown(0, 0.0, 0.0, 0.0, 0, 0.0, 0.0, currency)
+    if pricing.get("offert"):
+        # photos offertes par l'organisateur : rien a payer, pas de tirage
+        return PricingBreakdown(photo_count, 0.0, 0.0, 0.0, 0, 0.0, 0.0, currency)
 
     bundle_price = float(pricing.get("print_bundle_price") or 0)
     bundle = bundle_price > 0 and print_count > 0
@@ -98,6 +101,8 @@ def item_prices(pricing: dict, print_requested: bool) -> tuple[float, float | No
     """(prix photo, prix tirage) figes dans une ligne de commande. Au prix
     combine, le tirage vaut la difference (700 - 450 = 250) : le recu et les
     totaux d'impression de l'admin restent justes."""
+    if pricing.get("offert"):
+        return 0.0, None
     unit_price = float(pricing["unit_price"])
     if not print_requested:
         return unit_price, None

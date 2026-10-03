@@ -21,6 +21,8 @@ function AdminEventsContent() {
   const [date, setDate] = useState("");
   const [location, setLocation] = useState("");
   const [unitPrice, setUnitPrice] = useState("1000");
+  // Photos offertes par l'organisateur : pas de prix, pas de page de paiement
+  const [offert, setOffert] = useState(false);
   const [creating, setCreating] = useState(false);
 
   async function loadEvents() {
@@ -48,12 +50,13 @@ function AdminEventsContent() {
         name,
         date: new Date(date).toISOString(),
         location,
-        pricing: { unit_price: Number(unitPrice) },
+        pricing: offert ? { unit_price: 0, offert: true } : { unit_price: Number(unitPrice) },
       });
       setName("");
       setDate("");
       setLocation("");
       setUnitPrice("1000");
+      setOffert(false);
       setShowForm(false);
       await loadEvents();
     } catch (err) {
@@ -128,12 +131,25 @@ function AdminEventsContent() {
                 className="w-full rounded-xl border border-ink-900/10 bg-white/70 px-3.5 py-2.5 outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
               />
             </div>
-            <div className="mb-4">
+            <label className="mb-4 flex items-start gap-3 rounded-xl border border-ink-900/10 bg-white/60 px-3.5 py-3 text-sm text-ink-700">
+              <input
+                type="checkbox"
+                checked={offert}
+                onChange={(e) => setOffert(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-brand-accent"
+              />
+              <span>
+                <span className="font-medium text-ink-900">Photos offertes par l&apos;organisateur</span>
+                <br />
+                Les invités téléchargent leurs photos sans payer : pas de page de paiement.
+              </span>
+            </label>
+            <div className={`mb-4 ${offert ? "hidden" : ""}`}>
               <label className="mb-1 block text-sm font-medium text-ink-700">Prix unitaire (XOF)</label>
               <input
                 type="number"
                 min={1}
-                required
+                required={!offert}
                 value={unitPrice}
                 onChange={(e) => setUnitPrice(e.target.value)}
                 className="w-full rounded-xl border border-ink-900/10 bg-white/70 px-3.5 py-2.5 outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"

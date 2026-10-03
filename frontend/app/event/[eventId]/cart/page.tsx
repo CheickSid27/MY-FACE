@@ -39,6 +39,8 @@ export default function CartPage() {
   const [printUnitPrice, setPrintUnitPrice] = useState<number | null>(null);
   // Prix « photo + tirage » tout compris (borne), hors lots et remises.
   const [bundlePrice, setBundlePrice] = useState<number | null>(null);
+  // Photos offertes par l'organisateur : pas de prix, pas de paiement
+  const [offert, setOffert] = useState(false);
   const [cashEnabled, setCashEnabled] = useState(false);
 
   const loadCart = useCallback(async () => {
@@ -78,6 +80,7 @@ export default function CartPage() {
         setPaymentMethods(methods);
         setPrintUnitPrice(event.pricing.print_unit_price ?? null);
         setBundlePrice(event.pricing.print_bundle_price ?? null);
+        setOffert(Boolean(event.pricing.offert));
         setCashEnabled(event.cash_enabled);
         if (methods.length === 1) setSelectedMethod(methods[0].method);
         setMethodsState("ready");
@@ -115,10 +118,31 @@ export default function CartPage() {
 
   const showCashOption = kiosk && cashEnabled;
   const hasBundle = bundlePrice != null && bundlePrice > 0;
-  const printOffered = hasBundle || (printUnitPrice != null && printUnitPrice > 0);
+  const printOffered = !offert && (hasBundle || (printUnitPrice != null && printUnitPrice > 0));
   const digitalCount = cart ? cart.pricing.photo_count - cart.pricing.print_count : 0;
   const hasMethodChoice = paymentMethods.length > 0 || showCashOption;
-  const noPaymentAvailable = methodsState === "ready" && !hasMethodChoice;
+  const noPaymentAvailable = methodsState === "ready" && !hasMethodChoice && !offert;
+
+  async function handleFree(e: FormEvent) {
+    e.preventDefault();
+    if (!cart) return;
+    if (!phone) {
+      setError("Saisissez un numéro de téléphone valide.");
+      return;
+    }
+    setSubmitting(true);
+    setPaymentReady(false);
+    setError(null);
+    try {
+      const result = await api.claimFreePhotos(cart.session_id, phone, getKioskToken(eventId));
+      setPaymentReady(true);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      router.push(`/order/${result.order_id}/download`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Impossible de récupérer vos photos.");
+      setSubmitting(false);
+    }
+  }
 
   async function handleCheckout(e: FormEvent) {
     e.preventDefault();
@@ -226,14 +250,30 @@ export default function CartPage() {
           ))}
         </div>
 
-        {kiosk && hasBundle && (
+        {kiosk && hasBundle && !offert && (
           <p className="mt-4 rounded-xl bg-brand-accent/10 px-4 py-3 text-center text-sm text-ink-700">
             Photo + tirage 10×15 : <strong>{bundlePrice!.toLocaleString("fr-FR")} {cart.pricing.currency}</strong> la
             photo, tout compris. Ce prix ne change pas avec les lots et remises.
           </p>
         )}
 
-        <div className="glass mt-6 rounded-2xl p-5">
+        {offert && methodsState === "ready" && (
+          <form onSubmit={handleFree} className="glass mt-6 rounded-2xl p-5">
+            <p className="mb-1 text-lg font-bold text-ink-900">Vos photos sont offertes</p>
+            <p className="mb-4 text-sm text-ink-500">
+              L&apos;organisateur offre les photos de l&apos;événement : {cart.items.length} photo
+              {cart.items.length > 1 ? "s" : ""} en qualité d&apos;origine, sans rien payer.
+            </p>
+            <label className="mb-1.5 block text-sm font-medium text-ink-700">Numéro de téléphone</label>
+            <PhoneInput onChange={setPhone} disabled={submitting} className="mb-4" />
+            {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+            <button type="submit" disabled={submitting || !phone} className="btn-accent w-full">
+              {submitting ? "Préparation..." : "Recevoir mes photos"}
+            </button>
+          </form>
+        )}
+
+        <div className={`glass mt-6 rounded-2xl p-5 ${offert ? "hidden" : ""}`}>
           <div className="flex justify-between text-sm text-ink-500">
             <span>
               {cart.pricing.bundle
@@ -291,7 +331,7 @@ export default function CartPage() {
           </div>
         )}
 
-        {methodsState === "ready" && hasMethodChoice && (
+        {methodsState === "ready" && hasMethodChoice && !offert && (
           <form onSubmit={handleCheckout} className="glass mt-6 rounded-2xl p-5">
             <div className="mb-4">
               <label className="mb-1.5 block text-sm font-medium text-ink-700">Moyen de paiement</label>
