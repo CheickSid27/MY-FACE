@@ -25,7 +25,7 @@ function PosterContent() {
         setEvent(eventData);
         setQrUrl(url);
       })
-      .catch(() => setError("Impossible de preparer l'affiche."));
+      .catch(() => setError("Impossible de préparer l'affiche."));
     return () => {
       if (created) URL.revokeObjectURL(created);
     };
@@ -47,7 +47,7 @@ function PosterContent() {
           onClick={() => router.push(`/admin/events/${eventId}`)}
           className="text-sm font-medium text-ink-500 transition hover:text-brand"
         >
-          &larr; Retour a l&apos;evenement
+          &larr; Retour à l&apos;événement
         </button>
         <button type="button" onClick={() => window.print()} className="btn-accent flex items-center gap-2 !px-5 !py-2.5 text-sm">
           <PrinterIcon /> Imprimer
@@ -73,9 +73,9 @@ function PosterContent() {
 
         <ol className="grid w-full max-w-lg gap-4 text-left sm:grid-cols-3">
           {[
-            ["Scannez", "ce QR code avec l'appareil photo de votre telephone"],
+            ["Scannez", "ce QR code avec l'appareil photo de votre téléphone"],
             ["Prenez un selfie", "pour retrouver toutes les photos ou vous apparaissez"],
-            ["Achetez", "et telechargez-les en qualite originale"],
+            ["Achetez", "et téléchargez-les en qualité originale"],
           ].map(([title, text], i) => (
             <li key={title} className="flex flex-col items-center text-center">
               <span className="mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">

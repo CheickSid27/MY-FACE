@@ -107,7 +107,7 @@ export default function CartPage() {
       const updated = await api.setCartItemPrint(itemId, printRequested, getKioskToken(eventId));
       setCart(updated);
     } catch {
-      setError("Impossible de mettre a jour l'impression.");
+      setError("Impossible de mettre à jour l'impression.");
     } finally {
       setTogglingPrintId(null);
     }
@@ -128,7 +128,7 @@ export default function CartPage() {
       return;
     }
     if (!phone) {
-      setError("Saisissez un numero de telephone valide.");
+      setError("Saisissez un numéro de téléphone valide.");
       return;
     }
     setSubmitting(true);
@@ -204,8 +204,8 @@ export default function CartPage() {
                 &times;
               </button>
               {/* Impression papier : uniquement propose sur la borne (une
-                  imprimante physique n'existe pas sur le telephone d'un
-                  invite), et seulement si l'organisateur a fixe un prix. */}
+                  imprimante physique n'existe pas sur le téléphone d'un
+                  invité), et seulement si l'organisateur a fixe un prix. */}
               {kiosk && printOffered && (
                 <button
                   type="button"
@@ -276,17 +276,17 @@ export default function CartPage() {
         {methodsState === "error" && (
           <div className="glass mt-6 flex flex-col items-center gap-3 rounded-2xl p-5 text-center">
             <p className="text-sm text-ink-700">
-              Impossible de charger les moyens de paiement. Verifiez votre connexion.
+              Impossible de charger les moyens de paiement. Vérifiez votre connexion.
             </p>
             <button type="button" onClick={loadPaymentOptions} className="btn-ghost !px-5 !py-2.5 text-sm">
-              Reessayer
+              Réessayer
             </button>
           </div>
         )}
 
         {noPaymentAvailable && (
           <div className="glass mt-6 rounded-2xl p-5 text-center text-sm text-ink-700">
-            Le paiement n&apos;est pas encore disponible pour cet evenement. Rapprochez-vous de
+            Le paiement n&apos;est pas encore disponible pour cet événement. Rapprochez-vous de
             l&apos;organisateur.
           </div>
         )}
@@ -314,7 +314,7 @@ export default function CartPage() {
                   );
                 })}
                 {/* Especes : uniquement sur la borne, jamais propose sur le
-                    telephone personnel d'un invite (personne physiquement la
+                    téléphone personnel d'un invité (personne physiquement la
                     pour recevoir l'argent), voir Event.cash_enabled. */}
                 {showCashOption && (
                   <button
@@ -332,7 +332,7 @@ export default function CartPage() {
               </div>
             </div>
             <label className="mb-1.5 block text-sm font-medium text-ink-700">
-              Numero de telephone{" "}
+              Numéro de téléphone{" "}
               <span className="font-normal text-ink-500">(pour recevoir vos photos par SMS)</span>
             </label>
             <PhoneInput onChange={setPhone} disabled={submitting} className="mb-4" />

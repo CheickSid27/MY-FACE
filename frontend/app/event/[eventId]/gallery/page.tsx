@@ -217,7 +217,7 @@ export default function GalleryPage() {
           return next;
         });
         setCartCount((c) => Math.max(0, c - ids.length));
-        setError("Impossible de mettre a jour le panier, reessayez.");
+        setError("Impossible de mettre à jour le panier, réessayez.");
       }
     });
     return flushChainRef.current;
@@ -279,7 +279,7 @@ export default function GalleryPage() {
       } catch {
         setSelectedIds((prev) => new Set(prev).add(photo.id));
         setCartCount((c) => c + 1);
-        setError("Impossible de mettre a jour le panier, reessayez.");
+        setError("Impossible de mettre à jour le panier, réessayez.");
       }
     })();
     pendingRemovesRef.current.push(removePromise);
@@ -418,7 +418,7 @@ export default function GalleryPage() {
           onClick={goToCart}
           className="glass-strong fixed inset-x-4 bottom-4 z-30 flex items-center justify-between rounded-2xl bg-brand/95 px-5 py-4 text-white shadow-elevated transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99] animate-fade-in disabled:opacity-70 sm:inset-x-auto sm:right-6 sm:w-96"
         >
-          <span className="font-semibold">{cartCount} photo(s) selectionnee(s)</span>
+          <span className="font-semibold">{cartCount} photo{cartCount > 1 ? "s" : ""} sélectionnée{cartCount > 1 ? "s" : ""}</span>
           <span className="flex items-center gap-1 text-brand-accent">
             {goingToCart ? "Enregistrement..." : "Voir le panier"}{" "}
             {!goingToCart && <span aria-hidden>&rarr;</span>}

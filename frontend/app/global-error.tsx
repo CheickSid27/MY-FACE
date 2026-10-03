@@ -25,7 +25,7 @@ export default function GlobalError({ reset }: { reset: () => void }) {
         >
           <h1 style={{ fontSize: "1.25rem", fontWeight: 700 }}>Une erreur est survenue</h1>
           <p style={{ maxWidth: "24rem", fontSize: "0.875rem", color: "#a8adb8" }}>
-            Quelque chose s&apos;est mal passe. Rechargez la page pour reessayer.
+            Quelque chose s&apos;est mal passé. Rechargez la page pour réessayer.
           </p>
           <button
             type="button"
@@ -40,7 +40,7 @@ export default function GlobalError({ reset }: { reset: () => void }) {
               cursor: "pointer",
             }}
           >
-            Reessayer
+            Réessayer
           </button>
         </main>
       </body>

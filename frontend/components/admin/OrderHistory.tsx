@@ -9,17 +9,17 @@ import type { OrderRead } from "@/types/api";
 
 function ordersToCsv(orders: OrderRead[]): string {
   const header = [
-    "Numero de commande",
+    "Numéro de commande",
     "Date",
     "Heure",
-    "Telephone",
+    "Téléphone",
     "Nombre de photos",
     "Tirages papier",
-    "Tirages imprimes le",
+    "Tirages imprimés le",
     "Montant",
     "Devise",
     "Moyen de paiement",
-    "Reference",
+    "Référence",
     "Statut",
   ];
   const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
@@ -101,7 +101,7 @@ export default function OrderHistory({ orders, csvFilename, onChanged, title = "
           onClick={() => downloadCsv(csvFilename, ordersToCsv(filtered))}
           className="btn-ghost !px-4 !py-2 text-xs disabled:opacity-40"
         >
-          Telecharger le CSV
+          Télécharger le CSV
         </button>
       </div>
 
@@ -111,7 +111,7 @@ export default function OrderHistory({ orders, csvFilename, onChanged, title = "
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher : telephone du client, numero de commande, reference..."
+            placeholder="Rechercher : téléphone du client, numéro de commande, référence..."
             className="min-w-0 flex-1 bg-transparent text-sm text-ink-900 outline-none"
           />
           {query && (
@@ -133,7 +133,7 @@ export default function OrderHistory({ orders, csvFilename, onChanged, title = "
               <tr className="border-b border-ink-900/10 text-xs uppercase tracking-wide text-ink-500">
                 <th className="py-2 pr-4">N&deg; commande</th>
                 <th className="py-2 pr-4">Date</th>
-                <th className="py-2 pr-4">Telephone</th>
+                <th className="py-2 pr-4">Téléphone</th>
                 <th className="py-2 pr-4">Photos</th>
                 <th className="py-2 pr-4">Montant</th>
                 <th className="py-2 pr-4">Moyen</th>
@@ -149,7 +149,7 @@ export default function OrderHistory({ orders, csvFilename, onChanged, title = "
                     key={order.id}
                     onClick={() => setOpenOrderId(order.id)}
                     className="cursor-pointer border-b border-ink-900/5 text-ink-700 transition hover:bg-white/60"
-                    title="Voir la fiche detaillee (recu)"
+                    title="Voir la fiche détaillée (reçu)"
                   >
                     <td className="py-2 pr-4 font-mono text-xs text-ink-500">{order.id.slice(0, 8).toUpperCase()}</td>
                     <td className="whitespace-nowrap py-2 pr-4">
@@ -164,7 +164,7 @@ export default function OrderHistory({ orders, csvFilename, onChanged, title = "
                           className={`ml-1.5 inline-flex items-center gap-0.5 text-xs ${
                             order.printed_at ? "text-ink-500" : "font-semibold text-amber-700"
                           }`}
-                          title={order.printed_at ? "Tirages imprimes" : "Tirages a imprimer"}
+                          title={order.printed_at ? "Tirages imprimés" : "Tirages à imprimer"}
                         >
                           <PrinterIcon /> {order.print_count}
                           {order.printed_at ? " ✓" : ""}
@@ -182,7 +182,7 @@ export default function OrderHistory({ orders, csvFilename, onChanged, title = "
                     </td>
                     <td className="py-2 text-right">
                       <span className="whitespace-nowrap rounded-lg border border-ink-900/15 bg-white px-2.5 py-1 text-xs font-semibold text-ink-700">
-                        Recu &rarr;
+                        Reçu &rarr;
                       </span>
                     </td>
                   </tr>

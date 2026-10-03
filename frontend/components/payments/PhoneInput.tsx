@@ -9,11 +9,11 @@ import type { PhoneCountry } from "@/types/api";
 const FALLBACK_COUNTRIES: PhoneCountry[] = [
   {
     iso: "CI",
-    name: "Cote d'Ivoire",
+    name: "Côte d'Ivoire",
     dial_code: "225",
     pattern: "0[157]\\d{8}",
     example: "0701020304",
-    hint: "10 chiffres commencant par 01, 05 ou 07",
+    hint: "10 chiffres commençant par 01, 05 ou 07",
     trunk_prefix: null,
   },
 ];
@@ -88,7 +88,7 @@ export default function PhoneInput({ onChange, disabled, className = "" }: Phone
       <div className="flex gap-2">
         {/* Select natif invisible par-dessus un affichage compact (drapeau +
             indicatif) : la liste deroulante garde les noms complets des
-            pays, sans tronquer le champ ferme sur petit ecran. */}
+            pays, sans tronquer le champ ferme sur petit écran. */}
         <div className="relative w-[6.5rem] shrink-0">
           <select
             value={iso}
@@ -133,9 +133,9 @@ export default function PhoneInput({ onChange, disabled, className = "" }: Phone
       </div>
       <p className={`mt-1.5 text-xs ${showError ? "text-red-600" : "text-ink-500"}`}>
         {showError
-          ? `Numero invalide pour ${country.name} : ${country.hint}.`
+          ? `Numéro invalide pour ${country.name} : ${country.hint}.`
           : e164
-            ? `Numero enregistre : +${country.dial_code} ${groupDigits(national ?? "")}`
+            ? `Numéro enregistré : +${country.dial_code} ${groupDigits(national ?? "")}`
             : `Format : ${country.hint}.`}
       </p>
     </div>

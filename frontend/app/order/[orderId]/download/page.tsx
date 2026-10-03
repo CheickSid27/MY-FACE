@@ -31,7 +31,7 @@ export default function DownloadPage() {
         setError(
           err instanceof ApiError
             ? err.message
-            : "Impossible de charger les liens de telechargement."
+            : "Impossible de charger les liens de téléchargement."
         )
       );
   }, [orderId]);
@@ -104,10 +104,11 @@ export default function DownloadPage() {
         <div className="glass-pill mx-auto mb-4 flex h-16 w-16 items-center justify-center text-3xl !bg-emerald-500/15 text-emerald-600">
           <CheckIcon />
         </div>
-        <h1 className="text-2xl font-bold text-brand">Paiement confirme !</h1>
+        <h1 className="text-2xl font-bold text-brand">Paiement confirmé !</h1>
         <p className="mx-auto mt-1 max-w-md text-ink-500">
-          Vos {data.photos.length} photo(s) en qualite originale sont pretes. Elles restent
-          disponibles a tout moment depuis ce lien ou le QR code ci-dessous.
+          {data.photos.length > 1 ? `Vos ${data.photos.length} photos` : "Votre photo"} en qualité originale{" "}
+          {data.photos.length > 1 ? "sont prêtes" : "est prête"}. Elles restent
+          disponibles à tout moment depuis ce lien ou le QR code ci-dessous.
         </p>
       </div>
 
@@ -115,11 +116,11 @@ export default function DownloadPage() {
         href={`${API_URL}/download/${orderId}/zip`}
         className="btn-accent w-full max-w-sm !py-4 text-center text-base"
       >
-        Telecharger toutes mes photos ({data.photos.length})
+        Télécharger toutes mes photos ({data.photos.length})
       </a>
 
       {/* Impression papier : uniquement sur la borne (imprimante physique
-          branchee a cote), jamais propose sur le telephone d'un invite. */}
+          branchée a côté), jamais propose sur le téléphone d'un invité. */}
       {showPrintButton && (
         <button
           type="button"
@@ -134,7 +135,7 @@ export default function DownloadPage() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={`${API_URL}/download/${orderId}/qr.png`}
-          alt="QR code de telechargement"
+          alt="QR code de téléchargement"
           className="h-40 w-40 rounded-lg"
         />
         <p className="max-w-[220px] text-center text-xs text-ink-500">
@@ -147,7 +148,7 @@ export default function DownloadPage() {
         {data.photos.map((photo) => (
           <div key={photo.photo_id} className="glass flex flex-col overflow-hidden rounded-xl">
             {/* Miniature pour l'apercu : afficher les originaux ici faisait
-                telecharger plusieurs Mo par photo rien que pour voir la liste. */}
+                télécharger plusieurs Mo par photo rien que pour voir la liste. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={photo.thumbnail_url}
@@ -160,14 +161,14 @@ export default function DownloadPage() {
               download={photo.filename}
               className="flex items-center justify-center gap-1 px-2 py-2 text-xs font-semibold text-brand transition hover:bg-white/60"
             >
-              <span aria-hidden>&darr;</span> Telecharger
+              <span aria-hidden>&darr;</span> Télécharger
             </a>
           </div>
         ))}
       </div>
 
       <button type="button" onClick={goToGallery} className="btn-ghost w-full max-w-sm">
-        Retour a la galerie
+        Retour à la galerie
       </button>
     </main>
   );

@@ -29,7 +29,7 @@ function AdminEventsContent() {
       const data = await api.listEvents();
       setEvents(data);
     } catch {
-      setError("Impossible de charger les evenements.");
+      setError("Impossible de charger les événements.");
     } finally {
       setLoading(false);
     }
@@ -57,7 +57,7 @@ function AdminEventsContent() {
       setShowForm(false);
       await loadEvents();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur lors de la creation.");
+      setError(err instanceof Error ? err.message : "Erreur lors de la création.");
     } finally {
       setCreating(false);
     }
@@ -68,12 +68,12 @@ function AdminEventsContent() {
       <div className="mx-auto max-w-3xl">
         <div className="glass mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-5 py-4">
           <div>
-            <h1 className="text-xl font-bold text-ink-900">Evenements</h1>
+            <h1 className="text-xl font-bold text-ink-900">Événements</h1>
             {user && <p className="text-xs text-ink-500">{user.email}</p>}
           </div>
           <div className="flex items-center gap-4">
             {/* Gestion des comptes reservee aux admins (l'API renvoie 403 aux
-                photographes) : lien masque plutot que menant a une erreur. */}
+                photographes) : lien masque plutôt que menant à une erreur. */}
             {isAdmin && (
               <Link href="/admin/users" className="text-sm font-medium text-ink-500 transition hover:text-brand">
                 Utilisateurs
@@ -87,7 +87,7 @@ function AdminEventsContent() {
               onClick={logout}
               className="text-sm font-medium text-ink-500 transition hover:text-brand"
             >
-              Deconnexion
+              Déconnexion
             </button>
           </div>
         </div>
@@ -95,7 +95,7 @@ function AdminEventsContent() {
         <NotificationSetup />
 
         <button type="button" onClick={() => setShowForm((v) => !v)} className="btn-primary mb-4 !px-5 !py-2.5 text-sm">
-          {showForm ? "Annuler" : "+ Nouvel evenement"}
+          {showForm ? "Annuler" : "+ Nouvel événement"}
         </button>
 
         {showForm && (
@@ -140,7 +140,7 @@ function AdminEventsContent() {
               />
             </div>
             <button type="submit" disabled={creating} className="btn-accent !px-5 !py-2.5 text-sm disabled:opacity-50">
-              {creating ? "Creation..." : "Creer l'evenement"}
+              {creating ? "Création..." : "Créer l'événement"}
             </button>
           </form>
         )}
@@ -174,7 +174,7 @@ function AdminEventsContent() {
         </ul>
 
         {!loading && events.length === 0 && (
-          <p className="text-center text-ink-500">Aucun evenement pour le moment.</p>
+          <p className="text-center text-ink-500">Aucun événement pour le moment.</p>
         )}
       </div>
     </main>

@@ -48,7 +48,7 @@ function UsersContent() {
       setShowForm(false);
       await loadUsers();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Erreur lors de la creation.");
+      setError(err instanceof ApiError ? err.message : "Erreur lors de la création.");
     } finally {
       setCreating(false);
     }
@@ -73,7 +73,7 @@ function UsersContent() {
             onClick={() => router.push("/admin/events")}
             className="text-sm font-medium text-ink-500 transition hover:text-brand"
           >
-            &larr; Retour aux evenements
+            &larr; Retour aux événements
           </button>
           <h1 className="text-xl font-bold text-ink-900">Utilisateurs</h1>
           <div className="w-24" />
@@ -118,7 +118,7 @@ function UsersContent() {
               </select>
             </div>
             <button type="submit" disabled={creating} className="btn-accent !px-5 !py-2.5 text-sm disabled:opacity-50">
-              {creating ? "Creation..." : "Creer l'utilisateur"}
+              {creating ? "Création..." : "Créer l'utilisateur"}
             </button>
           </form>
         )}

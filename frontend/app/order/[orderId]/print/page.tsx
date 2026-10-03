@@ -133,7 +133,7 @@ export default function PrintOrderPage() {
         <div>
           <h1 className="text-xl font-bold text-brand">Impression papier</h1>
           <p className="mt-1 text-ink-500">
-            {printPhotos.length} photo(s) a imprimer &middot; commande{" "}
+            {printPhotos.length} photo(s) à imprimer &middot; commande{" "}
             <span className="font-mono text-sm">{orderId.slice(0, 8)}</span>
           </p>
         </div>
@@ -142,7 +142,7 @@ export default function PrintOrderPage() {
           <div className="flex max-w-sm items-start gap-2 rounded-xl bg-red-50 p-3 text-left text-sm text-red-700">
             <AlertIcon className="mt-0.5 shrink-0" />
             <p>
-              {failedIds.length} photo(s) n&apos;ont pas pu etre chargees. Verifiez la connexion puis
+              {failedIds.length} photo(s) n&apos;ont pas pu être chargées. Vérifiez la connexion puis
               rechargez la page avant d&apos;imprimer.
             </p>
           </div>
@@ -152,7 +152,7 @@ export default function PrintOrderPage() {
           <div className="flex max-w-sm items-start gap-2 rounded-xl bg-amber-50 p-3 text-left text-sm text-amber-800">
             <AlertIcon className="mt-0.5 shrink-0" />
             <p>
-              Deja imprimees le {new Date(printedAt).toLocaleString("fr-FR")}. Relancez seulement
+              Déjà imprimées le {new Date(printedAt).toLocaleString("fr-FR")}. Relancez seulement
               si le premier tirage a echoue.
             </p>
           </div>
@@ -179,9 +179,9 @@ export default function PrintOrderPage() {
           className="btn-accent w-full max-w-sm !py-4 text-base"
         >
           {printing
-            ? "Envoi a l'imprimante..."
+            ? "Envoi à l'imprimante..."
             : !allLoaded
-              ? `Preparation des photos en qualite originale (${loadedCount}/${printPhotos.length})...`
+              ? `Preparation des photos en qualité originale (${loadedCount}/${printPhotos.length})...`
               : printedAt
                 ? "Reimprimer"
                 : "Lancer l'impression"}
@@ -192,7 +192,7 @@ export default function PrintOrderPage() {
       </main>
 
       {/* Contenu reellement imprime (originaux, pleine qualite) : invisible a
-          l'ecran, une photo par page dans son orientation. */}
+          l'écran, une photo par page dans son orientation. */}
       <div className="hidden print:block">
         {printPhotos.map((photo) => (
           <div key={photo.photo_id} className={`print-sheet ${orientations[photo.photo_id] ?? "portrait"}`}>

@@ -12,7 +12,7 @@ export const METHOD_LABELS: Record<PaymentMethod, string> = {
   mtn_money: "MTN Money",
   moov_money: "Moov Money",
   manual: "Test",
-  cash: "Especes",
+  cash: "Espèces",
   geniuspay: "GeniusPay",
 };
 

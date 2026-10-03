@@ -25,19 +25,19 @@ export default function GlobalError({
       </div>
       <h1 className="text-xl font-bold">Une erreur est survenue</h1>
       <p className="max-w-sm text-sm text-ink-300">
-        Quelque chose s&apos;est mal passe de notre cote. Reessayez, et si le probleme persiste,
-        revenez a l&apos;accueil.
+        Quelque chose s&apos;est mal passé de notre côté. Réessayez, et si le problème persiste,
+        revenez à l&apos;accueil.
       </p>
       <div className="flex flex-col gap-3 sm:flex-row">
         <button type="button" onClick={reset} className="btn-accent">
-          Reessayer
+          Réessayer
         </button>
         <button
           type="button"
           onClick={() => (window.location.href = "/")}
           className="btn-ghost !border-white/20 !bg-white/5 !text-white hover:!bg-white/10"
         >
-          Retour a l&apos;accueil
+          Retour à l&apos;accueil
         </button>
       </div>
     </main>

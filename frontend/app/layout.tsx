@@ -18,7 +18,7 @@ const cormorant = Cormorant_Garamond({
 
 export const metadata: Metadata = {
   title: "MYFACE",
-  description: "Retrouvez, achetez et telechargez vos photos d'evenement",
+  description: "Retrouvez, achetez et téléchargez vos photos d'événement",
   manifest: "/manifest.json",
 };
 

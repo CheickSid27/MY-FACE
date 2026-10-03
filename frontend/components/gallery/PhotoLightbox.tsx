@@ -188,7 +188,7 @@ export default function PhotoLightbox({
             type="button"
             onClick={goPrev}
             className="glass-pill absolute left-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-xl text-white transition hover:bg-white/20 sm:left-6"
-            aria-label="Photo precedente"
+            aria-label="Photo précédente"
           >
             &larr;
           </button>

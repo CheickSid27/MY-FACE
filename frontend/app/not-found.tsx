@@ -9,10 +9,10 @@ export default function NotFound() {
       </div>
       <h1 className="text-xl font-bold">Page introuvable</h1>
       <p className="max-w-sm text-sm text-ink-300">
-        Cette page n&apos;existe pas ou plus. Verifiez le lien, ou revenez a l&apos;accueil.
+        Cette page n&apos;existe pas ou plus. Vérifiez le lien, ou revenez à l&apos;accueil.
       </p>
       <Link href="/" className="btn-accent">
-        Retour a l&apos;accueil
+        Retour à l&apos;accueil
       </Link>
     </main>
   );

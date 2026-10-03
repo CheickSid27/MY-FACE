@@ -50,7 +50,7 @@ export default function NotificationSetup() {
 
       const { public_key: vapidPublicKey } = await api.getVapidPublicKey();
       if (!vapidPublicKey) {
-        setError("Notifications non configurees cote serveur.");
+        setError("Notifications non configurees côté serveur.");
         return;
       }
 
@@ -88,8 +88,8 @@ export default function NotificationSetup() {
   if (status === "denied") {
     return (
       <div className="glass mb-4 rounded-2xl p-4 text-sm text-ink-500">
-        Notifications bloquees pour ce site. Autorisez-les dans les reglages de votre navigateur pour
-        recevoir une alerte a chaque commande a confirmer.
+        Notifications bloquées pour ce site. Autorisez-les dans les réglages de votre navigateur pour
+        recevoir une alerte à chaque commande à confirmer.
       </div>
     );
   }
@@ -102,8 +102,8 @@ export default function NotificationSetup() {
         </p>
         <p className="text-xs text-ink-500">
           {status === "on"
-            ? "Vous serez notifie sur cet appareil des qu'un client declare avoir paye."
-            : "Installez cette page sur votre telephone et activez les notifications."}
+            ? "Vous serez notifié sur cet appareil dès qu'un client déclare avoir payé."
+            : "Installez cette page sur votre téléphone et activez les notifications."}
         </p>
         {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
       </div>

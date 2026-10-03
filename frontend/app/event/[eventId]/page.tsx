@@ -44,7 +44,7 @@ export default function EventHomePage() {
           forgetKioskToken(eventId);
         }
       })
-      .catch(() => setError("Evenement introuvable."))
+      .catch(() => setError("Événement introuvable."))
       .finally(() => setLoading(false));
   }, [eventId, urlKioskToken, router]);
 
@@ -72,7 +72,7 @@ export default function EventHomePage() {
   if (error || !event) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-brand px-6 text-center text-white">
-        <p className="text-lg">{error || "Evenement introuvable."}</p>
+        <p className="text-lg">{error || "Événement introuvable."}</p>
       </main>
     );
   }

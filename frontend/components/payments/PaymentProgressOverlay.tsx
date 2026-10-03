@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { CardIcon } from "@/components/icons";
 
 const STEPS = [
-  "Verification du panier...",
-  "Creation de la commande...",
+  "Vérification du panier...",
+  "Création de la commande...",
   "Preparation du paiement...",
 ];
 

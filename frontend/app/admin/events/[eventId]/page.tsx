@@ -59,7 +59,7 @@ function EventInfoEditor({ event, onSaved }: { event: Event; onSaved: (event: Ev
 
   return (
     <div className="glass mb-6 rounded-2xl p-5">
-      <h2 className="mb-3 text-sm font-semibold text-ink-900">Informations de l&apos;evenement</h2>
+      <h2 className="mb-3 text-sm font-semibold text-ink-900">Informations de l&apos;événement</h2>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-xs font-medium text-ink-500 sm:col-span-2">
           Nom
@@ -192,7 +192,7 @@ function PricingEditor({ event, onSaved }: { event: Event; onSaved: (event: Even
   // Meme regles que le serveur (schemas/event.py), verifiees avant l'envoi
   // pour un message precis plutot qu'un refus generique.
   function validate(): string | null {
-    if (!Number.isFinite(unit) || unit <= 0) return "Le prix par photo doit etre superieur a 0.";
+    if (!Number.isFinite(unit) || unit <= 0) return "Le prix par photo doit être supérieur à 0.";
     if (printPrice.trim() && (!Number.isFinite(Number(printPrice)) || Number(printPrice) < 0)) {
       return "Le prix d'impression est invalide.";
     }
@@ -202,19 +202,19 @@ function PricingEditor({ event, onSaved }: { event: Event; onSaved: (event: Even
     for (const p of packs) {
       const count = Number(p.count);
       if (!Number.isInteger(count) || count < 2) return "Un lot doit contenir au moins 2 photos.";
-      if (!(Number(p.price) > 0)) return "Chaque lot doit avoir un prix superieur a 0.";
+      if (!(Number(p.price) > 0)) return "Chaque lot doit avoir un prix supérieur à 0.";
     }
     if (new Set(packs.map((p) => Number(p.count))).size !== packs.length) {
-      return "Deux lots ne peuvent pas avoir le meme nombre de photos.";
+      return "Deux lots ne peuvent pas avoir le même nombre de photos.";
     }
     for (const d of discounts) {
       const min = Number(d.min_quantity);
       const percent = Number(d.percent);
-      if (!Number.isInteger(min) || min < 2) return "Une remise doit s'appliquer a partir de 2 photos au moins.";
-      if (!(percent > 0 && percent < 100)) return "Le pourcentage de remise doit etre entre 1 et 99.";
+      if (!Number.isInteger(min) || min < 2) return "Une remise doit s'appliquer à partir de 2 photos au moins.";
+      if (!(percent > 0 && percent < 100)) return "Le pourcentage de remise doit être entre 1 et 99.";
     }
     if (new Set(discounts.map((d) => Number(d.min_quantity))).size !== discounts.length) {
-      return "Deux remises ne peuvent pas avoir le meme seuil.";
+      return "Deux remises ne peuvent pas avoir le même seuil.";
     }
     return null;
   }
@@ -252,7 +252,7 @@ function PricingEditor({ event, onSaved }: { event: Event; onSaved: (event: Even
 
   return (
     <div className="glass mb-6 rounded-2xl p-5">
-      <h2 className="mb-3 text-sm font-semibold text-ink-900">Tarifs et paiement en especes</h2>
+      <h2 className="mb-3 text-sm font-semibold text-ink-900">Tarifs et paiement en espèces</h2>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-xs font-medium text-ink-500">
           Prix par photo ({currency})
@@ -269,7 +269,7 @@ function PricingEditor({ event, onSaved }: { event: Event; onSaved: (event: Even
           <input
             type="number"
             min={0}
-            placeholder="Desactive"
+            placeholder="Désactivé"
             value={printPrice}
             onChange={(e) => setPrintPrice(e.target.value)}
             className={`${inputClass} mt-1`}
@@ -361,7 +361,7 @@ function PricingEditor({ event, onSaved }: { event: Event; onSaved: (event: Even
           </button>
         </div>
         {discounts.length === 0 && (
-          <p className="text-xs text-ink-300">Aucune remise (ex : -15 % a partir de 20 photos).</p>
+          <p className="text-xs text-ink-300">Aucune remise (ex : -15 % à partir de 20 photos).</p>
         )}
         <div className="flex flex-col gap-2">
           {discounts.map((discount, i) => (
@@ -378,7 +378,7 @@ function PricingEditor({ event, onSaved }: { event: Event; onSaved: (event: Even
                 className={`${inputClass} !w-20`}
                 aria-label="Pourcentage de remise"
               />
-              <span>% a partir de</span>
+              <span>% à partir de</span>
               <input
                 type="number"
                 min={2}
@@ -414,7 +414,7 @@ function PricingEditor({ event, onSaved }: { event: Event; onSaved: (event: Even
           onChange={(e) => setCashEnabled(e.target.checked)}
           className="h-4 w-4 rounded border-ink-900/20 text-brand-accent focus:ring-brand-accent/40"
         />
-        Accepter le paiement en especes (borne uniquement)
+        Accepter le paiement en espèces (borne uniquement)
       </label>
       <div className="mt-3">
         <button
@@ -488,10 +488,10 @@ function ShareCard({ event }: { event: Event }) {
 
   return (
     <div className="glass mb-6 rounded-2xl p-5">
-      <h2 className="mb-1 text-sm font-semibold text-ink-900">Partager avec les invites</h2>
+      <h2 className="mb-1 text-sm font-semibold text-ink-900">Partager avec les invités</h2>
       <p className="mb-4 text-xs text-ink-500">
-        Imprimez ce QR code (affiche sur place, table, carton) ou envoyez le lien : chaque invite
-        retrouve ses photos sur son propre telephone.
+        Imprimez ce QR code (affiche sur place, table, carton) ou envoyez le lien : chaque invité
+        retrouve ses photos sur son propre téléphone.
       </p>
 
       {isLocalUrl && (
@@ -499,7 +499,7 @@ function ShareCard({ event }: { event: Event }) {
           <AlertIcon className="mt-0.5 shrink-0" />
           <p>
             L&apos;adresse publique de l&apos;application est encore <strong>{new URL(event.guest_url).origin}</strong> :
-            ce lien et ce QR ne fonctionneront pas sur le telephone des invites. Renseignez l&apos;URL
+            ce lien et ce QR ne fonctionneront pas sur le téléphone des invités. Renseignez l&apos;URL
             publique (tunnel ou nom de domaine) dans <code>APP_BASE_URL</code> du fichier <code>.env</code>,
             puis redemarrez le backend.
           </p>
@@ -510,13 +510,13 @@ function ShareCard({ event }: { event: Event }) {
         <div className="flex h-36 w-36 shrink-0 items-center justify-center rounded-xl bg-white p-2 shadow-soft">
           {guestQr ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={guestQr} alt="QR code du lien invite" className="h-full w-full" />
+            <img src={guestQr} alt="QR code du lien invité" className="h-full w-full" />
           ) : (
             <div className="skeleton h-full w-full rounded-lg" />
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="mb-1 text-xs font-medium text-ink-500">Lien invite</p>
+          <p className="mb-1 text-xs font-medium text-ink-500">Lien invité</p>
           <div className="mb-3 flex items-center gap-2">
             <code className="min-w-0 flex-1 truncate rounded-lg bg-surface-alt px-3 py-2 text-xs text-ink-900">
               {event.guest_url}
@@ -553,8 +553,8 @@ function ShareCard({ event }: { event: Event }) {
             </div>
             <div className="min-w-0 flex-1">
               <p className="mb-1 text-xs text-ink-500">
-                A ouvrir uniquement sur la borne (active especes, impression et apercus sans
-                filigrane) : ne le diffusez pas aux invites.
+                À ouvrir uniquement sur la borne (active espèces, impression et aperçus sans
+                filigrane) : ne le diffusez pas aux invités.
               </p>
               <div className="flex items-center gap-2">
                 <code className="min-w-0 flex-1 truncate rounded-lg bg-surface-alt px-3 py-2 text-xs text-ink-900">
@@ -602,7 +602,7 @@ function IndexingCard({
         <div>
           <h2 className="text-sm font-semibold text-ink-900">Reconnaissance faciale</h2>
           <p className="text-xs text-ink-500">
-            {summary.done}/{total} photo(s) analysee(s) &middot; {summary.faces} visage(s) detecte(s)
+            {summary.done}/{total} photo(s) analysée(s) &middot; {summary.faces} visage(s) détecté(s)
           </p>
         </div>
         {toRetry > 0 && (
@@ -618,7 +618,7 @@ function IndexingCard({
       </div>
       <div className="flex flex-wrap gap-2 text-xs">
         <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 font-semibold text-emerald-700">
-          {summary.done} analysee(s)
+          {summary.done} analysée(s)
         </span>
         {unfinished > 0 && (
           <span className="rounded-full bg-amber-100 px-2.5 py-0.5 font-semibold text-amber-700">
@@ -627,14 +627,14 @@ function IndexingCard({
         )}
         {summary.failed > 0 && (
           <span className="rounded-full bg-red-100 px-2.5 py-0.5 font-semibold text-red-700">
-            {summary.failed} en echec
+            {summary.failed} en échec
           </span>
         )}
       </div>
       {(unfinished > 0 || summary.failed > 0) && (
         <p className="mt-2 text-xs text-ink-500">
-          Une photo non analysee n&apos;apparait pas dans les resultats du scan facial ni dans
-          les personnes detectees.
+          Une photo non analysée n&apos;apparaît pas dans les résultats du scan facial ni dans
+          les personnes détectées.
         </p>
       )}
       {message && <p className="mt-2 text-xs text-ink-700">{message}</p>}
@@ -645,7 +645,7 @@ function IndexingCard({
 const STATUS_BADGES: Record<string, { label: string; className: string }> = {
   pending: { label: "En attente", className: "bg-amber-400/90 text-brand" },
   processing: { label: "Analyse...", className: "bg-amber-400/90 text-brand" },
-  failed: { label: "Echec", className: "bg-red-600/90 text-white" },
+  failed: { label: "Échec", className: "bg-red-600/90 text-white" },
 };
 
 function AdminEventDetailContent() {
@@ -677,7 +677,7 @@ function AdminEventDetailContent() {
       const [eventData] = await Promise.all([api.getEvent(eventId), loadPhotos(pageRef.current)]);
       setEvent(eventData);
     } catch {
-      setError("Impossible de charger l'evenement.");
+      setError("Impossible de charger l'événement.");
     }
   }, [eventId, loadPhotos]);
 
@@ -723,12 +723,12 @@ function AdminEventDetailContent() {
   }, [eventId, loadPhotos]);
 
   async function handleDelete() {
-    if (!confirm("Supprimer definitivement cet evenement, toutes ses photos et ses fichiers ?")) return;
+    if (!confirm("Supprimer définitivement cet événement, toutes ses photos et ses fichiers ?")) return;
     try {
       await api.deleteEvent(eventId);
       router.push("/admin/events");
     } catch (err) {
-      alert(errorText(err, "Impossible de supprimer cet evenement."));
+      alert(errorText(err, "Impossible de supprimer cet événement."));
     }
   }
 
@@ -740,7 +740,7 @@ function AdminEventDetailContent() {
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
 
   async function handleDeletePhoto(photo: Photo) {
-    if (!confirm(`Supprimer definitivement "${photo.original_filename}" ?`)) return;
+    if (!confirm(`Supprimer définitivement "${photo.original_filename}" ?`)) return;
     setDeletingPhotoId(photo.id);
     try {
       await api.deletePhoto(photo.id);
@@ -766,7 +766,7 @@ function AdminEventDetailContent() {
           onClick={() => router.push("/admin/events")}
           className="mb-4 text-sm font-medium text-ink-500 transition hover:text-brand"
         >
-          &larr; Retour aux evenements
+          &larr; Retour aux événements
         </button>
 
         <div className="glass mb-6 flex items-start justify-between rounded-2xl p-5">
@@ -794,7 +794,7 @@ function AdminEventDetailContent() {
             onClick={() => router.push(`/admin/events/${eventId}/clusters`)}
             className="btn-primary !px-4 !py-2.5 text-sm"
           >
-            Voir les personnes detectees
+            Voir les personnes détectées
           </button>
           <button
             type="button"
@@ -825,7 +825,7 @@ function AdminEventDetailContent() {
           <div className="glass mb-6 rounded-2xl p-5">
             <h2 className="mb-1 text-sm font-semibold text-ink-900">Dossier surveille</h2>
             <p className="mb-3 text-xs text-ink-500">
-              Deposez les photos (ex: depuis la carte SD de l&apos;appareil) dans ce dossier sur le
+              Déposez les photos (ex: depuis la carte SD de l&apos;appareil) dans ce dossier sur le
               PC : elles sont ajoutees automatiquement, sans passer par l&apos;upload manuel.
             </p>
             <code className="mb-3 block break-all rounded-lg bg-surface-alt px-3 py-2 text-xs text-ink-900">

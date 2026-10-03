@@ -35,7 +35,7 @@ function AccountContent() {
       return;
     }
     if (next === current) {
-      setError("Le nouveau mot de passe doit etre different de l'actuel.");
+      setError("Le nouveau mot de passe doit être différent de l'actuel.");
       return;
     }
     setSaving(true);
@@ -60,7 +60,7 @@ function AccountContent() {
           onClick={() => router.push("/admin/events")}
           className="mb-4 text-sm font-medium text-ink-500 transition hover:text-brand"
         >
-          &larr; Retour aux evenements
+          &larr; Retour aux événements
         </button>
 
         <div className="glass mb-6 rounded-2xl p-5">
@@ -110,7 +110,7 @@ function AccountContent() {
           {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
           {done && (
             <p className="mb-3 flex items-center gap-1.5 text-sm text-emerald-700">
-              <CheckIcon /> Mot de passe modifie.
+              <CheckIcon /> Mot de passe modifié.
             </p>
           )}
 

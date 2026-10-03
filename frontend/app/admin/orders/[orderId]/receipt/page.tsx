@@ -32,7 +32,7 @@ function ReceiptContent() {
         @media print { html, body { background: #fff !important; } }
       `}</style>
       <div className="flex items-center justify-between gap-3 p-4 print:hidden">
-        <p className="text-sm text-ink-500">Recu de la commande {order.id.slice(0, 8).toUpperCase()}</p>
+        <p className="text-sm text-ink-500">Reçu de la commande {order.id.slice(0, 8).toUpperCase()}</p>
         <button type="button" onClick={() => window.print()} className="btn-accent flex items-center gap-2 !px-5 !py-2.5 text-sm">
           <PrinterIcon /> Imprimer
         </button>
@@ -40,7 +40,7 @@ function ReceiptContent() {
       <main className="mx-auto max-w-[190mm] bg-white p-8 shadow-card print:p-0 print:shadow-none">
         <OrderReceipt order={order} />
         <p className="mt-6 text-center text-[10px] text-ink-300">
-          Document genere le {new Date().toLocaleString("fr-FR")} depuis l&apos;espace organisateur MYFACE.
+          Document généré le {new Date().toLocaleString("fr-FR")} depuis l&apos;espace organisateur MYFACE.
         </p>
       </main>
     </>

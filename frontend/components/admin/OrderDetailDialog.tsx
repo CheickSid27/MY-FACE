@@ -20,7 +20,7 @@ type Action = "approve" | "reject" | "cancel";
 const ACTION_CONFIRMATIONS: Record<Action, string> = {
   approve: "Valider cette commande ? Le client recevra ses photos (et un SMS).",
   reject: "Rejeter cette commande ? Le paiement annonce n'est pas arrive.",
-  cancel: "Annuler cette commande jamais payee ?",
+  cancel: "Annuler cette commande jamais payée ?",
 };
 
 const secondaryButton =
@@ -85,7 +85,7 @@ export default function OrderDetailDialog({ orderId, onClose, onChanged }: Order
   const canCancel = status === "pending" || status === "processing";
   // Libelle adapte : pour une commande que le client n'a pas declaree payee
   // (ou expiree), valider = l'organisateur a constate le paiement lui-meme.
-  const approveLabel = status === "awaiting_confirmation" ? "Confirmer le paiement" : "Valider quand meme (paiement recu)";
+  const approveLabel = status === "awaiting_confirmation" ? "Confirmer le paiement" : "Valider quand même (paiement reçu)";
 
   // Rendu dans <body> (portail) : ouvert depuis une carte "verre depoli"
   // (backdrop-filter), le dialogue en position fixe se retrouvait
@@ -151,7 +151,7 @@ export default function OrderDetailDialog({ orderId, onClose, onChanged }: Order
                 </button>
               )}
               <a href={`/admin/orders/${order.id}/receipt`} target="_blank" rel="noreferrer" className={secondaryButton}>
-                <PrinterIcon /> Imprimer le recu
+                <PrinterIcon /> Imprimer le reçu
               </a>
               {order.status === "success" && order.print_count > 0 && (
                 <a
@@ -165,7 +165,7 @@ export default function OrderDetailDialog({ orderId, onClose, onChanged }: Order
               )}
               {order.status === "success" && (
                 <a href={`/order/${order.id}/download`} target="_blank" rel="noreferrer" className={secondaryButton}>
-                  Page de telechargement du client
+                  Page de téléchargement du client
                 </a>
               )}
             </div>

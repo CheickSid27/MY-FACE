@@ -25,7 +25,7 @@ function ClustersContent() {
         setClusters(clusterData.clusters);
         setUnclusteredCount(clusterData.unclustered_count);
       })
-      .catch(() => setError("Impossible de charger les personnes detectees."))
+      .catch(() => setError("Impossible de charger les personnes détectées."))
       .finally(() => setLoading(false));
   }, [eventId]);
 
@@ -45,14 +45,14 @@ function ClustersContent() {
             onClick={() => router.push(`/admin/events/${eventId}`)}
             className="text-sm font-medium text-ink-500 transition hover:text-brand"
           >
-            &larr; Retour a l&apos;evenement
+            &larr; Retour à l&apos;événement
           </button>
         </div>
 
-        <h1 className="mb-1 text-xl font-bold text-ink-900">Personnes detectees</h1>
+        <h1 className="mb-1 text-xl font-bold text-ink-900">Personnes détectées</h1>
         <p className="mb-6 text-sm text-ink-500">
           Pre-groupage automatique par similarite de visage (DBSCAN). Ce ne sont pas des
-          identites verifiees.
+          identités vérifiées.
         </p>
 
         {loading && (
@@ -67,7 +67,7 @@ function ClustersContent() {
         {!loading && !error && (
           <>
             <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
-              {clusters.map((cluster) => (
+              {clusters.map((cluster, i) => (
                 <button
                   key={cluster.cluster_id}
                   type="button"
@@ -78,7 +78,7 @@ function ClustersContent() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={cluster.representative_face_url}
-                      alt={`Personne ${cluster.cluster_id}`}
+                      alt={`Personne ${i + 1}`}
                       className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                     <span className="absolute bottom-1.5 right-1.5 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur">
@@ -93,7 +93,7 @@ function ClustersContent() {
               <div className="card flex flex-col items-center gap-2 p-10 text-center text-ink-500">
                 <UsersIcon className="text-3xl" />
                 <p>
-                  Aucun groupe detecte pour le moment (indexation en cours ou pas assez de visages
+                  Aucun groupe détecté pour le moment (indexation en cours ou pas assez de visages
                   similaires).
                 </p>
               </div>
@@ -119,7 +119,7 @@ function ClustersContent() {
             >
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="font-semibold text-ink-900">
-                  Personne {selectedCluster.cluster_id}, {selectedCluster.photo_count} photo(s)
+                  Personne {clusters.indexOf(selectedCluster) + 1}, {selectedCluster.photo_count} photo{selectedCluster.photo_count > 1 ? "s" : ""}
                 </h2>
                 <button
                   type="button"

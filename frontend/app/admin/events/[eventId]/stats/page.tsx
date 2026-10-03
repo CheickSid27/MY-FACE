@@ -65,14 +65,14 @@ function StatsContent() {
           onClick={() => router.push(`/admin/events/${eventId}`)}
           className="mb-4 text-sm font-medium text-ink-500 transition hover:text-brand"
         >
-          &larr; Retour a l&apos;evenement
+          &larr; Retour à l&apos;événement
         </button>
 
         <h1 className="mb-6 text-xl font-bold text-ink-900">Statistiques</h1>
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <StatTile label="Photos" value={stats.photo_count} />
-          <StatTile label="Photos indexees" value={stats.photos_indexed} />
+          <StatTile label="Photos indexées" value={stats.photos_indexed} />
           <StatTile label="Photos vendues" value={stats.photos_sold} />
           <StatTile
             label="Revenu total"
@@ -81,11 +81,11 @@ function StatsContent() {
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <StatTile label="Commandes payees" value={stats.orders_success} />
+          <StatTile label="Commandes payées" value={stats.orders_success} />
           <StatTile label="A confirmer" value={stats.orders_awaiting_confirmation} />
           <StatTile label="En attente de paiement" value={stats.orders_pending + stats.orders_processing} />
           <StatTile label="Rejetees" value={stats.orders_failed} />
-          <StatTile label="Annulees / expirees" value={stats.orders_cancelled} />
+          <StatTile label="Annulées / expirées" value={stats.orders_cancelled} />
           <StatTile label="Photos en cours d'indexation" value={stats.photos_pending} />
         </div>
 

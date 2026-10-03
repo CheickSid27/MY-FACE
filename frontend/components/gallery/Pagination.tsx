@@ -34,7 +34,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange, disa
         type="button"
         disabled={disabled || currentPage === 1}
         onClick={() => onPageChange(currentPage - 1)}
-        aria-label="Page precedente"
+        aria-label="Page précédente"
         className="glass-pill flex h-9 w-9 items-center justify-center text-sm text-ink-700 transition hover:bg-brand/10 disabled:pointer-events-none disabled:opacity-30"
       >
         &larr;

@@ -10,7 +10,7 @@ export default function RootPage() {
       </h1>
       <p className="-mt-3 text-sm text-gray-400">Scanne. Retrouve. Repars avec.</p>
       <p className="max-w-md text-gray-300">
-        Cette application se consulte via le lien specifique a un evenement
+        Cette application se consulte via le lien spécifique à un événement
         (borne ou QR code), ou via l&apos;espace organisateur.
       </p>
       <Link

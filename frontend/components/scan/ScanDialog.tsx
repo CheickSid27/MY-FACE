@@ -113,13 +113,13 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
 
     if (typeof window !== "undefined" && !window.isSecureContext) {
       setError(
-        "L'acces a la camera necessite une connexion securisee (https://). Ouvrez ce lien en HTTPS, pas en http://."
+        "L'accès à la camera necessite une connexion sécurisée (https://). Ouvrez ce lien en HTTPS, pas en http://."
       );
       setStep("error");
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia) {
-      setError("Votre navigateur ne supporte pas l'acces a la camera. Essayez avec Chrome ou Safari a jour.");
+      setError("Votre navigateur ne supporte pas l'accès à la camera. Essayez avec Chrome ou Safari à jour.");
       setStep("error");
       return;
     }
@@ -132,14 +132,14 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
       const name = err instanceof DOMException ? err.name : "";
       if (name === "NotAllowedError" || name === "PermissionDeniedError") {
         setError(
-          "Acces a la camera refuse. Autorisez la camera pour ce site dans les reglages de votre navigateur, puis reessayez."
+          "Accès à la camera refuse. Autorisez la camera pour ce site dans les réglages de votre navigateur, puis réessayez."
         );
       } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-        setError("Aucune camera detectee sur cet appareil.");
+        setError("Aucune camera détectée sur cet appareil.");
       } else if (name === "NotReadableError") {
-        setError("La camera est deja utilisee par une autre application. Fermez-la et reessayez.");
+        setError("La camera est déjà utilisee par une autre application. Fermez-la et réessayez.");
       } else {
-        setError("Impossible d'acceder a la camera. Verifiez les autorisations de votre navigateur.");
+        setError("Impossible d'acceder à la camera. Vérifiez les autorisations de votre navigateur.");
       }
       setStep("error");
     }
@@ -155,7 +155,7 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
       // dimensions existent deja) donne une image noire/vide -> "aucun
       // visage detecte" alors qu'un visage est pourtant bien devant la
       // camera. On bloque plutot que d'echouer silencieusement.
-      setError("La camera n'est pas encore prete, patientez une seconde puis reessayez.");
+      setError("La camera n'est pas encore prete, patientez une seconde puis réessayez.");
       return;
     }
 
@@ -232,7 +232,7 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
           return next;
         });
         setCartCount((c) => Math.max(0, c - ids.length));
-        setError("Impossible de mettre a jour le panier, reessayez.");
+        setError("Impossible de mettre à jour le panier, réessayez.");
       }
     });
     return flushChainRef.current;
@@ -280,7 +280,7 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
       } catch {
         setSelectedIds((prev) => new Set(prev).add(photo.id));
         setCartCount((c) => c + 1);
-        setError("Impossible de mettre a jour le panier, reessayez.");
+        setError("Impossible de mettre à jour le panier, réessayez.");
       }
     })();
     pendingRemovesRef.current.push(removePromise);
@@ -330,13 +330,13 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
               <h2 className="text-xl font-bold">Scanner mon visage</h2>
             </div>
             <p className="text-sm leading-relaxed text-ink-300">
-              Pour retrouver vos photos, votre selfie est envoye de facon securisee a notre
-              serveur, qui le compare aux visages des photos de l&apos;evenement. Il n&apos;est
-              jamais enregistre : il est efface des la fin de la recherche.
+              Pour retrouver vos photos, votre selfie est envoyé de façon sécurisée a notre
+              serveur, qui le compare aux visages des photos de l&apos;événement. Il n&apos;est
+              jamais enregistré : il est effacé dès la fin de la recherche.
             </p>
             <p className="text-sm leading-relaxed text-ink-300">
               Ce scan est facultatif : vous pouvez aussi parcourir la galerie. Pour faire
-              retirer vos photos ou vos donnees, ecrivez a contact@myfaceci.online.
+              retirer vos photos ou vos données, écrivez a contact@myfaceci.online.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <button type="button" onClick={startCamera} className="btn-accent flex-1">
@@ -406,7 +406,7 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
             </div>
             <p>{error}</p>
             <button type="button" onClick={() => setStep("consent")} className="btn-accent">
-              Reessayer
+              Réessayer
             </button>
           </div>
         )}
@@ -415,13 +415,13 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
           <div className="flex flex-1 flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b border-ink-900/5 px-6 py-4">
               <h2 className="font-semibold">
-                {matches.length > 0 ? `${matches.length} photo(s) trouvee(s)` : "Aucune photo trouvee"}
+                {matches.length > 0 ? `${matches.length} photo${matches.length > 1 ? "s" : ""} trouvée${matches.length > 1 ? "s" : ""}` : "Aucune photo trouvée"}
               </h2>
             </div>
 
             {matches.length === 0 ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-4 p-10 text-center text-ink-500">
-                <p>Aucune photo ne correspond a ce visage pour le moment.</p>
+                <p>Aucune photo ne correspond à ce visage pour le moment.</p>
                 <button
                   type="button"
                   onClick={() => {
@@ -478,7 +478,7 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
                   onClick={goToCart}
                   className="btn-primary w-full justify-between px-5 disabled:opacity-70"
                 >
-                  <span>{cartCount} photo(s) selectionnee(s)</span>
+                  <span>{cartCount} photo{cartCount > 1 ? "s" : ""} sélectionnée{cartCount > 1 ? "s" : ""}</span>
                   <span className="text-brand-accent-light">
                     {goingToCart ? "Enregistrement..." : "Voir le panier →"}
                   </span>
@@ -491,7 +491,7 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
 
       {/* Clics de la visionneuse arretes ici : sinon fermer une photo
           remontait jusqu'au fond du dialogue et fermait tout le scan (les
-          resultats etaient perdus). */}
+          résultats etaient perdus). */}
       {lightboxIndex !== null && (
         <div onClick={(e) => e.stopPropagation()}>
           <PhotoLightbox

@@ -4,9 +4,9 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   pending: "En attente de paiement",
   processing: "En cours",
   awaiting_confirmation: "A confirmer",
-  success: "Payee",
+  success: "Payée",
   failed: "Rejetee",
-  cancelled: "Annulee / expiree",
+  cancelled: "Annulée / expirée",
 };
 
 export function orderStatusBadgeClass(status: OrderStatus): string {

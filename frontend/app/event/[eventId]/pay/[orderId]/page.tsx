@@ -45,7 +45,7 @@ export default function PaymentStatusPage() {
         stopPolling();
         return;
       }
-      setError("Connexion instable : nouvelle verification automatique dans quelques secondes...");
+      setError("Connexion instable : nouvelle vérification automatique dans quelques secondes...");
     }
   }, [orderId, router, stopPolling]);
 
@@ -67,7 +67,7 @@ export default function PaymentStatusPage() {
       setData(result);
       setError(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Impossible de confirmer votre paiement. Reessayez.");
+      setError(err instanceof ApiError ? err.message : "Impossible de confirmer votre paiement. Réessayez.");
       // Le statut a pu changer (ex: commande expiree) : on le relit.
       poll();
     } finally {
@@ -83,11 +83,11 @@ export default function PaymentStatusPage() {
         </div>
         <h1 className="text-xl font-bold">Commande introuvable</h1>
         <p className="max-w-sm text-sm text-ink-300">
-          Ce lien de paiement n&apos;existe pas ou est incomplet. Verifiez le lien, ou refaites
-          votre selection depuis la galerie.
+          Ce lien de paiement n&apos;existe pas ou est incomplet. Vérifiez le lien, ou refaites
+          votre sélection depuis la galerie.
         </p>
         <button type="button" onClick={() => router.push(`/event/${eventId}/gallery`)} className="btn-accent">
-          Retour a la galerie
+          Retour à la galerie
         </button>
       </main>
     );
@@ -108,10 +108,10 @@ export default function PaymentStatusPage() {
         <div className="glass-pill flex h-16 w-16 items-center justify-center text-3xl">
           <CrossIcon />
         </div>
-        <h1 className="text-xl font-bold">Paiement non confirme</h1>
+        <h1 className="text-xl font-bold">Paiement non confirmé</h1>
         <p className="max-w-sm text-ink-300">
-          L&apos;organisateur n&apos;a pas pu verifier la reception de ce paiement. Si vous avez
-          bien paye, rapprochez-vous de l&apos;organisateur avec votre numero de telephone.
+          L&apos;organisateur n&apos;a pas pu vérifier la réception de ce paiement. Si vous avez
+          bien payé, rapprochez-vous de l&apos;organisateur avec votre numéro de téléphone.
         </p>
         <button type="button" onClick={() => router.push(`/event/${eventId}/cart`)} className="btn-accent">
           Retour au panier
@@ -126,10 +126,10 @@ export default function PaymentStatusPage() {
         <div className="glass-pill flex h-16 w-16 items-center justify-center text-3xl">
           <ClockIcon />
         </div>
-        <h1 className="text-xl font-bold">Commande expiree</h1>
+        <h1 className="text-xl font-bold">Commande expirée</h1>
         <p className="max-w-sm text-ink-300">
-          Cette commande n&apos;a pas ete payee a temps et a ete annulee. Si vous avez deja paye,
-          rapprochez-vous de l&apos;organisateur avec votre numero de telephone : il peut la
+          Cette commande n&apos;a pas été payée à temps et a été annulée. Si vous avez déjà payé,
+          rapprochez-vous de l&apos;organisateur avec votre numéro de téléphone : il peut la
           valider. Sinon, vous pouvez repasser commande depuis votre panier.
         </p>
         <button type="button" onClick={() => router.push(`/event/${eventId}/cart`)} className="btn-accent">
@@ -161,7 +161,7 @@ export default function PaymentStatusPage() {
 
         {data.merchant_phone && (
           <p className="text-sm text-ink-300">
-            Numero marchand : <span className="font-semibold text-white">{data.merchant_phone}</span>
+            Numéro marchand : <span className="font-semibold text-white">{data.merchant_phone}</span>
           </p>
         )}
 
@@ -173,10 +173,10 @@ export default function PaymentStatusPage() {
           onClick={handleMarkPaid}
           className="btn-accent w-full max-w-xs"
         >
-          {markingPaid ? "Confirmation..." : "J'ai paye"}
+          {markingPaid ? "Confirmation..." : "J'ai payé"}
         </button>
         <p className="max-w-sm text-xs text-ink-300">
-          Apres verification par l&apos;organisateur, vous recevrez vos photos par SMS et sur cette
+          Après vérification par l&apos;organisateur, vous recevrez vos photos par SMS et sur cette
           page.
         </p>
       </main>
@@ -197,7 +197,7 @@ export default function PaymentStatusPage() {
             Rendez-vous au comptoir avec {data.total_amount.toLocaleString("fr-FR")} {data.currency}
           </h1>
           <p className="max-w-sm text-sm text-ink-300">
-            Un membre de l&apos;equipe va recevoir votre paiement en especes et valider votre
+            Un membre de l&apos;équipe va recevoir votre paiement en espèces et valider votre
             commande. Ne fermez pas cette page : vous serez redirige automatiquement des
             confirmation.
           </p>
@@ -212,9 +212,9 @@ export default function PaymentStatusPage() {
           <span className="absolute inset-0 rounded-full border-2 border-brand-accent animate-pulse-ring" />
           <ClockIcon className="text-2xl" />
         </div>
-        <h1 className="text-xl font-bold">Paiement en cours de verification...</h1>
+        <h1 className="text-xl font-bold">Paiement en cours de vérification...</h1>
         <p className="max-w-sm text-sm text-ink-300">
-          L&apos;organisateur verifie la reception de votre paiement. Ne fermez pas cette page :
+          L&apos;organisateur vérifie la réception de votre paiement. Ne fermez pas cette page :
           vous serez redirige automatiquement des confirmation.
         </p>
         {error && <p className="text-sm text-red-200">{error}</p>}
@@ -230,7 +230,7 @@ export default function PaymentStatusPage() {
       </div>
       <h1 className="text-xl font-bold">En attente de confirmation du paiement...</h1>
       <p className="max-w-sm text-sm text-ink-300">
-        Ne fermez pas cette page. Vous recevrez un SMS avec votre lien de telechargement des la
+        Ne fermez pas cette page. Vous recevrez un SMS avec votre lien de téléchargement des la
         confirmation.
       </p>
       {error && <p className="text-sm text-red-200">{error}</p>}

@@ -39,7 +39,7 @@ function MethodCard({
 
   async function handleSave() {
     if (!phone.trim()) {
-      setError("Numero requis.");
+      setError("Numéro requis.");
       return;
     }
     // A la creation, le QR est obligatoire ; en modification, le QR deja
@@ -63,7 +63,7 @@ function MethodCard({
   }
 
   async function handleDelete() {
-    if (!confirm(`Retirer ${label} des moyens de paiement de cet evenement ?`)) return;
+    if (!confirm(`Retirer ${label} des moyens de paiement de cet événement ?`)) return;
     await api.deletePaymentMethod(eventId, method);
     onSaved();
   }
@@ -85,7 +85,7 @@ function MethodCard({
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={configured.qr_image_url} alt={`QR ${label}`} className="h-16 w-16 rounded-lg object-cover" />
-          <div className="flex-1 text-sm text-ink-500">Numero : {configured.phone_number}</div>
+          <div className="flex-1 text-sm text-ink-500">Numéro : {configured.phone_number}</div>
           <button type="button" onClick={() => setEditing(true)} className="text-xs font-semibold text-brand hover:underline">
             Modifier
           </button>
@@ -97,7 +97,7 @@ function MethodCard({
         <div className="flex flex-col gap-2.5">
           <input
             type="tel"
-            placeholder={`Numero ${label}`}
+            placeholder={`Numéro ${label}`}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             className="rounded-lg border border-ink-900/10 bg-white/70 px-3 py-2 text-sm outline-none focus:border-brand-accent"
@@ -249,7 +249,7 @@ function OrdersToHandle({ eventId }: { eventId: string }) {
   return (
     <>
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-500">
-        Commandes a confirmer ({toConfirm.length})
+        Commandes à confirmer ({toConfirm.length})
       </h2>
       {toConfirm.length === 0 ? (
         <div className="glass mb-8 rounded-2xl p-5 text-sm text-ink-500">
@@ -273,9 +273,9 @@ function OrdersToHandle({ eventId }: { eventId: string }) {
         En attente de paiement ({awaitingPayment.length})
       </h2>
       <p className="mb-3 text-xs text-ink-500">
-        Le client n&apos;a pas encore declare avoir paye. Ces commandes sont annulees
-        automatiquement si elles ne sont pas payees a temps (1 h par defaut) ; ouvrez-en une
-        pour l&apos;annuler tout de suite ou la valider si vous avez recu le paiement.
+        Le client n&apos;a pas encore déclare avoir payé. Ces commandes sont annulées
+        automatiquement si elles ne sont pas payées à temps (1 h par défaut) ; ouvrez-en une
+        pour l&apos;annuler tout de suite ou la valider si vous avez reçu le paiement.
       </p>
       {awaitingPayment.length === 0 ? (
         <div className="glass mb-8 rounded-2xl p-5 text-sm text-ink-500">Aucune commande en attente de paiement.</div>
@@ -288,11 +288,11 @@ function OrdersToHandle({ eventId }: { eventId: string }) {
       )}
 
       <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-ink-500">
-        <PrinterIcon /> Tirages a imprimer ({toPrint.length})
+        <PrinterIcon /> Tirages à imprimer ({toPrint.length})
       </h2>
       <p className="mb-3 text-xs text-ink-500">
-        Commandes payees avec des tirages papier pas encore imprimes. Normalement imprimees a la
-        borne juste apres le paiement ; sinon, imprimez-les d&apos;ici depuis un poste relie a
+        Commandes payées avec des tirages papier pas encore imprimés. Normalement imprimées à la
+        borne juste après le paiement ; sinon, imprimez-les d&apos;ici depuis un poste relié à
         l&apos;imprimante.
       </p>
       {toPrint.length === 0 ? (
@@ -316,7 +316,7 @@ function OrdersToHandle({ eventId }: { eventId: string }) {
                   onClick={() => setOpenOrderId(order.id)}
                   className="rounded-lg border border-ink-900/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 transition hover:bg-surface-alt"
                 >
-                  Recu
+                  Reçu
                 </button>
                 <a
                   href={`/order/${order.id}/print`}
@@ -375,15 +375,15 @@ function PaymentsContent() {
             onClick={() => router.push(`/admin/events/${eventId}`)}
             className="text-sm font-medium text-ink-500 transition hover:text-brand"
           >
-            &larr; Retour a l&apos;evenement
+            &larr; Retour à l&apos;événement
           </button>
         </div>
 
         <h1 className="mb-1 text-xl font-bold text-ink-900">Paiements</h1>
         <p className="mb-6 text-sm text-ink-500">
-          Aucun operateur mobile money n&apos;est branche via API pour le moment. Configurez ici le
-          QR code marchand et le numero de chaque moyen de paiement que vous acceptez : le client
-          scanne, paie hors-app, puis vous confirmez manuellement ci-dessous apres verification.
+          Aucun opérateur mobile money n&apos;est branche via API pour le moment. Configurez ici le
+          QR code marchand et le numéro de chaque moyen de paiement que vous acceptez : le client
+          scanne, paie hors-app, puis vous confirmez manuellement ci-dessous après vérification.
         </p>
 
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-500">

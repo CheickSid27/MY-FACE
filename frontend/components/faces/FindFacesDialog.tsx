@@ -41,7 +41,7 @@ export default function FindFacesDialog({
     api
       .getClustersPublic(eventId, getKioskToken(eventId))
       .then((clusterData) => setClusters(clusterData.clusters))
-      .catch(() => setError("Impossible de charger les visages detectes."))
+      .catch(() => setError("Impossible de charger les visages détectés."))
       .finally(() => setLoading(false));
   }, [open, eventId]);
 
@@ -74,7 +74,7 @@ export default function FindFacesDialog({
         <div className="border-b border-ink-900/5 px-6 py-5">
           <h2 className="text-lg font-bold text-ink-900">Trouver mon visage</h2>
           <p className="mt-1 text-sm text-ink-500">
-            Voici les visages detectes sur les photos de l&apos;evenement, regroupes par
+            Voici les visages détectés sur les photos de l&apos;événement, regroupés par
             ressemblance. Cliquez sur celui qui vous correspond.
           </p>
         </div>
@@ -92,13 +92,13 @@ export default function FindFacesDialog({
           {!loading && !error && clusters.length === 0 && (
             <div className="flex flex-col items-center gap-2 py-10 text-center text-ink-500">
               <UsersIcon className="text-3xl" />
-              <p>Aucun visage detecte pour le moment.</p>
+              <p>Aucun visage détecté pour le moment.</p>
             </div>
           )}
 
           {!loading && !error && clusters.length > 0 && (
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-              {clusters.map((cluster) => (
+              {clusters.map((cluster, i) => (
                 <button
                   key={cluster.cluster_id}
                   type="button"
@@ -108,7 +108,7 @@ export default function FindFacesDialog({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={cluster.representative_face_url}
-                    alt={`Personne ${cluster.cluster_id}`}
+                    alt={`Personne ${i + 1}`}
                     className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                   <span className="absolute bottom-1.5 right-1.5 glass-pill px-2 py-0.5 text-[10px] font-semibold text-white">
@@ -128,6 +128,7 @@ export default function FindFacesDialog({
         <div onClick={(e) => e.stopPropagation()}>
           <ClusterLightbox
             cluster={selectedCluster}
+            numero={clusters.indexOf(selectedCluster) + 1}
             photos={clusterPhotos}
             onClose={() => setSelectedCluster(null)}
             selectedPhotoIds={selectedPhotoIds}
@@ -143,6 +144,7 @@ export default function FindFacesDialog({
 
 function ClusterLightbox({
   cluster,
+  numero,
   photos,
   onClose,
   selectedPhotoIds,
@@ -151,6 +153,8 @@ function ClusterLightbox({
   addingPhotoId,
 }: {
   cluster: FaceCluster;
+  // numero d'affichage, a partir de 1 (cluster_id commence a 0 et peut sauter)
+  numero: number;
   photos: Photo[];
   onClose: () => void;
   selectedPhotoIds: Set<string>;
@@ -173,7 +177,7 @@ function ClusterLightbox({
         >
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="font-semibold text-ink-900">
-              Personne {cluster.cluster_id}, {cluster.photo_count} photo(s)
+              Personne {numero}, {cluster.photo_count} photo{cluster.photo_count > 1 ? "s" : ""}
             </h3>
             <button
               type="button"
@@ -189,7 +193,7 @@ function ClusterLightbox({
             onClick={() => onBulkSelect(photos)}
             className="btn-accent mb-4 w-full !py-2.5 text-sm disabled:cursor-default disabled:opacity-60"
           >
-            {allSelected ? "Toutes ces photos sont dans le panier" : `Tout selectionner (${photos.length})`}
+            {allSelected ? "Toutes ces photos sont dans le panier" : `Tout sélectionner (${photos.length})`}
           </button>
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
             {photos.map((photo, i) => {
@@ -197,10 +201,10 @@ function ClusterLightbox({
               return (
                 <div key={photo.id} className="group relative aspect-square overflow-hidden rounded-lg">
                   {/* Bouton pleine vignette = ouvrir la visionneuse. Bouton
-                      distinct en coin = selectionner/deselectionner sans
+                      distinct en coin = sélectionner/deselectionner sans
                       quitter la grille (stopPropagation pour ne pas aussi
                       ouvrir la visionneuse), l'un remplacait l'autre avant
-                      ce correctif, rendant la selection individuelle
+                      ce correctif, rendant la sélection individuelle
                       impossible depuis cette vue. */}
                   <button type="button" onClick={() => setIndex(i)} className="block h-full w-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}

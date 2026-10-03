@@ -28,10 +28,10 @@ export default function OrderReceipt({ order }: { order: OrderDetail }) {
         <div className="flex items-start gap-3">
           <MyfaceLogo size={38} />
           <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-brand-accent">MYFACE &middot; Recu de commande</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-brand-accent">MYFACE &middot; Reçu de commande</p>
           <h2 className="mt-1 text-lg font-bold">{order.event_name}</h2>
           <p className="text-xs text-ink-500">
-            Evenement du {new Date(order.event_date).toLocaleDateString("fr-FR")}
+            Événement du {new Date(order.event_date).toLocaleDateString("fr-FR")}
           </p>
           </div>
         </div>
@@ -58,7 +58,7 @@ export default function OrderReceipt({ order }: { order: OrderDetail }) {
           <dd className="font-medium">{METHOD_LABELS[order.payment_method] ?? order.payment_method}</dd>
         </div>
         <div>
-          <dt className="text-xs text-ink-500">Reference</dt>
+          <dt className="text-xs text-ink-500">Référence</dt>
           <dd className="break-all font-mono text-xs">{order.payment_reference ?? "-"}</dd>
         </div>
       </dl>
@@ -124,7 +124,7 @@ export default function OrderReceipt({ order }: { order: OrderDetail }) {
           </div>
         )}
         <div className="flex justify-between border-t border-ink-900/10 pt-1 text-base font-bold">
-          <span>{paid ? "Total paye" : "Total"}</span>
+          <span>{paid ? "Total payé" : "Total"}</span>
           <span>{money(order.total_amount, order.currency)}</span>
         </div>
       </div>
@@ -133,10 +133,10 @@ export default function OrderReceipt({ order }: { order: OrderDetail }) {
         <p className="mb-4 flex items-center gap-1.5 text-sm">
           <PrinterIcon />
           {order.printed_at ? (
-            <span>Tirages imprimes le {new Date(order.printed_at).toLocaleString("fr-FR")}</span>
+            <span>Tirages imprimés le {new Date(order.printed_at).toLocaleString("fr-FR")}</span>
           ) : (
             <span className="font-semibold text-amber-700">
-              {paid ? "Tirages a imprimer" : "Tirages a imprimer apres paiement"}
+              {paid ? "Tirages à imprimer" : "Tirages à imprimer après paiement"}
             </span>
           )}
         </p>
@@ -147,14 +147,14 @@ export default function OrderReceipt({ order }: { order: OrderDetail }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`${API_URL}/download/${order.id}/qr.png`}
-            alt="QR code de telechargement du client"
+            alt="QR code de téléchargement du client"
             className="h-24 w-24 shrink-0 rounded bg-white"
           />
           <div className="min-w-0 text-xs">
-            <p className="font-semibold text-ink-900">Telechargement du client (permanent)</p>
+            <p className="font-semibold text-ink-900">Téléchargement du client (permanent)</p>
             <p className="break-all text-ink-500">{order.download_url}</p>
             <p className="mt-1 text-ink-500">
-              Le client peut scanner ce QR code pour recuperer ses photos a tout moment.
+              Le client peut scanner ce QR code pour récupérer ses photos à tout moment.
             </p>
           </div>
         </div>

@@ -54,7 +54,7 @@ export default function BatchUploader({ eventId, onUploaded }: BatchUploaderProp
         chunk.forEach((file) =>
           allErrors.push({
             filename: file.name,
-            error: err instanceof Error ? err.message : "Echec de l'upload",
+            error: err instanceof Error ? err.message : "Échec de l'upload",
           })
         );
       }
@@ -104,7 +104,7 @@ export default function BatchUploader({ eventId, onUploaded }: BatchUploaderProp
       >
         <ImageIcon className="text-2xl text-ink-500" />
         <p className="text-sm font-semibold text-ink-900">
-          {dragOver ? "Deposez les photos ici" : "Glissez-deposez vos photos ici"}
+          {dragOver ? "Déposez les photos ici" : "Glissez-déposez vos photos ici"}
         </p>
         <p className="text-xs text-ink-500">ou cliquez pour les choisir &middot; JPEG, PNG, WebP &middot; 25 Mo max par photo</p>
       </div>
