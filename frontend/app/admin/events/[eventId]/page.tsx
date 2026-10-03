@@ -168,9 +168,11 @@ function PricingEditor({ event, onSaved }: { event: Event; onSaved: (event: Even
     percent: String(d.percent),
   }));
   const initialPrint = event.pricing.print_unit_price != null ? String(event.pricing.print_unit_price) : "";
+  const initialBundle = event.pricing.print_bundle_price != null ? String(event.pricing.print_bundle_price) : "";
 
   const [unitPrice, setUnitPrice] = useState(String(event.pricing.unit_price));
   const [printPrice, setPrintPrice] = useState(initialPrint);
+  const [bundlePrice, setBundlePrice] = useState(initialBundle);
   const [cashEnabled, setCashEnabled] = useState(event.cash_enabled);
   const [packs, setPacks] = useState<PackRow[]>(initialPacks);
   const [discounts, setDiscounts] = useState<DiscountRow[]>(initialDiscounts);
@@ -180,6 +182,7 @@ function PricingEditor({ event, onSaved }: { event: Event; onSaved: (event: Even
   const dirty =
     unitPrice !== String(event.pricing.unit_price) ||
     printPrice !== initialPrint ||
+    bundlePrice !== initialBundle ||
     cashEnabled !== event.cash_enabled ||
     JSON.stringify(packs) !== JSON.stringify(initialPacks) ||
     JSON.stringify(discounts) !== JSON.stringify(initialDiscounts);
@@ -192,6 +195,9 @@ function PricingEditor({ event, onSaved }: { event: Event; onSaved: (event: Even
     if (!Number.isFinite(unit) || unit <= 0) return "Le prix par photo doit etre superieur a 0.";
     if (printPrice.trim() && (!Number.isFinite(Number(printPrice)) || Number(printPrice) < 0)) {
       return "Le prix d'impression est invalide.";
+    }
+    if (bundlePrice.trim() && (!Number.isFinite(Number(bundlePrice)) || Number(bundlePrice) < 0)) {
+      return "Le prix photo + tirage est invalide.";
     }
     for (const p of packs) {
       const count = Number(p.count);
@@ -230,6 +236,7 @@ function PricingEditor({ event, onSaved }: { event: Event; onSaved: (event: Even
           unit_price: unit,
           currency,
           print_unit_price: printPrice.trim() ? Number(printPrice) : null,
+          print_bundle_price: bundlePrice.trim() ? Number(bundlePrice) : null,
           packs: packs.map((p) => ({ count: Number(p.count), price: Number(p.price) })),
           discounts: discounts.map((d) => ({ min_quantity: Number(d.min_quantity), percent: Number(d.percent) })),
         },
@@ -268,10 +275,22 @@ function PricingEditor({ event, onSaved }: { event: Event; onSaved: (event: Even
             className={`${inputClass} mt-1`}
           />
         </label>
+        <label className="text-xs font-medium text-ink-500">
+          Prix photo + tirage, à la borne ({currency})
+          <input
+            type="number"
+            min={0}
+            placeholder="Ex : 700"
+            value={bundlePrice}
+            onChange={(e) => setBundlePrice(e.target.value)}
+            className={`${inputClass} mt-1`}
+          />
+        </label>
       </div>
       <p className="mt-1 text-xs text-ink-300">
-        Laissez le prix d&apos;impression vide pour ne jamais proposer l&apos;impression papier sur
-        la borne.
+        Laissez les deux prix d&apos;impression vides pour ne jamais proposer le tirage papier sur
+        la borne. Le prix photo + tirage remplace le prix photo + impression pour chaque photo
+        imprimée ; ces photos ne comptent pas dans les lots ni dans les remises.
       </p>
 
       <div className="mt-5">

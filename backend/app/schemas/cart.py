@@ -39,6 +39,7 @@ class PricingBreakdownRead(BaseModel):
     print_total: float
     total: float
     currency: str
+    bundle: bool = False
 
 
 class CartRead(BaseModel):

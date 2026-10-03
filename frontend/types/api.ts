@@ -29,6 +29,7 @@ export interface PricingConfig {
   packs: PricingPack[];
   discounts: PricingDiscount[];
   print_unit_price: number | null;
+  print_bundle_price?: number | null;
 }
 
 export interface Event {
@@ -142,6 +143,7 @@ export interface PricingBreakdown {
   print_total: number;
   total: number;
   currency: string;
+  bundle?: boolean;
 }
 
 export interface CartItemRead {

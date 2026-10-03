@@ -27,7 +27,7 @@ from app.models.user import User
 from app.routers.payments import _apply_webhook_result
 from app.schemas.geniuspay import GeniusPayInitRequest, GeniusPayInitResponse
 from app.services import geniuspay
-from app.services.pricing import calculate_total
+from app.services.pricing import calculate_total, item_prices
 
 router = APIRouter(prefix="/payments/geniuspay", tags=["geniuspay"])
 
@@ -55,7 +55,6 @@ async def init_geniuspay_payment(
     event = await db.get(Event, cart.event_id)
     print_count = sum(1 for item in cart.items if item.print_requested)
     breakdown = calculate_total(event.pricing, len(cart.items), print_count)
-    print_unit_price = float(event.pricing.get("print_unit_price") or 0)
 
     order = Order(
         event_id=cart.event_id,
@@ -68,15 +67,15 @@ async def init_geniuspay_payment(
     db.add(order)
     await db.flush()
 
-    unit_price = float(event.pricing["unit_price"])
     for item in cart.items:
+        unit_price, print_price = item_prices(event.pricing, item.print_requested)
         db.add(
             OrderItem(
                 order_id=order.id,
                 photo_id=item.photo_id,
                 unit_price=unit_price,
                 print_requested=item.print_requested,
-                print_price=print_unit_price if item.print_requested else None,
+                print_price=print_price,
             )
         )
 

@@ -82,3 +82,53 @@ def test_best_discount_tier_used():
     }
     result = calculate_total(pricing, 25)
     assert result.discount_percent == 15
+
+
+# --- prix combine photo + tirage (borne) -----------------------------------
+DEMO = {
+    "unit_price": 450,
+    "currency": "XOF",
+    "packs": [{"count": 5, "price": 2000}],
+    "discounts": [{"min_quantity": 10, "percent": 10}],
+    "print_unit_price": 500,
+    "print_bundle_price": 700,
+}
+
+
+def test_bundle_price_replaces_photo_plus_print():
+    result = calculate_total(DEMO, 1, 1)
+    assert result.total == 700
+    assert result.subtotal == 0
+    assert result.bundle is True
+
+
+def test_bundle_photos_left_out_of_packs_and_discounts():
+    # 10 photos dont 3 imprimees : 7 numeriques seules (1 lot de 5 + 2 a 450,
+    # sous le seuil de 10 donc sans remise) + 3 x 700
+    result = calculate_total(DEMO, 10, 3)
+    assert result.subtotal == 2900
+    assert result.discount_percent == 0
+    assert result.print_total == 2100
+    assert result.total == 5000
+
+
+def test_discount_still_applies_to_digital_only_photos():
+    # 12 photos dont 2 imprimees : 10 numeriques (2 lots = 4000, -10 %) + 2 x 700
+    result = calculate_total(DEMO, 12, 2)
+    assert result.subtotal == 4000
+    assert result.discount_amount == 400
+    assert result.total == 3600 + 1400
+
+
+def test_without_bundle_print_stays_a_supplement():
+    pricing = {k: v for k, v in DEMO.items() if k != "print_bundle_price"}
+    result = calculate_total(pricing, 1, 1)
+    assert result.total == 950
+    assert result.bundle is False
+
+
+def test_item_prices_split_bundle():
+    from app.services.pricing import item_prices
+
+    assert item_prices(DEMO, True) == (450.0, 250.0)
+    assert item_prices(DEMO, False) == (450.0, None)

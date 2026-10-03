@@ -49,6 +49,7 @@ export interface PricingPayload {
   packs?: PricingPack[];
   discounts?: PricingDiscount[];
   print_unit_price?: number | null;
+  print_bundle_price?: number | null;
 }
 
 async function refreshAccessToken(): Promise<string | null> {

@@ -29,6 +29,11 @@ class PricingConfig(BaseModel):
     # photo dans le panier. None/0 = impression non proposee pour cet
     # evenement. Pas de remise de volume dessus pour l'instant.
     print_unit_price: float | None = Field(default=None, ge=0)
+    # Prix « photo + tirage » a la borne : une photo achetee en numerique ET
+    # imprimee coute ce prix tout compris (ex : 700 au lieu de 450 + 500).
+    # Ces photos ne comptent pas dans les lots ni dans les remises. None/0 =
+    # pas de prix combine (on retombe sur prix photo + print_unit_price).
+    print_bundle_price: float | None = Field(default=None, ge=0)
 
     @field_validator("packs")
     @classmethod

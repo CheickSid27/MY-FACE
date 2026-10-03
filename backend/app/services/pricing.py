@@ -6,7 +6,13 @@ Format attendu :
   "currency": "XOF",
   "packs": [{"count": 10, "price": 8000}, ...],   # bundles a prix fixe
   "discounts": [{"min_quantity": 20, "percent": 15}, ...]  # remise degressive
+  "print_unit_price": 500,     # tirage papier en plus de la photo (borne)
+  "print_bundle_price": 700,   # photo + tirage tout compris (borne)
 }
+
+Prix combine (`print_bundle_price`) : chaque photo imprimee coute ce prix,
+numerique compris, et sort du calcul des lots et des remises, qui ne portent
+que sur les photos seulement numeriques.
 
 Algorithme : on applique greedily les packs les plus grands en premier sur le
 nombre de photos, le reste au prix unitaire, puis on applique la meilleure
@@ -26,6 +32,8 @@ class PricingBreakdown:
     print_total: float
     total: float
     currency: str
+    # True quand les photos imprimees sont au prix combine (photo + tirage)
+    bundle: bool = False
 
 
 def calculate_total(pricing: dict, photo_count: int, print_count: int = 0) -> PricingBreakdown:
@@ -38,6 +46,11 @@ def calculate_total(pricing: dict, photo_count: int, print_count: int = 0) -> Pr
     if photo_count <= 0:
         return PricingBreakdown(0, 0.0, 0.0, 0.0, 0, 0.0, 0.0, currency)
 
+    bundle_price = float(pricing.get("print_bundle_price") or 0)
+    bundle = bundle_price > 0 and print_count > 0
+    # avec le prix combine, lots et remises ne portent que sur le numerique seul
+    digital_count = photo_count - print_count if bundle else photo_count
+
     unit_price = float(pricing["unit_price"])
     packs = sorted(
         (p for p in pricing.get("packs", []) if int(p.get("count", 0)) > 0),
@@ -45,7 +58,7 @@ def calculate_total(pricing: dict, photo_count: int, print_count: int = 0) -> Pr
         reverse=True,
     )
 
-    remaining = photo_count
+    remaining = digital_count
     subtotal = 0.0
     for pack in packs:
         count = int(pack["count"])
@@ -58,13 +71,13 @@ def calculate_total(pricing: dict, photo_count: int, print_count: int = 0) -> Pr
 
     discounts = pricing.get("discounts", [])
     applicable_percents = [
-        float(d.get("percent", 0)) for d in discounts if photo_count >= int(d.get("min_quantity", 0))
+        float(d.get("percent", 0)) for d in discounts if digital_count >= int(d.get("min_quantity", 0))
     ]
     discount_percent = max(applicable_percents, default=0.0)
     discount_amount = subtotal * discount_percent / 100
 
     print_unit_price = float(pricing.get("print_unit_price") or 0)
-    print_total = round(print_count * print_unit_price, 2)
+    print_total = round(print_count * (bundle_price if bundle else print_unit_price), 2)
 
     total = round(subtotal - discount_amount + print_total, 2)
 
@@ -77,4 +90,18 @@ def calculate_total(pricing: dict, photo_count: int, print_count: int = 0) -> Pr
         print_total=print_total,
         total=total,
         currency=currency,
+        bundle=bundle,
     )
+
+
+def item_prices(pricing: dict, print_requested: bool) -> tuple[float, float | None]:
+    """(prix photo, prix tirage) figes dans une ligne de commande. Au prix
+    combine, le tirage vaut la difference (700 - 450 = 250) : le recu et les
+    totaux d'impression de l'admin restent justes."""
+    unit_price = float(pricing["unit_price"])
+    if not print_requested:
+        return unit_price, None
+    bundle_price = float(pricing.get("print_bundle_price") or 0)
+    if bundle_price > 0:
+        return unit_price, round(max(0.0, bundle_price - unit_price), 2)
+    return unit_price, float(pricing.get("print_unit_price") or 0)

@@ -21,7 +21,7 @@ from app.schemas.payment import (
 from app.services.access import is_kiosk_request
 from app.services.orders import expire_order_if_stale, set_order_status
 from app.services.payments import PaymentProvider, get_payment_provider
-from app.services.pricing import calculate_total
+from app.services.pricing import calculate_total, item_prices
 from app.services.push_notifications import send_push_to_user
 from app.services.storage import StorageService, get_storage_service
 
@@ -50,8 +50,6 @@ def _create_order_from_cart(
     jamais une commande deja passee). Ajoutee a la session, non commitee."""
     print_count = sum(1 for item in cart.items if item.print_requested)
     breakdown = calculate_total(event.pricing, len(cart.items), print_count)
-    unit_price = float(event.pricing["unit_price"])
-    print_unit_price = float(event.pricing.get("print_unit_price") or 0)
 
     order = Order(
         event_id=cart.event_id,
@@ -65,9 +63,9 @@ def _create_order_from_cart(
     order.items = [
         OrderItem(
             photo_id=item.photo_id,
-            unit_price=unit_price,
+            unit_price=item_prices(event.pricing, item.print_requested)[0],
             print_requested=item.print_requested,
-            print_price=print_unit_price if item.print_requested else None,
+            print_price=item_prices(event.pricing, item.print_requested)[1],
         )
         for item in cart.items
     ]

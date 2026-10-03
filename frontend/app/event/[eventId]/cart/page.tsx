@@ -37,6 +37,8 @@ export default function CartPage() {
   // jamais propose sur le telephone personnel d'un invite. Voir lib/kiosk.ts.
   const [kiosk, setKiosk] = useState(false);
   const [printUnitPrice, setPrintUnitPrice] = useState<number | null>(null);
+  // Prix « photo + tirage » tout compris (borne), hors lots et remises.
+  const [bundlePrice, setBundlePrice] = useState<number | null>(null);
   const [cashEnabled, setCashEnabled] = useState(false);
 
   const loadCart = useCallback(async () => {
@@ -75,6 +77,7 @@ export default function CartPage() {
       .then(([methods, event]) => {
         setPaymentMethods(methods);
         setPrintUnitPrice(event.pricing.print_unit_price ?? null);
+        setBundlePrice(event.pricing.print_bundle_price ?? null);
         setCashEnabled(event.cash_enabled);
         if (methods.length === 1) setSelectedMethod(methods[0].method);
         setMethodsState("ready");
@@ -111,6 +114,9 @@ export default function CartPage() {
   }
 
   const showCashOption = kiosk && cashEnabled;
+  const hasBundle = bundlePrice != null && bundlePrice > 0;
+  const printOffered = hasBundle || (printUnitPrice != null && printUnitPrice > 0);
+  const digitalCount = cart ? cart.pricing.photo_count - cart.pricing.print_count : 0;
   const hasMethodChoice = paymentMethods.length > 0 || showCashOption;
   const noPaymentAvailable = methodsState === "ready" && !hasMethodChoice;
 
@@ -200,7 +206,7 @@ export default function CartPage() {
               {/* Impression papier : uniquement propose sur la borne (une
                   imprimante physique n'existe pas sur le telephone d'un
                   invite), et seulement si l'organisateur a fixe un prix. */}
-              {kiosk && printUnitPrice != null && printUnitPrice > 0 && (
+              {kiosk && printOffered && (
                 <button
                   type="button"
                   disabled={togglingPrintId === item.id}
@@ -209,16 +215,31 @@ export default function CartPage() {
                     item.print_requested ? "!bg-brand-accent !text-brand" : "text-white"
                   }`}
                 >
-                  {item.print_requested ? "✓ Imprimer" : `+ Imprimer (+${printUnitPrice.toLocaleString("fr-FR")})`}
+                  {item.print_requested
+                    ? "✓ Imprimer"
+                    : hasBundle
+                      ? `+ Imprimer (${bundlePrice!.toLocaleString("fr-FR")} le tout)`
+                      : `+ Imprimer (+${printUnitPrice!.toLocaleString("fr-FR")})`}
                 </button>
               )}
             </div>
           ))}
         </div>
 
+        {kiosk && hasBundle && (
+          <p className="mt-4 rounded-xl bg-brand-accent/10 px-4 py-3 text-center text-sm text-ink-700">
+            Photo + tirage 10×15 : <strong>{bundlePrice!.toLocaleString("fr-FR")} {cart.pricing.currency}</strong> la
+            photo, tout compris. Ce prix ne change pas avec les lots et remises.
+          </p>
+        )}
+
         <div className="glass mt-6 rounded-2xl p-5">
           <div className="flex justify-between text-sm text-ink-500">
-            <span>{cart.pricing.photo_count} photo(s)</span>
+            <span>
+              {cart.pricing.bundle
+                ? `${digitalCount} photo${digitalCount > 1 ? "s" : ""} numérique${digitalCount > 1 ? "s" : ""}`
+                : `${cart.pricing.photo_count} photo${cart.pricing.photo_count > 1 ? "s" : ""}`}
+            </span>
             <span>
               {cart.pricing.subtotal.toLocaleString("fr-FR")} {cart.pricing.currency}
             </span>
@@ -233,7 +254,11 @@ export default function CartPage() {
           )}
           {cart.pricing.print_count > 0 && (
             <div className="mt-1 flex justify-between text-sm text-ink-500">
-              <span>Impression ({cart.pricing.print_count} photo(s))</span>
+              <span>
+                {cart.pricing.bundle
+                  ? `Photo + tirage (${cart.pricing.print_count})`
+                  : `Impression (${cart.pricing.print_count} photo${cart.pricing.print_count > 1 ? "s" : ""})`}
+              </span>
               <span>
                 +{cart.pricing.print_total.toLocaleString("fr-FR")} {cart.pricing.currency}
               </span>
