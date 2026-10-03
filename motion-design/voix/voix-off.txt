@@ -5,8 +5,8 @@ V04|fr|Scanne.
 V05|fr|Un QR code, et toutes les photos de la fête.
 V06|fr|Retrouve.
 V07|fr|Parcours la galerie,
-V08|fr|ou touche ton visage : tes photos, regroupées.
-V09|fr|Ou prends un selfie. En quelques secondes, tes dix photos sont là.
+V08|fr|ou « Trouver mon visage » : tes photos, regroupées.
+V09|fr|Ou prends un selfie : notre IA retrouve tes dix photos en quelques secondes.
 V10|fr|Repars avec.
 V11|fr|Plus tu en prends, moins tu paies.
 V12|fr|Pas de téléphone ? La borne.
