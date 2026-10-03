@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>À propos · MYFACE</title>
+<meta name="description" content="MYFACE est né dans les salles de fête d'Abidjan : une IA de reconnaissance faciale, une borne et le paiement local pour que chaque invité reparte avec ses photos.">
+<link rel="canonical" href="https://myfaceci.online/a-propos.html">
+<link rel="icon" href="img/logo.svg?v=2" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --ink: #0E2429; --sand: #F4EFE6; --sand-2: #EAE3D6; --orange: #F26A1B; --orange-2: #FF8A3D;
+    --orange-ink: #B34A08; --green: #00854B; --muted-dark: #9BB0B3; --muted-light: #5E7378;
+    --line-light: #DCD2C2; --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+    --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif; --pad: clamp(20px, 5vw, 64px);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--sand); color: var(--ink); font: 400 17.5px/1.7 var(--body); -webkit-font-smoothing: antialiased; }
+  a { color: var(--orange-ink); }
+  :focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; border-radius: 6px; }
+  .nav { background: var(--ink); }
+  .nav-in { display: flex; align-items: center; gap: 18px; padding: 13px var(--pad); max-width: 1240px; margin: 0 auto; }
+  .marque { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--sand); }
+  .marque img { width: 34px; height: 34px; border-radius: 9px; }
+  .marque span { font: 800 19px/1 var(--display); letter-spacing: -.01em; }
+  .marque span i { font-style: normal; color: var(--orange); }
+  .nav-in nav { margin-left: auto; display: flex; gap: 22px; flex-wrap: wrap; }
+  .nav-in nav a { color: #C9D6D7; text-decoration: none; font-size: 15px; }
+  .nav-in nav a:hover, .nav-in nav a[aria-current] { color: #fff; }
+  .entete { background: var(--ink); color: var(--sand); padding: clamp(46px, 8vw, 96px) var(--pad) clamp(40px, 6vw, 70px); position: relative; overflow: hidden; }
+  .entete::after { content: ""; position: absolute; right: -120px; top: -120px; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle, rgba(242,106,27,.28), transparent 65%); }
+  .entete-in { max-width: 860px; margin: 0 auto; position: relative; z-index: 1; }
+  .entete .sur-titre { margin: 0 0 14px; font: 700 13px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--orange-2); }
+  h1 { margin: 0; font: 800 clamp(30px, 5vw, 54px)/1.08 var(--display); letter-spacing: -.02em; text-wrap: balance; }
+  h1 em { font-style: normal; color: var(--orange); }
+  .entete p.chapo { margin: 18px 0 0; max-width: 62ch; color: #C9D6D7; font-size: 19px; }
+  main { max-width: 860px; margin: 0 auto; padding: clamp(36px, 6vw, 70px) var(--pad) 80px; }
+  h2 { margin: 46px 0 12px; font: 700 clamp(21px, 2.6vw, 27px)/1.25 var(--display); text-wrap: balance; }
+  h2:first-child { margin-top: 0; }
+  h3 { margin: 22px 0 6px; font-size: 18px; }
+  p, li { max-width: 68ch; }
+  ul { padding-left: 1.2em; }
+  li { margin-bottom: 8px; }
+  .encadre { border-left: 4px solid var(--orange); background: #fff; border-radius: 0 16px 16px 0; padding: 18px 22px; margin: 22px 0; }
+  .encadre p { margin: 0; }
+  .grille { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 24px 0; }
+  .grille div { background: #fff; border: 1px solid var(--line-light); border-radius: 18px; padding: 20px; }
+  .grille b { display: block; font: 700 17px/1.3 var(--display); margin-bottom: 6px; }
+  .grille span { color: var(--muted-light); font-size: 15.5px; }
+  @media (max-width: 760px) { .grille { grid-template-columns: minmax(0, 1fr); } .nav-in nav { display: none; } }
+  .appel { margin-top: 50px; background: var(--ink); color: var(--sand); border-radius: 24px; padding: clamp(24px, 4vw, 40px); display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: space-between; }
+  .appel p { margin: 0; font: 700 clamp(19px, 2.4vw, 24px)/1.3 var(--display); }
+  .btn { display: inline-flex; align-items: center; gap: 9px; padding: 14px 22px; border-radius: 999px; font: 700 15.5px/1 var(--body); text-decoration: none; background: var(--orange); color: #fff; box-shadow: 0 10px 26px rgba(242,106,27,.34); transition: transform .2s ease, background .2s ease; }
+  .btn:hover { background: var(--orange-2); transform: translateY(-2px); }
+  .maj { color: var(--muted-light); font-size: 14.5px; }
+  footer { background: #091518; color: var(--muted-dark); padding: 34px var(--pad); font-size: 14.5px; }
+  footer .in { max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; }
+  footer a { color: #C9D6D7; }
+  footer .liens { margin-left: auto; }
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-in">
+    <a class="marque" href="index.html"><img src="img/logo.svg?v=2" alt=""><span>MY<i>FACE</i></span></a>
+    <nav aria-label="Navigation">
+      <a href="index.html#fonctionnement">Comment ça marche</a>
+      <a href="index.html#borne">La borne</a>
+      <a href="index.html#prix">Les prix</a>
+      <a href="a-propos.html" aria-current="page">À propos</a>
+    </nav>
+  </div>
+</header>
+
+<section class="entete">
+  <div class="entete-in">
+    <p class="sur-titre">À propos</p>
+    <h1>MYFACE est né dans les <em>salles de fête</em> d'Abidjan.</h1>
+    <p class="chapo">Un mariage, deux mille photos, et des invités accroupis devant des tirages étalés par terre. On a vu cette scène trop souvent. MYFACE existe pour qu'elle n'arrive plus.</p>
+  </div>
+</section>
+<main>
+  <h2>Ce qu'on a vu</h2>
+  <p>Dans les mariages, les remises de diplômes et les galas, les photos sont là, mais personne ne les retrouve. On fouille un tas de tirages, on fait défiler un groupe WhatsApp de plusieurs centaines d'images, on négocie le prix au moment de payer. Beaucoup repartent sans leurs photos, et celles qui restent finissent chez un inconnu.</p>
+
+  <h2>Ce qu'on a construit</h2>
+  <p>Depuis un an, on construit une plateforme pensée pour nos événements et nos habitudes de paiement :</p>
+  <div class="grille">
+    <div><b>Une IA de reconnaissance faciale</b><span>Elle repère chaque visage de la soirée et retrouve toutes les photos d'un invité, à partir de la galerie, de « Trouver mon visage » ou d'un selfie.</span></div>
+    <div><b>Une borne sur place</b><span>Écran tactile, selfie intégré et tirage 10×15 en 20 secondes, pour ceux qui ne veulent pas sortir leur téléphone.</span></div>
+    <div><b>Le paiement d'ici</b><span>Wave, Orange Money, MTN, Moov, et les espèces à la borne. Les prix sont affichés avant de choisir.</span></div>
+  </div>
+
+  <h2>Ce à quoi on tient</h2>
+  <ul>
+    <li><b>Chaque invité repart avec ses photos</b>, le soir même, en qualité d'origine.</li>
+    <li><b>Les prix sont clairs</b> : affichés d'avance, sans négociation.</li>
+    <li><b>Les images restent à leurs propriétaires</b> : le selfie n'est jamais enregistré, et rien n'est revendu. Le détail est sur notre page <a href="confidentialite.html">Confidentialité</a>.</li>
+    <li><b>On est là</b> : on installe, on reste toute la soirée, on remballe. L'organisateur ne touche à rien.</li>
+  </ul>
+
+  <h2>Photographes et organisateurs</h2>
+  <p>MYFACE travaille avec les photographes, pas à leur place : ils déposent leurs photos, l'IA les classe, et les ventes se font pendant la fête. Les organisateurs choisissent leurs prix, leurs lots et leurs remises, ou offrent les photos à leurs invités.</p>
+
+  <div class="appel">
+    <p>Un événement en vue&nbsp;? Parlons-en.</p>
+    <a class="btn" href="https://wa.me/2250758509403?text=Bonjour%20MYFACE%2C%20je%20voudrais%20discuter%20de%20mon%20%C3%A9v%C3%A9nement." target="_blank" rel="noopener">Discuter sur WhatsApp</a>
+  </div>
+</main>
+
+<footer>
+  <div class="in">
+    <a class="marque" href="index.html"><img src="img/logo.svg?v=2" alt=""><span>MY<i>FACE</i></span></a>
+    <span>Scanne. Retrouve. Repars avec.</span>
+    <span class="liens"><a href="a-propos.html">À propos</a> · <a href="confidentialite.html">Confidentialité</a> · <a href="mailto:contact@myfaceci.online">contact@myfaceci.online</a></span>
+  </div>
+</footer>
+</body>
+</html>

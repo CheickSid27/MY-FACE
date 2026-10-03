@@ -8,3 +8,9 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+/a-propos.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/confidentialite.html
+  Cache-Control: public, max-age=0, must-revalidate

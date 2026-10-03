@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Confidentialité · MYFACE</title>
+<meta name="description" content="Comment MYFACE traite les photos, les données de visage et les commandes, et comment exercer vos droits.">
+<link rel="canonical" href="https://myfaceci.online/confidentialite.html">
+<link rel="icon" href="img/logo.svg?v=2" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --ink: #0E2429; --sand: #F4EFE6; --sand-2: #EAE3D6; --orange: #F26A1B; --orange-2: #FF8A3D;
+    --orange-ink: #B34A08; --green: #00854B; --muted-dark: #9BB0B3; --muted-light: #5E7378;
+    --line-light: #DCD2C2; --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+    --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif; --pad: clamp(20px, 5vw, 64px);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--sand); color: var(--ink); font: 400 17.5px/1.7 var(--body); -webkit-font-smoothing: antialiased; }
+  a { color: var(--orange-ink); }
+  :focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; border-radius: 6px; }
+  .nav { background: var(--ink); }
+  .nav-in { display: flex; align-items: center; gap: 18px; padding: 13px var(--pad); max-width: 1240px; margin: 0 auto; }
+  .marque { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--sand); }
+  .marque img { width: 34px; height: 34px; border-radius: 9px; }
+  .marque span { font: 800 19px/1 var(--display); letter-spacing: -.01em; }
+  .marque span i { font-style: normal; color: var(--orange); }
+  .nav-in nav { margin-left: auto; display: flex; gap: 22px; flex-wrap: wrap; }
+  .nav-in nav a { color: #C9D6D7; text-decoration: none; font-size: 15px; }
+  .nav-in nav a:hover, .nav-in nav a[aria-current] { color: #fff; }
+  .entete { background: var(--ink); color: var(--sand); padding: clamp(46px, 8vw, 96px) var(--pad) clamp(40px, 6vw, 70px); position: relative; overflow: hidden; }
+  .entete::after { content: ""; position: absolute; right: -120px; top: -120px; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle, rgba(242,106,27,.28), transparent 65%); }
+  .entete-in { max-width: 860px; margin: 0 auto; position: relative; z-index: 1; }
+  .entete .sur-titre { margin: 0 0 14px; font: 700 13px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--orange-2); }
+  h1 { margin: 0; font: 800 clamp(30px, 5vw, 54px)/1.08 var(--display); letter-spacing: -.02em; text-wrap: balance; }
+  h1 em { font-style: normal; color: var(--orange); }
+  .entete p.chapo { margin: 18px 0 0; max-width: 62ch; color: #C9D6D7; font-size: 19px; }
+  main { max-width: 860px; margin: 0 auto; padding: clamp(36px, 6vw, 70px) var(--pad) 80px; }
+  h2 { margin: 46px 0 12px; font: 700 clamp(21px, 2.6vw, 27px)/1.25 var(--display); text-wrap: balance; }
+  h2:first-child { margin-top: 0; }
+  h3 { margin: 22px 0 6px; font-size: 18px; }
+  p, li { max-width: 68ch; }
+  ul { padding-left: 1.2em; }
+  li { margin-bottom: 8px; }
+  .encadre { border-left: 4px solid var(--orange); background: #fff; border-radius: 0 16px 16px 0; padding: 18px 22px; margin: 22px 0; }
+  .encadre p { margin: 0; }
+  .grille { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 24px 0; }
+  .grille div { background: #fff; border: 1px solid var(--line-light); border-radius: 18px; padding: 20px; }
+  .grille b { display: block; font: 700 17px/1.3 var(--display); margin-bottom: 6px; }
+  .grille span { color: var(--muted-light); font-size: 15.5px; }
+  @media (max-width: 760px) { .grille { grid-template-columns: minmax(0, 1fr); } .nav-in nav { display: none; } }
+  .appel { margin-top: 50px; background: var(--ink); color: var(--sand); border-radius: 24px; padding: clamp(24px, 4vw, 40px); display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: space-between; }
+  .appel p { margin: 0; font: 700 clamp(19px, 2.4vw, 24px)/1.3 var(--display); }
+  .btn { display: inline-flex; align-items: center; gap: 9px; padding: 14px 22px; border-radius: 999px; font: 700 15.5px/1 var(--body); text-decoration: none; background: var(--orange); color: #fff; box-shadow: 0 10px 26px rgba(242,106,27,.34); transition: transform .2s ease, background .2s ease; }
+  .btn:hover { background: var(--orange-2); transform: translateY(-2px); }
+  .maj { color: var(--muted-light); font-size: 14.5px; }
+  footer { background: #091518; color: var(--muted-dark); padding: 34px var(--pad); font-size: 14.5px; }
+  footer .in { max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; }
+  footer a { color: #C9D6D7; }
+  footer .liens { margin-left: auto; }
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-in">
+    <a class="marque" href="index.html"><img src="img/logo.svg?v=2" alt=""><span>MY<i>FACE</i></span></a>
+    <nav aria-label="Navigation">
+      <a href="index.html#fonctionnement">Comment ça marche</a>
+      <a href="index.html#borne">La borne</a>
+      <a href="index.html#prix">Les prix</a>
+      <a href="a-propos.html">À propos</a>
+    </nav>
+  </div>
+</header>
+
+<section class="entete">
+  <div class="entete-in">
+    <p class="sur-titre">Confidentialité</p>
+    <h1>Ce qu'on fait de vos <em>images</em>, et de rien d'autre.</h1>
+    <p class="chapo">MYFACE utilise une IA de reconnaissance faciale pour aider chaque invité à retrouver ses photos. Voici, simplement, ce que nous traitons, pourquoi, pendant combien de temps, et comment exercer vos droits.</p>
+  </div>
+</section>
+<main>
+  <div class="encadre"><p><b>L'essentiel.</b> Le selfie n'est jamais enregistré. Les photos et les données de visage ne servent qu'à retrouver les photos de l'événement. Rien n'est revendu, ni utilisé pour la publicité.</p></div>
+
+  <h2>Qui est responsable</h2>
+  <p>MYFACE, service de photos d'événements basé à Abidjan, Côte d'Ivoire. Contact : <a href="mailto:contact@myfaceci.online">contact@myfaceci.online</a>, ou WhatsApp au 07 58 50 94 03.</p>
+
+  <h2>Ce que nous traitons</h2>
+  <h3>Les photos de l'événement</h3>
+  <p>Déposées par le photographe ou l'organisateur. Les invités en voient des aperçus marqués ; les fichiers en qualité d'origine ne sont remis qu'après l'achat, ou directement quand l'organisateur offre les photos.</p>
+  <h3>Les données de visage</h3>
+  <p>Pour chaque visage repéré sur les photos, notre IA calcule une empreinte numérique : une suite de nombres, qui ne contient aucune image. Elle sert à regrouper les photos d'une même personne (« Trouver mon visage ») et à les retrouver à partir d'un selfie.</p>
+  <h3>Le selfie</h3>
+  <p>Facultatif, et seulement après votre accord à l'écran. Il est envoyé de façon sécurisée à notre serveur, comparé aux visages des photos de l'événement, puis effacé dès la fin de la recherche. Il n'est jamais enregistré.</p>
+  <h3>Les commandes</h3>
+  <p>Les photos choisies, le montant, le moyen de paiement, la référence de la transaction et le numéro de téléphone indiqué au moment du paiement. Ils servent à encaisser, à remettre les photos, à imprimer les tirages et à traiter les réclamations.</p>
+  <h3>Le site</h3>
+  <p>Ce site ne dépose aucun cookie publicitaire ni outil de mesure d'audience. Ses polices de caractères sont chargées depuis Google Fonts, ce qui transmet votre adresse IP à Google. Dans l'application, le panier est gardé dans votre navigateur.</p>
+
+  <h2>Ce que nous ne faisons pas</h2>
+  <ul>
+    <li>Nous ne vendons ni ne louons aucune photo ni aucune donnée.</li>
+    <li>Nous n'utilisons pas les visages pour entraîner une IA, ni pour un autre usage que la recherche des photos de l'événement.</li>
+    <li>Nous ne publions aucune photo en dehors de la galerie de l'événement, sans l'accord des personnes concernées.</li>
+  </ul>
+
+  <h2>Qui y a accès</h2>
+  <p>L'équipe MYFACE et l'organisateur de l'événement. Nos prestataires techniques hébergent la base de données (Neon) et le stockage des photos (Cloudflare) ; ces services peuvent se trouver hors de Côte d'Ivoire. Les opérateurs de paiement (Wave, Orange Money, MTN, Moov) reçoivent ce qui est nécessaire à la transaction.</p>
+
+  <h2>Combien de temps</h2>
+  <ul>
+    <li><b>Selfie</b> : pas conservé, effacé dès la fin de la recherche.</li>
+    <li><b>Photos et données de visage</b> : le temps que l'événement reste en ligne, puis supprimées avec lui. L'organisateur peut en demander la suppression à tout moment.</li>
+    <li><b>Commandes</b> : conservées pour la comptabilité et le traitement des réclamations.</li>
+  </ul>
+
+  <h2>Vos droits</h2>
+  <p>Conformément à la loi ivoirienne n° 2013-450 du 19 juin 2013 relative à la protection des données à caractère personnel, vous pouvez demander l'accès à vos données, leur correction ou leur suppression, et vous opposer à leur traitement. Pour faire retirer une photo où vous apparaissez, ou les données de votre visage, écrivez à <a href="mailto:contact@myfaceci.online">contact@myfaceci.online</a> en précisant l'événement. Vous pouvez aussi saisir l'ARTCI, l'autorité ivoirienne chargée de la protection des données personnelles.</p>
+
+  <p class="maj">Mis à jour le 3 octobre 2026.</p>
+</main>
+
+<footer>
+  <div class="in">
+    <a class="marque" href="index.html"><img src="img/logo.svg?v=2" alt=""><span>MY<i>FACE</i></span></a>
+    <span>Scanne. Retrouve. Repars avec.</span>
+    <span class="liens"><a href="a-propos.html">À propos</a> · <a href="confidentialite.html">Confidentialité</a> · <a href="mailto:contact@myfaceci.online">contact@myfaceci.online</a></span>
+  </div>
+</footer>
+</body>
+</html>
