@@ -1,13 +1,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MYFACE, photos d'événement à Abidjan</title>
-<meta name="description" content="Vos invités retrouvent leurs photos avec un simple selfie, les achètent en Mobile Money ou en espèces, et les impriment sur place. Mariages, remises de diplômes, galas d'entreprise à Abidjan.">
+<meta name="description" content="Vos invités retrouvent leurs photos en parcourant la galerie, en touchant leur visage ou avec un selfie, les achètent en Mobile Money ou en espèces, et les impriment sur place. Mariages, remises de diplômes, galas d'entreprise à Abidjan.">
 <link rel="canonical" href="https://myfaceci.online/">
 <link rel="icon" href="img/logo.svg?v=2" type="image/svg+xml">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://myfaceci.online/">
 <meta property="og:title" content="MYFACE, retrouver SES photos n'a jamais été aussi facile">
-<meta property="og:description" content="Un selfie, et l'invité retrouve toutes les photos où il apparaît. Paiement Mobile Money ou espèces, impression sur place. Abidjan.">
+<meta property="og:description" content="La galerie, son visage ou un selfie : chaque invité retrouve toutes les photos où il apparaît. Paiement Mobile Money ou espèces, impression sur place. Abidjan.">
 <meta property="og:image" content="https://myfaceci.online/img/partage.jpg?v=3">
 <meta property="og:locale" content="fr_CI">
 <meta name="twitter:card" content="summary_large_image">
@@ -262,6 +262,54 @@
   .chrono span { font-size: 15.5px; color: #BBCBCC; }
   @media (max-width: 900px) { .etapes { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px 16px; } }
 
+  /* demo : la vraie application, l'ecran suit l'etape lue */
+  .ancre { position: relative; top: -90px; display: block; }
+  .demo { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: clamp(30px, 6vw, 90px); margin-top: 34px; }
+  .demo-tel { position: sticky; top: 92px; align-self: start; display: grid; justify-items: center; padding-top: 6vh; }
+  .cadre-tel.grand { width: min(320px, 100%); border-radius: 46px; padding: 10px; }
+  .ecrans { position: relative; aspect-ratio: 480 / 1108; border-radius: 37px; overflow: hidden; background: #09161A; }
+  .ecrans img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 0; opacity: 0; transform: scale(1.035); transition: opacity .55s ease, transform .8s cubic-bezier(.2,.8,.2,1); }
+  .ecrans img.actif { opacity: 1; transform: none; }
+  .viseur { position: absolute; left: var(--vx, 50%); top: var(--vy, 40%); width: var(--vt, 30%); aspect-ratio: 1; translate: -50% -50%; opacity: 0; pointer-events: none; }
+  .viseur i { position: absolute; width: 28%; height: 28%; border: 3px solid var(--orange); }
+  .viseur i:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0; border-top-left-radius: 9px; }
+  .viseur i:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 9px; }
+  .viseur i:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 9px; }
+  .viseur i:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 9px; border-color: var(--green); }
+  .viseur.cible { animation: verrou .7s cubic-bezier(.2,.8,.2,1) .25s both; }
+  @keyframes verrou { from { opacity: 0; scale: 1.9; } to { opacity: 1; scale: 1; } }
+  .doigt { position: absolute; left: var(--tx, 50%); top: var(--ty, 50%); width: 44px; height: 44px; translate: -50% -50%; border-radius: 50%; pointer-events: none; opacity: 0; background: rgba(242,106,27,.32); border: 2px solid var(--orange); }
+  .doigt.touche { animation: toucher 1.3s ease .9s both; }
+  @keyframes toucher { 0% { opacity: 0; scale: 1.7; } 25% { opacity: 1; scale: .78; } 45% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 2.1; } }
+  .demo-etapes { list-style: none; margin: 0; padding: 0; }
+  .demo-etapes li { min-height: 64vh; display: grid; align-content: center; gap: 12px; transition: opacity .45s ease; }
+  .js .demo-etapes li { opacity: .34; }
+  .js .demo-etapes li.actif { opacity: 1; }
+  .demo-etapes .num { width: 40px; height: 40px; border-radius: 50%; background: var(--orange); color: #fff; font: 800 17px/40px var(--display); text-align: center; box-shadow: 0 8px 18px rgba(242,106,27,.4); }
+  .demo-etapes h3 { margin: 0; font: 800 clamp(24px, 2.7vw, 36px)/1.12 var(--display); color: var(--sand); text-wrap: balance; }
+  .demo-etapes p { margin: 0; max-width: 44ch; font-size: 17px; color: #BBCBCC; }
+  .demo-etapes .mini { display: none; }
+  @media (max-width: 900px) {
+    .demo { grid-template-columns: minmax(0, 1fr); }
+    .demo-tel { display: none; }
+    .demo-etapes li, .js .demo-etapes li { min-height: 0; opacity: 1; padding-bottom: 40px; }
+    .demo-etapes .mini { display: block; width: min(250px, 72%); border-radius: 30px; border: 8px solid #1B2226; box-shadow: 0 18px 34px rgba(0,0,0,.35); margin-top: 8px; }
+  }
+
+  /* la borne : le tirage sort de la fente, en boucle */
+  .borne-visuel { position: relative; justify-self: center; }
+  .borne-bloc .borne-visuel .borne-img { display: block; max-height: 620px; width: auto; filter: drop-shadow(0 30px 50px rgba(14,36,41,.22)); }
+  .borne-bloc .borne-visuel .tirage-sort { position: absolute; left: var(--fx); top: var(--fy); width: 23%; max-height: none; translate: -50% 0; transform-origin: top center; filter: drop-shadow(0 8px 14px rgba(14,36,41,.28)); clip-path: inset(0 0 52% 0); }
+  @media (prefers-reduced-motion: no-preference) {
+    .borne-bloc .borne-visuel .tirage-sort { animation: imprime 5.5s cubic-bezier(.45,0,.2,1) infinite; }
+  }
+  @keyframes imprime {
+    0%, 12% { clip-path: inset(0 0 100% 0); transform: translateY(-4%); opacity: 1; }
+    52% { clip-path: inset(0 0 0 0); transform: translateY(0); opacity: 1; }
+    70% { clip-path: inset(0 0 0 0); transform: translateY(10%) rotate(-7deg) scale(1.12); opacity: 1; }
+    88%, 100% { clip-path: inset(0 0 0 0); transform: translateY(16%) rotate(-10deg) scale(1.18); opacity: 0; }
+  }
+
   /* borne */
   .borne-bloc { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: clamp(26px, 5vw, 70px); align-items: center; }
   .borne-bloc img { justify-self: center; filter: drop-shadow(0 30px 50px rgba(14,36,41,.22)); max-height: 620px; width: auto; }
@@ -460,46 +508,60 @@
     </div>
   </section>
 
-  <!-- ================= TROIS FACONS DE SE RETROUVER ================= -->
-  <section class="sur-sable-2 motif-clair" id="trois-facons">
+  <!-- ================= LA DEMO : TROIS FACONS, EN VRAI ================= -->
+  <section class="sur-encre motif" id="fonctionnement">
+    <span id="trois-facons" class="ancre" aria-hidden="true"></span>
     <div class="wrap">
       <div class="titre-bloc revele">
         <h2>Trois façons de trouver ses photos.</h2>
-        <p>Chacun choisit celle qui lui ressemble. Personne n'est obligé de prendre un selfie.</p>
+        <p>Rien à installer, aucun compte à créer. Ci-dessous, la vraie application, sur un mariage de démonstration.</p>
       </div>
-      <div class="cibles">
-        <div class="cible revele"><h3>Parcourir la galerie</h3><p>Toutes les photos de l'événement sont là, comme un album. On les regarde tranquillement, on garde celles qu'on aime, les siennes comme celles des autres.</p></div>
-        <div class="cible revele d1"><h3>Toucher son visage</h3><p>L'application regroupe les visages de toute la soirée. On touche le sien parmi ceux qui s'affichent, et toutes ses photos sortent. Sans selfie.</p></div>
-        <div class="cible revele d2"><h3>Prendre un selfie</h3><p>Le plus rapide : un selfie à la borne ou sur le téléphone, et en quelques secondes toutes les photos où l'on apparaît s'affichent.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ================= COMMENT CA MARCHE ================= -->
-  <section class="sur-encre motif" id="fonctionnement">
-    <div class="wrap">
-      <div class="titre-bloc revele">
-        <h2>Quatre écrans, et il a ses photos.</h2>
-        <p>Rien à installer, aucun compte à créer. Tout se passe dans le navigateur du téléphone,
-          ou directement sur la borne pour ceux qui n'ont pas de forfait Internet.</p>
-      </div>
-      <div class="etapes">
-        <div class="etape revele">
-          <div class="cadre-tel"><span class="num">1</span><img src="img/ecran-1.webp?v=2" width="415" height="900" alt="Écran d'accueil de l'événement" loading="lazy"></div>
-          <p><b>Il ouvre le lien</b>Le QR code de votre événement, sur sa table ou à l'entrée.</p>
+      <div class="demo">
+        <div class="demo-tel">
+          <div class="cadre-tel grand">
+            <div class="ecrans">
+            <img data-ecran="0" class="actif" src="img/demo-galerie.webp?v=1" width="480" height="1108" alt="La galerie de l'événement de démonstration">
+            <img data-ecran="1" src="img/demo-visages.webp?v=1" width="480" height="1108" alt="Les visages de la soirée, regroupés" loading="lazy">
+            <img data-ecran="2" src="img/demo-selfie.webp?v=1" width="480" height="1108" alt="La prise du selfie" loading="lazy">
+            <img data-ecran="3" src="img/demo-resultats.webp?v=1" width="480" height="1108" alt="Les 10 photos retrouvées" loading="lazy">
+            <img data-ecran="4" src="img/demo-panier.webp?v=1" width="480" height="1108" alt="Le panier avec la remise et le choix du paiement" loading="lazy">
+              <span class="viseur" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+              <span class="doigt" aria-hidden="true"></span>
+            </div>
+          </div>
         </div>
-        <div class="etape revele d1">
-          <div class="cadre-tel"><span class="num">2</span><img src="img/ecran-2.webp?v=2" width="415" height="900" alt="Écran de prise de selfie" loading="lazy"></div>
-          <p><b>Il prend un selfie</b>Le selfie ne sert qu'à retrouver ses photos.</p>
-        </div>
-        <div class="etape revele d2">
-          <div class="cadre-tel"><span class="num">3</span><img src="img/ecran-3.webp?v=2" width="415" height="900" alt="Écran des photos retrouvées" loading="lazy"></div>
-          <p><b>Ses photos apparaissent</b>Toutes celles où il est, et aucune autre.</p>
-        </div>
-        <div class="etape revele d3">
-          <div class="cadre-tel"><span class="num">4</span><img src="img/ecran-4.webp?v=2" width="415" height="900" alt="Écran de paiement" loading="lazy"></div>
-          <p><b>Il paie et télécharge</b>Wave, Orange Money, MTN, Moov, ou espèces à la borne.</p>
-        </div>
+        <ol class="demo-etapes">
+        <li data-ecran="0" data-tx="25%" data-ty="29%">
+          <span class="num">1</span>
+          <h3>Il parcourt la galerie</h3>
+          <p>Toutes les photos de la soirée, comme un album. Il garde celles qu'il aime, les siennes comme celles des autres.</p>
+          <img class="mini" src="img/demo-galerie.webp?v=1" width="480" height="1108" alt="" loading="lazy">
+        </li>
+        <li data-ecran="1" data-tx="21%" data-ty="31%" data-vx="21%" data-vy="31%" data-vt="30%">
+          <span class="num">2</span>
+          <h3>Il touche son visage</h3>
+          <p>L'application regroupe les visages de la soirée. Il touche le sien, et toutes ses photos sortent. Sans selfie.</p>
+          <img class="mini" src="img/demo-visages.webp?v=1" width="480" height="1108" alt="" loading="lazy">
+        </li>
+        <li data-ecran="2" data-tx="50%" data-ty="77%" data-vx="50%" data-vy="41%" data-vt="44%">
+          <span class="num">3</span>
+          <h3>Ou il prend un selfie</h3>
+          <p>Sur son téléphone ou à la borne. Le selfie sert seulement à la recherche : il n'est jamais enregistré.</p>
+          <img class="mini" src="img/demo-selfie.webp?v=1" width="480" height="1108" alt="" loading="lazy">
+        </li>
+        <li data-ecran="3" data-tx="74%" data-ty="81%">
+          <span class="num">4</span>
+          <h3>Ses photos sont là</h3>
+          <p>En quelques secondes, toutes celles où il apparaît, et aucune autre. Il les garde d'un geste.</p>
+          <img class="mini" src="img/demo-resultats.webp?v=1" width="480" height="1108" alt="" loading="lazy">
+        </li>
+        <li data-ecran="4" data-tx="29%" data-ty="68%">
+          <span class="num">5</span>
+          <h3>Il paie et repart avec</h3>
+          <p>Les remises se calculent toutes seules. Wave, Orange Money, MTN, Moov, ou espèces à la borne, et le tirage sort sur place.</p>
+          <img class="mini" src="img/demo-panier.webp?v=1" width="480" height="1108" alt="" loading="lazy">
+        </li>
+        </ol>
       </div>
       <div class="chrono verre revele"><b>Moins d'une minute</b><span>du premier scan au téléchargement</span></div>
     </div>
@@ -508,7 +570,10 @@
   <!-- ================= LA BORNE ================= -->
   <section class="sur-sable-2 motif-clair" id="borne">
     <div class="wrap borne-bloc">
-      <img class="revele" src="img/borne-34.webp?v=2" width="744" height="900" alt="La borne MYFACE, avec un tirage papier qui sort de la fente" loading="lazy">
+      <div class="borne-visuel revele" style="--fx: 26.3%; --fy: 69.3%">
+        <img class="borne-img" src="img/borne-demo.webp?v=1" width="357" height="900" alt="La borne MYFACE, l'accueil de l'événement à l'écran" loading="lazy">
+        <img class="tirage-sort" src="img/tirage-demo.webp?v=1" width="360" height="518" alt="" aria-hidden="true" loading="lazy">
+      </div>
       <div>
         <div class="titre-bloc revele d1">
           <h2>La borne travaille toute la soirée.</h2>
@@ -522,7 +587,7 @@
           </li>
           <li>
             <span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 9V4h12v5M6 18h12v-5H6zM4 9h16a1 1 0 011 1v5a1 1 0 01-1 1h-1"/></svg></span>
-            <span><b>Tirage 10×15 en quelques secondes</b>L'invité repart avec sa photo dans la main.</span>
+            <span><b>Tirage 10×15 en 20 secondes</b>L'invité repart avec sa photo dans la main.</span>
           </li>
           <li>
             <span class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 10h18M6 15h4M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg></span>
@@ -549,7 +614,7 @@
         <div class="cible revele d2"><h3>Entreprises</h3><p>Galas, séminaires, 8 mars, présentation des vœux. Vos photos en qualité d'origine pour la communication interne.</p></div>
         <div class="cible revele"><h3>Soirées et clubs</h3><p>Chaque semaine, la même borne. Vos clients rentrent chez eux avec les photos de leur soirée.</p></div>
         <div class="cible revele d1"><h3>Baptêmes et anniversaires</h3><p>Le format familial : on couvre, on imprime sur place, et chacun emporte ses photos.</p></div>
-        <div class="cible revele d2"><h3>Concerts et festivals</h3><p>Le volume ne fait pas peur à la reconnaissance faciale. Une marque peut offrir les photos à tout le public.</p></div>
+        <div class="cible revele d2"><h3>Concerts et festivals</h3><p>Des milliers de photos ? Chacun retrouve les siennes en quelques secondes. Une marque peut offrir les photos à tout le public.</p></div>
       </div>
     </div>
   </section>
@@ -601,7 +666,7 @@
         <h2>On vous dit exactement ce qu'on fait des images.</h2>
       </div>
       <div class="confiance">
-        <div class="verre revele"><h3>Le selfie sert à une seule chose</h3><p>Retrouver les photos de la personne qui le prend. Il n'est ni publié, ni revendu, ni utilisé pour autre chose.</p></div>
+        <div class="verre revele"><h3>Le selfie sert à une seule chose</h3><p>Retrouver les photos de la personne qui le prend. Il n'est jamais enregistré : il est effacé dès la fin de la recherche. Ni publié, ni revendu.</p></div>
         <div class="verre revele d1"><h3>Rien n'est visible en grand avant l'achat</h3><p>Les invités voient des aperçus marqués. Les fichiers en qualité d'origine n'arrivent qu'après le paiement.</p></div>
         <div class="verre revele d2"><h3>Chaque commande a son reçu</h3><p>Numéro, liste des photos, montant, moyen de paiement. En cas de réclamation, tout est retrouvable.</p></div>
       </div>
@@ -756,6 +821,34 @@
       });
       if (img) img.style.transform = 'translate3d(' + (x * -8) + 'px,' + (y * -6) + 'px,0)';
     }, { passive: true });
+  }
+
+  // demo : l'ecran du telephone suit l'etape lue
+  var etapes = document.querySelectorAll('.demo-etapes li');
+  var ecrans = document.querySelectorAll('.ecrans img');
+  var viseur = document.querySelector('.viseur');
+  var doigt = document.querySelector('.doigt');
+  function relancer(el, classe) { el.classList.remove(classe); void el.offsetWidth; el.classList.add(classe); }
+  function montrer(li) {
+    var i = li.dataset.ecran;
+    etapes.forEach(function (e) { e.classList.toggle('actif', e === li); });
+    ecrans.forEach(function (im) { im.classList.toggle('actif', im.dataset.ecran === i); });
+    if (doux || !viseur || !doigt) return;
+    if (li.dataset.vx) {
+      viseur.style.setProperty('--vx', li.dataset.vx);
+      viseur.style.setProperty('--vy', li.dataset.vy);
+      viseur.style.setProperty('--vt', li.dataset.vt);
+      relancer(viseur, 'cible');
+    } else { viseur.classList.remove('cible'); }
+    doigt.style.setProperty('--tx', li.dataset.tx);
+    doigt.style.setProperty('--ty', li.dataset.ty);
+    relancer(doigt, 'touche');
+  }
+  if (etapes.length && 'IntersectionObserver' in window) {
+    var obsDemo = new IntersectionObserver(function (entrees) {
+      entrees.forEach(function (e) { if (e.isIntersecting) montrer(e.target); });
+    }, { rootMargin: '-45% 0px -45% 0px' });
+    etapes.forEach(function (li) { obsDemo.observe(li); });
   }
 
   // barre d'appel sur telephone + ombre de la navigation
