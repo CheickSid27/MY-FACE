@@ -56,3 +56,11 @@ motion-design/voix/*.wav
 motion-design/v2/*.mp4
 motion-design/v2/*.wav
 motion-design/v2/voix/*.wav
+
+# Motion design v3 (voix Gemini) : se regenere avec v3/voix/generer_voix_gemini.py,
+# v3/sons_v3.py et v3/assembler_v3.ps1. La cle API ne doit jamais partir sur GitHub.
+motion-design/v3/*.mp4
+motion-design/v3/*.wav
+motion-design/v3/voix/*.wav
+motion-design/v3/voix/essais/
+motion-design/v3/voix/cle-google.txt
