@@ -123,9 +123,16 @@ def generer(cle, voix, texte):
                     break
                 if "API_KEY_INVALID" in detail or e.code in (401, 403):
                     sys.exit("Cle API refusee par Google : verifie-la dans cle-google.txt.")
+                if e.code >= 500:                      # erreur passagere chez Google
+                    time.sleep(5 * (essai + 1))
+                    continue
                 sys.exit(f"Erreur Google {e.code} : {detail[:400]}")
+            except (urllib.error.URLError, OSError, TimeoutError) as e:
+                print(f"  connexion coupee ({type(e).__name__}), nouvel essai...")
+                time.sleep(5 * (essai + 1))
+                continue
         else:
-            sys.exit("Toujours bloque par le quota apres 5 essais : reessaie plus tard.")
+            sys.exit("Toujours bloque (quota ou connexion) apres 5 essais : reessaie plus tard.")
         if rep is None:
             continue
         try:
@@ -248,6 +255,9 @@ def main():
     if args.essai:
         texte = CONSIGNES + lignes[3][3] + "\n\n" + lignes[4][3]
         for voix, genre in VOIX_ESSAI.items():
+            if (ESSAIS / f"{voix}.wav").exists():
+                print(f"  {voix:10s} ({genre}) deja fait")
+                continue
             ecrire(ESSAIS / f"{voix}.wav", generer(cle, voix, texte))
             print(f"  {voix:10s} ({genre}) ok")
         print(f"\nEcoute les fichiers de {ESSAIS} et choisis ta voix.")
