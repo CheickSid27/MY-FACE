@@ -22,7 +22,7 @@ function Attendre($op, [Type]$type) {
 [Windows.Media.MediaProperties.MediaEncodingProfile, Windows.Media.MediaProperties, ContentType = WindowsRuntime] | Out-Null
 [Windows.Media.Transcoding.TranscodeFailureReason, Windows.Media.Transcoding, ContentType = WindowsRuntime] | Out-Null
 
-$video = Attendre ([Windows.Storage.StorageFile]::GetFileFromPathAsync((Join-Path $ici 'myface-motion-design-v2.mp4'))) ([Windows.Storage.StorageFile])
+$video = Attendre ([Windows.Storage.StorageFile]::GetFileFromPathAsync((Join-Path $ici 'myface-motion-design-v2-muet.mp4'))) ([Windows.Storage.StorageFile])
 $son = Attendre ([Windows.Storage.StorageFile]::GetFileFromPathAsync((Join-Path $ici 'son-motion-design-v2.wav'))) ([Windows.Storage.StorageFile])
 $dossier = Attendre ([Windows.Storage.StorageFolder]::GetFolderFromPathAsync($ici)) ([Windows.Storage.StorageFolder])
 

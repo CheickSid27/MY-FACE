@@ -7,7 +7,7 @@ impression et especes), puis le tirage sort de la borne. Suit le prompt
 maitre de fiches/sources-html/motion-design-myface.html.
 
     python motion-design/preparer_motion.py   (le kit, une fois)
-    python motion-design/rendre_film.py       -> motion-design/myface-motion-design.mp4 (muet)
+    python motion-design/rendre_film.py       -> motion-design/myface-motion-design-muet.mp4 (muet)
     python motion-design/sons.py              -> la bande son (musique, bruitages, voix off)
     powershell -ExecutionPolicy Bypass -File motion-design/assembler.ps1
                                               -> myface-motion-design-son.mp4 (+ version legere)
@@ -30,7 +30,7 @@ W, H, FPS = 1080, 1920, 30
 INK, SAND, ORANGE, GREEN, WHITE = (14, 36, 41), (244, 239, 230), (242, 106, 27), (0, 133, 75), (255, 255, 255)
 F_DISPLAY = "C:/Windows/Fonts/ariblk.ttf"
 F_BOLD = "C:/Windows/Fonts/segoeuib.ttf"
-SORTIE = ICI / "myface-motion-design.mp4"
+SORTIE = ICI / "myface-motion-design-muet.mp4"
 
 DET, ELE, CAP = ICI / "detoure", ICI / "elements", ICI.parent / "captures" / "iphone"
 

@@ -7,7 +7,7 @@ rendre_film.py, inchange) et ajoute :
 - la recherche qui echoue dans le mur de photos ;
 - l'avant / apres sur la qualite d'origine.
 
-    python motion-design/v2/rendre_film_v2.py   -> motion-design/v2/myface-motion-design-v2.mp4 (muet)
+    python motion-design/v2/rendre_film_v2.py   -> motion-design/v2/myface-motion-design-v2-muet.mp4 (muet)
 """
 
 import io
@@ -26,7 +26,7 @@ from rendre_film import (DET, F_BOLD, F_DISPLAY, FPS, GREEN, H, INK, ORANGE, SAN
                          Film, charger, clamp, coller, coller_centre, doux, entree_cubique, etiquette,
                          police, ressort, sortie_cubique, texte, transformer)
 
-SORTIE = ICI / "myface-motion-design-v2.mp4"
+SORTIE = ICI / "myface-motion-design-v2-muet.mp4"
 DEMO = ICI.parent.parent / "watched-photos" / "6b3391d9-e2eb-4942-990b-ac1353cd170e"
 COUPLE = DEMO / "pexels-joshua-j-lewis-1577020288-27333351.jpg"
 EX, EY, EW, EH = 220, 221, 640, 1478  # ecran du telephone dans l'image
