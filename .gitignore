@@ -51,3 +51,8 @@ motion-design/sources/
 motion-design/*.mp4
 motion-design/*.wav
 motion-design/voix/*.wav
+
+# Motion design v2 : sorties regenerables
+motion-design/v2/*.mp4
+motion-design/v2/*.wav
+motion-design/v2/voix/*.wav

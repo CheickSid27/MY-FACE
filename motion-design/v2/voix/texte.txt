@@ -1,0 +1,15 @@
+# Voix off du motion design v2 (50 s) : les problemes, puis ce que MYFACE y repond.
+# id | debut (s) | fin max (s) | vitesse (-10 a +10) | texte
+# {MYFACE} est prononce « maille-féïce » par la voix francaise (balise phoneme).
+N01|0.2|3.9|0|Des centaines de photos, et tout le monde fouille par terre.
+N02|4.1|7.9|0|Ou alors, elles arrivent en vrac dans le groupe, toutes floues.
+N03|8.1|10.85|0|Et souvent, on repart sans ses photos.
+N04|11.0|13.1|0|Avec {MYFACE}, c'est fini.
+N05|13.2|16.55|0|Scanne le QR code, et toutes tes photos sont là.
+N06|16.7|23.9|0|Parcours la galerie, ou touche « Trouver mon visage » : notre IA a déjà regroupé toutes tes photos.
+N07|24.4|29.4|0|Encore plus simple : un selfie, et l'IA retrouve tes photos.
+N08|29.7|33.9|0|Les prix sont clairs : plus tu en prends, moins tu paies.
+N09|33.95|36.98|0|Pas de téléphone ? Passe à la borne.
+N10|37.0|41.95|0|Coche l'impression, paie même en espèces, et ta photo sort en vingt secondes.
+N11|42.0|45.95|0|En qualité d'origine, le soir même, et parfois offertes.
+N12|46.05|49.95|0|{MYFACE}, scanne, retrouve, repars avec.
