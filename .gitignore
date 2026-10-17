@@ -64,3 +64,10 @@ motion-design/v3/*.wav
 motion-design/v3/voix/*.wav
 motion-design/v3/voix/essais/
 motion-design/v3/voix/cle-google.txt
+
+# Motion design v4 (2 min) : se regenere avec v4/voix/generer_voix_v4.py, v4/rendre_film_v4.py,
+# v4/sons_v4.py et v4/assembler_v4.ps1
+motion-design/v4/*.mp4
+motion-design/v4/*.wav
+motion-design/v4/voix/*.wav
+motion-design/v4/apercus/

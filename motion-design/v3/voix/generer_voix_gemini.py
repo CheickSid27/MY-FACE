@@ -17,6 +17,7 @@ Le texte et les temps sont ceux de la v2 : motion-design/v2/voix/texte.txt.
 
 import argparse
 import base64
+import http.client
 import json
 import os
 import re
@@ -101,7 +102,7 @@ def generer(cle, voix, texte):
         },
     }).encode("utf-8")
     for modele in MODELES:
-        for essai in range(5):
+        for essai in range(8):
             req = urllib.request.Request(URL.format(modele), data=corps, method="POST", headers={
                 "Content-Type": "application/json", "x-goog-api-key": cle})
             try:
@@ -127,12 +128,12 @@ def generer(cle, voix, texte):
                     time.sleep(5 * (essai + 1))
                     continue
                 sys.exit(f"Erreur Google {e.code} : {detail[:400]}")
-            except (urllib.error.URLError, OSError, TimeoutError) as e:
+            except (urllib.error.URLError, OSError, TimeoutError, http.client.HTTPException) as e:
                 print(f"  connexion coupee ({type(e).__name__}), nouvel essai...")
                 time.sleep(5 * (essai + 1))
                 continue
         else:
-            sys.exit("Toujours bloque (quota ou connexion) apres 5 essais : reessaie plus tard.")
+            sys.exit("Toujours bloque (quota ou connexion) apres 8 essais : reessaie plus tard.")
         if rep is None:
             continue
         try:
