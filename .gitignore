@@ -71,3 +71,6 @@ motion-design/v4/*.mp4
 motion-design/v4/*.wav
 motion-design/v4/voix/*.wav
 motion-design/v4/apercus/
+
+# Voix des scenarios de pub : se regenerent avec motion-design/scenarios/generer_scenarios.py
+motion-design/scenarios/voix/

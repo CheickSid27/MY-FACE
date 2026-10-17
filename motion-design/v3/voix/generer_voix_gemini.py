@@ -92,13 +92,14 @@ def phrases():
     return lignes
 
 
-def generer(cle, voix, texte):
-    """Une requete Gemini : renvoie l'audio en float 48 kHz mono."""
+def generer(cle, voix, texte, config_voix=None):
+    """Une requete Gemini : renvoie l'audio en float 48 kHz mono. config_voix remplace la
+    voix unique (par exemple deux voix pour un dialogue : multiSpeakerVoiceConfig)."""
     corps = json.dumps({
         "contents": [{"parts": [{"text": texte}]}],
         "generationConfig": {
             "responseModalities": ["AUDIO"],
-            "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voix}}},
+            "speechConfig": config_voix or {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voix}}},
         },
     }).encode("utf-8")
     for modele in MODELES:
