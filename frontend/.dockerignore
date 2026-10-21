@@ -1,0 +1,7 @@
+# Ne pas envoyer a Docker ce qui est reconstruit dans l'image : les modules
+# Windows du PC (347 Mo, mauvais systeme) et la compilation locale (214 Mo).
+node_modules
+.next
+out
+tsconfig.tsbuildinfo
+npm-debug.log*

@@ -10,6 +10,11 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Compilation : 2 processus au plus (le PC a 16 coeurs, Next.js en lancait
+  // une quinzaine en parallele et saturait la memoire, Docker est tombe).
+  experimental: {
+    cpus: 2,
+  },
   // Docker Desktop sur Windows ne propage pas toujours fiablement les
   // evenements filesystem natifs (inotify) a travers le bind-mount vers le
   // conteneur : le watcher par defaut de webpack manque alors des
