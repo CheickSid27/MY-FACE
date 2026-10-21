@@ -151,10 +151,11 @@ export default function OrderReceipt({ order }: { order: OrderDetail }) {
             className="h-24 w-24 shrink-0 rounded bg-white"
           />
           <div className="min-w-0 text-xs">
-            <p className="font-semibold text-ink-900">Téléchargement du client (permanent)</p>
+            <p className="font-semibold text-ink-900">Téléchargement du client</p>
             <p className="break-all text-ink-500">{order.download_url}</p>
             <p className="mt-1 text-ink-500">
-              Le client peut scanner ce QR code pour récupérer ses photos à tout moment.
+              Le client peut scanner ce QR code pour récupérer ses photos tant qu&apos;elles sont en ligne (la date
+              limite s&apos;affiche sur sa page de téléchargement).
             </p>
           </div>
         </div>

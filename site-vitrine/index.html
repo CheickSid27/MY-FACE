@@ -357,6 +357,8 @@
   .cible:hover::before { transform: scaleX(1); }
   .cible h3 { margin-bottom: 8px; }
   .cible p { color: var(--muted-light); font-size: 16px; }
+  .sur-encre .cible h3 { color: var(--ink); }
+  #photographes .hero-actions { margin-top: 36px; }
   @media (max-width: 880px) { .cibles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 560px) { .cibles { grid-template-columns: minmax(0, 1fr); } }
 
@@ -558,7 +560,7 @@
       </div>
       <div class="chiffres">
         <div class="chiffre verre-clair revele d1"><b><span class="compteur" data-vers="4">0</span> s</b><span>pour qu'un invité retrouve toutes ses photos, sans fouiller</span></div>
-        <div class="chiffre verre-clair revele d2"><b><span class="compteur" data-vers="450">0</span> F</b><span>la photo en qualité d'origine, prix affiché d'avance</span></div>
+        <div class="chiffre verre-clair revele d2"><b><span class="compteur" data-vers="20">0</span> s</b><span>pour imprimer un tirage 10×15 sur place, à la borne</span></div>
         <div class="chiffre verre-clair revele d3"><b><span class="compteur" data-vers="0">0</span> F</b><span>à payer par l'organisateur dans la formule simple</span></div>
       </div>
     </div>
@@ -675,6 +677,26 @@
     </div>
   </section>
 
+  <!-- ================= PHOTOGRAPHES ================= -->
+  <section class="sur-encre motif" id="photographes">
+    <div class="wrap">
+      <div class="titre-bloc revele">
+        <h2>Vous êtes photographe ? MYFACE travaille pour vous.</h2>
+        <p>Déposez les photos de vos événements depuis votre compte : notre IA de reconnaissance faciale les range
+          par invité, et chacun retrouve les siennes avec un selfie.</p>
+      </div>
+      <div class="cibles">
+        <div class="cible revele"><h3>Rien à trier</h3><p>Créez l'événement en une minute, déposez vos photos même pendant la soirée. L'IA fait le tri.</p></div>
+        <div class="cible revele d1"><h3>Vous vendez plus</h3><p>Les invités paient sur votre Wave ou votre Orange Money. MYFACE ne prend aucune commission sur vos ventes.</p></div>
+        <div class="cible revele d2"><h3>Petits prix</h3><p>Un premier événement gratuit pour essayer, puis des packs à petit prix, sans abonnement.</p></div>
+      </div>
+      <div class="hero-actions revele">
+        <a class="btn btn-primaire" href="photographes.html">Découvrir l'offre photographes</a>
+        <a class="btn btn-clair" href="https://app.myfaceci.online/photographes/inscription">Essayer gratuitement</a>
+      </div>
+    </div>
+  </section>
+
   <!-- ================= LES PRIX ================= -->
   <section class="sur-sable-2" id="prix">
     <div class="wrap">
@@ -690,8 +712,8 @@
             <p class="pour">Remises de diplômes, soirées, concerts</p>
           </div>
           <div>
-            <div class="ligne"><span>La photo</span><b>450 F</b></div>
-            <div class="ligne"><span>Impression papier, en option</span><b>+500 F</b></div>
+            <div class="ligne"><span>La photo</span><b>petit prix, affiché avant l'achat</b></div>
+            <div class="ligne"><span>Impression papier</span><b>en option, sur place</b></div>
             <div class="ligne"><span>Lots et remises</span><b>selon l'événement</b></div>
             <div class="ligne"><span>Coût pour l'organisateur</span><b>0 F</b></div>
           </div>
@@ -702,16 +724,15 @@
             <p class="pour">Mariages, galas, séminaires</p>
           </div>
           <div>
-            <div class="ligne"><span>Jusqu'à 150 invités</span><b>150 000 F</b></div>
-            <div class="ligne"><span>Jusqu'à 300 invités</span><b>250 000 F</b></div>
-            <div class="ligne"><span>Au-delà</span><b>sur devis</b></div>
+            <div class="ligne"><span>Le forfait</span><b>sur devis</b></div>
+            <div class="ligne"><span>Calculé selon</span><b>vos invités et la durée</b></div>
             <div class="ligne"><span>Vos invités paient</span><b>rien</b></div>
           </div>
           <a class="btn btn-primaire" href="https://wa.me/2250758509403?text=Bonjour%20MYFACE%2C%20je%20voudrais%20offrir%20les%20photos%20%C3%A0%20mes%20invit%C3%A9s.%20Voici%20mon%20%C3%A9v%C3%A9nement%20%3A" target="_blank" rel="noopener">Demander ce forfait</a>
         </div>
       </div>
-      <p class="note-prix revele">Les prix sont fixés événement par événement : ils dépendent du type de cérémonie,
-        du nombre d'invités et de la durée. Demandez un devis, vous l'avez dans l'heure.</p>
+      <p class="note-prix revele">Pas de grille figée : chaque prix est calculé pour votre événement, selon le type de
+        cérémonie, le nombre d'invités et la durée. Une seule promesse : des prix bas. Demandez un devis, vous l'avez dans l'heure.</p>
     </div>
   </section>
 
@@ -935,6 +956,6 @@
   "email": "contact@myfaceci.online",
   "areaServed": "Abidjan, Côte d'Ivoire",
   "address": { "@type": "PostalAddress", "addressLocality": "Abidjan", "addressCountry": "CI" },
-  "priceRange": "450 F - 250 000 F"
+  "priceRange": "Prix bas, sur devis"
 }
 </script>
