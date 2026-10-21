@@ -6,12 +6,15 @@ import { AlertIcon, CardIcon, ClockIcon, CrossIcon } from "@/components/icons";
 import MethodIcon from "@/components/payments/MethodIcon";
 import { api, ApiError } from "@/lib/api-client";
 import type { OrderStatus, PaymentStatusResponse } from "@/types/api";
+import { formatPhone } from "@/lib/phone";
+import { useSmsEnabled } from "@/lib/features";
 
 const POLL_INTERVAL_MS = 3000;
 // Statuts definitifs : plus rien a attendre, le polling s'arrete.
 const FINAL_STATUSES: OrderStatus[] = ["success", "failed", "cancelled"];
 
 export default function PaymentStatusPage() {
+  const smsEnabled = useSmsEnabled();
   const { eventId, orderId } = useParams<{ eventId: string; orderId: string }>();
   const router = useRouter();
 
@@ -161,7 +164,7 @@ export default function PaymentStatusPage() {
 
         {data.merchant_phone && (
           <p className="text-sm text-ink-300">
-            Numéro marchand : <span className="font-semibold text-white">{data.merchant_phone}</span>
+            Numéro marchand : <span className="font-semibold text-white">{formatPhone(data.merchant_phone)}</span>
           </p>
         )}
 
@@ -176,8 +179,9 @@ export default function PaymentStatusPage() {
           {markingPaid ? "Confirmation..." : "J'ai payé"}
         </button>
         <p className="max-w-sm text-xs text-ink-300">
-          Après vérification par l&apos;organisateur, vous recevrez vos photos par SMS et sur cette
-          page.
+          {smsEnabled
+            ? "Après vérification par l'organisateur, vous recevrez vos photos par SMS et sur cette page."
+            : "Après vérification par l'organisateur, vos photos s'afficheront sur cette page : gardez-la ouverte."}
         </p>
       </main>
     );
@@ -230,8 +234,9 @@ export default function PaymentStatusPage() {
       </div>
       <h1 className="text-xl font-bold">En attente de confirmation du paiement...</h1>
       <p className="max-w-sm text-sm text-ink-300">
-        Ne fermez pas cette page. Vous recevrez un SMS avec votre lien de téléchargement des la
-        confirmation.
+        {smsEnabled
+          ? "Ne fermez pas cette page. Vous recevrez un SMS avec votre lien de téléchargement dès la confirmation."
+          : "Ne fermez pas cette page : votre lien de téléchargement s'affichera ici dès la confirmation."}
       </p>
       {error && <p className="text-sm text-red-200">{error}</p>}
     </main>

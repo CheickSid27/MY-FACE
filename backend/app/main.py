@@ -26,6 +26,7 @@ from app.services.face_indexing import recover_unfinished_indexing
 from app.services.face_recognition import preload_face_analysis
 from app.services.folder_watcher import folder_watcher
 from app.services.orders import run_startup_maintenance
+from app.services.retention import retention_loop
 from app.services.storage import get_storage_service
 from app.services.watermark import backfill_watermarks
 
@@ -86,14 +87,22 @@ async def lifespan(app: FastAPI):
     startup_task = asyncio.create_task(_startup_jobs())
     intervalle = get_settings().db_keepalive_seconds
     eveil_task = asyncio.create_task(_garder_base_eveillee(intervalle)) if intervalle > 0 else None
+    # Suppression des photos et numeros arrives au bout de leur duree de
+    # conservation (simulation tant que RETENTION_ENABLED=false).
+    retention_task = asyncio.create_task(retention_loop(get_storage_service(), AsyncSessionLocal))
     yield
     startup_task.cancel()
+    retention_task.cancel()
     if eveil_task:
         eveil_task.cancel()
     await folder_watcher.stop()
 
 
-app = FastAPI(title="MYFACE API", version="0.1.0", lifespan=lifespan)
+# En production, pas de documentation interactive publique de l'API (elle
+# listait toutes les routes, y compris celles d'administration).
+_docs = {} if not settings.is_production else {"docs_url": None, "redoc_url": None, "openapi_url": None}
+
+app = FastAPI(title="MYFACE API", version="0.1.0", lifespan=lifespan, **_docs)
 
 app.add_middleware(
     CORSMiddleware,
@@ -112,7 +121,8 @@ app.include_router(payments.router)
 app.include_router(download.router)
 app.include_router(admin.router)
 app.include_router(notifications.router)
-app.include_router(geniuspay.router)
+if settings.geniuspay_enabled:
+    app.include_router(geniuspay.router)
 app.include_router(meta.router)
 app.include_router(packs.router)
 

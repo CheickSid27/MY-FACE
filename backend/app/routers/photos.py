@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db, get_session_factory
-from app.deps import get_current_user, get_optional_user
+from app.deps import get_current_user, get_optional_user, require_verified_user
 from app.models.event import Event
 from app.models.face_embedding import FaceEmbedding
 from app.models.order import Order, OrderItem, OrderStatus
@@ -17,7 +17,7 @@ from app.services.face_clusters import face_cluster_cache
 from app.services.face_crops import face_crop_key
 from app.services.face_indexing import index_photos_faces
 from app.services.gallery_access import require_gallery_access
-from app.services.ingestion import InvalidImageError, ingest_photo
+from app.services.ingestion import MAX_FILE_SIZE_BYTES, InvalidImageError, ingest_photo
 from app.services.packs import (
     count_event_photos,
     effective_photo_limit,
@@ -40,7 +40,7 @@ async def upload_photos(
     event_id: uuid.UUID,
     files: list[UploadFile],
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_verified_user),
     db: AsyncSession = Depends(get_db),
     storage: StorageService = Depends(get_storage_service),
     session_factory=Depends(get_session_factory),
@@ -63,6 +63,10 @@ async def upload_photos(
             errors.append(
                 PhotoUploadError(filename=file.filename or "unknown", error=limit_reached_message(event, limit))
             )
+            continue
+        if file.size is not None and file.size > MAX_FILE_SIZE_BYTES:
+            # refuse avant lecture : un fichier enorme ne passe pas en memoire
+            errors.append(PhotoUploadError(filename=file.filename or "unknown", error="Fichier trop volumineux (max 25 Mo)"))
             continue
         try:
             data = await file.read()
@@ -118,7 +122,7 @@ async def delete_photo(
     if sold_result.first() is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Cette photo fait partie d'une commande deja payee, suppression impossible",
+            detail="Cette photo fait partie d'une commande déjà payée : suppression impossible",
         )
 
     # Vignettes des visages (voir services/face_crops.py) : a recuperer avant
@@ -171,7 +175,7 @@ async def list_event_photos(
     mot de passe : jeton `access` requis (voir services/gallery_access.py)."""
     event = await db.get(Event, event_id)
     if event is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Événement introuvable")
     require_gallery_access(event, kiosk_token=kiosk_token, access_token=access, user=current_user)
 
     # Compte total + page de resultats en UNE requete (window function) plutot

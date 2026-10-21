@@ -11,6 +11,10 @@ export interface User {
   phone?: string | null;
   city?: string | null;
   is_active?: boolean;
+  // Adresse confirmee par le lien recu par e-mail (photographes)
+  email_verified?: boolean;
+  // Photographe bloque tant qu'il n'a pas confirme (envoi d'e-mails en place)
+  must_verify_email?: boolean;
 }
 
 export interface UserAdmin extends User {
@@ -155,6 +159,11 @@ export interface Event {
   photo_limit_override: number | null;
   watermark_text: string | null;
   has_gallery_password: boolean;
+  // Conservation des donnees : evenement exempte de la suppression
+  // automatique (demo), date de suppression des photos
+  retention_exempt: boolean;
+  photos_purged_at: string | null;
+  photos_available_until: string | null;
 }
 
 export interface EventPublicRead {
@@ -169,6 +178,9 @@ export interface EventPublicRead {
   photographer_name: string | null;
   password_required: boolean;
   gallery_access: boolean;
+  // Photos en ligne jusqu'a cette date (null = pas de suppression prevue)
+  photos_available_until: string | null;
+  photos_purged: boolean;
 }
 
 export interface EventListItem {
@@ -371,6 +383,8 @@ export interface DownloadResponse {
   expires_in: number;
   printed_at: string | null;
   offert?: boolean;
+  photos_available_until?: string | null;
+  photos_purged?: boolean;
 }
 
 export interface DailySales {
@@ -415,4 +429,22 @@ export interface PhoneCountry {
   example: string;
   hint: string;
   trunk_prefix: string | null;
+}
+
+export interface ExpiredEvent {
+  event_id: string;
+  name: string;
+  date: string;
+  photo_count: number;
+}
+
+/** Ce que la suppression automatique supprime (ou supprimerait en simulation). */
+export interface RetentionReport {
+  enabled: boolean;
+  photo_days: number;
+  order_days: number;
+  events: ExpiredEvent[];
+  orders_to_anonymize: number;
+  photos_deleted: number;
+  orders_anonymized: number;
 }

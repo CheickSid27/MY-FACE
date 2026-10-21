@@ -5,8 +5,10 @@ mariage, une remise de diplomes ou tout autre evenement sont indexees automatiqu
 invite retrouve ses propres photos en scannant son visage (selfie), les achete et les telecharge
 en qualite originale, sans jamais avoir a faire defiler des centaines de photos a la main.
 
-Voir [docs/MYFACE_cahier_des_charges_v2.1.md](docs/MYFACE_cahier_des_charges_v2.1.md) pour la
-vision produit complete, et [docs/](docs/) pour la documentation technique detaillee.
+Voir [docs/cahier-des-charges/](docs/cahier-des-charges/MYFACE_cahier_des_charges_v2.1.md) pour la
+vision produit complete, et [docs/technique/](docs/technique/) pour la documentation technique
+detaillee. Pour lancer MYFACE au quotidien sur le PC : `DEMARRER MYFACE.bat`, `ARRETER MYFACE.bat`
+et le guide `COMMENT LANCER MYFACE.txt`, a la racine.
 
 ## Sommaire
 
@@ -74,7 +76,20 @@ vision produit complete, et [docs/](docs/) pour la documentation technique detai
 - **Notifications push (PWA)** : alerte sur le telephone de l'organisateur des qu'un client declare
   avoir paye, sans app mobile separee
 - Un admin voit et gere tous les evenements (tous organisateurs) et cree les comptes photographe ;
-  chacun peut changer son mot de passe ("Mon compte")
+  chacun peut changer son mot de passe ("Mon compte"), ce qui ferme ses autres sessions
+
+**Service photographe** (inscription libre, memes tarifs que Fokevani)
+- Inscription avec **confirmation de l'adresse e-mail** (lien envoye par e-mail ; sans confirmation,
+  pas d'evenement ni d'envoi de photos), **mot de passe oublie** par lien a usage unique
+- Packs par evenement (Decouverte gratuit 10 photos, Evenement, Pro, Sur mesure), achat declare
+  puis valide par un admin ; 3 evenements gratuits au plus en meme temps par compte
+- Mot de passe de galerie et filigrane au nom du studio (packs payants)
+
+**Donnees personnelles** (declarees a l'ARTCI)
+- Selfie jamais enregistre ; ecran d'accord avant chaque scan
+- **Suppression automatique** des photos et empreintes faciales 90 jours apres l'evenement, numero
+  de telephone des commandes efface apres 1 an (`RETENTION_*`, en simulation tant que
+  `RETENTION_ENABLED=false` ; liste de ce qui serait supprime dans Admin > Reglages)
 
 ## Stack technique
 
@@ -154,15 +169,17 @@ docker compose up --build
 ```
 
 - Application (via nginx, site + API) : http://localhost
-- Backend (docs interactives Swagger) : http://localhost:8000/docs
+- Backend (docs interactives Swagger, hors production) : http://localhost:8000/docs
 - Console MinIO : http://localhost:9001
-- Acces public (telephones, camera en HTTPS) : `docker compose up -d tunnel-app`, puis voir
-  [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#3-exposition-publique--cloudflare-tunnel-quick-tunnel)
+- Tous ces ports ne sont ouverts que sur ce PC (127.0.0.1), jamais sur le reseau local
+- Acces public (telephones, camera en HTTPS) : tunnel Cloudflare nomme,
+  `docker compose --profile domaine up -d tunnel-domaine` (voir
+  [docs/technique/DEPLOYMENT.md](docs/technique/DEPLOYMENT.md))
 
 Le premier demarrage applique les migrations Alembic et cree le compte admin initial
 (`INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` dans `.env`).
 
-**Notes d'exploitation locale** (voir [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) pour le detail) :
+**Notes d'exploitation locale** (voir [docs/technique/DEPLOYMENT.md](docs/technique/DEPLOYMENT.md) pour le detail) :
 - Apres avoir recree `backend` ou `frontend`, redemarrez `nginx` (`docker restart <container>
   nginx`) : nginx met en cache la resolution DNS de ses upstreams au demarrage.
 - Le dossier surveille attend un sous-dossier par evenement dans `./watched-photos/<event_id>/`
@@ -187,36 +204,70 @@ Voir [.env.example](.env.example) pour la liste complete et commentee. Points no
   lien invite, affiche) et les notifications. Tant qu'elle vaut `localhost`, la page admin affiche
   un avertissement : ces liens ne s'ouvriraient pas sur le telephone des invites.
 - `VAPID_*`, necessaires pour les notifications push admin ; voir
-  [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#notifications-push-vapid) pour generer une paire de cles.
+  [docs/technique/DEPLOYMENT.md](docs/technique/DEPLOYMENT.md#notifications-push-vapid) pour generer une paire de cles.
 - `WATCHED_FOLDER_*`, configuration du dossier surveille (ingestion automatique).
+- `SMTP_*`, envoi des e-mails (confirmation d'adresse, mot de passe oublie). Vide : aucun e-mail ne
+  part, les liens s'affichent dans `docker compose logs backend`, et la confirmation d'adresse
+  n'est pas exigee (`EMAIL_VERIFICATION_REQUIRED=auto`).
+- `RETENTION_*`, conservation des donnees (voir plus haut).
+- `FREE_EVENTS_PER_ACCOUNT`, evenements gratuits simultanes par photographe (3).
+- `GENIUSPAY_ENABLED`, routes GeniusPay (sandbox) fermees par defaut.
 
 ## Structure du projet
 
 ```
-backend/
+DEMARRER MYFACE.bat        # lancement quotidien sur le PC (double-clic)
+ARRETER MYFACE.bat
+COMMENT LANCER MYFACE.txt  # guide pas a pas
+docker-compose.yml         # l'application (backend, frontend, nginx, tunnel)
+docker-compose.e2e.yml     # copie de test isolee (voir Tests)
+.env.example               # toutes les variables, commentees (.env : secrets, jamais sur GitHub)
+
+backend/                   # API FastAPI
   app/
-    core/          # config (pydantic-settings), base de donnees, securite (JWT, hash)
-    models/        # SQLAlchemy ORM (User, Event, Photo, FaceEmbedding, Order, ...)
-    schemas/       # Pydantic (requetes/reponses API)
-    routers/       # endpoints FastAPI par domaine (auth, events, photos, faces, cart, payments, ...)
-    services/      # logique metier reutilisable (storage, thumbnails, face_recognition,
-                    # face_indexing, folder_watcher, push_notifications, payments, sms, ...)
-  alembic/versions/ # migrations
-  tests/            # pytest, Postgres reel (pas de mock DB)
-frontend/
-  app/              # Next.js App Router (pages invite + admin)
-  components/       # composants React (gallery, scan, upload, admin, payments, icons)
-  lib/              # client API, auth, animations
-  types/            # types TypeScript partages (miroir des schemas Pydantic)
-nginx/              # reverse proxy (config + Dockerfile)
-docs/               # documentation technique detaillee
+    core/                  # config (pydantic-settings), base de donnees, securite (JWT, hash)
+    models/                # SQLAlchemy ORM (User, Event, Photo, FaceEmbedding, Order, ...)
+    schemas/               # Pydantic (requetes/reponses API)
+    routers/               # endpoints par domaine (auth, events, photos, faces, cart, payments,
+                           # packs, admin, ...)
+    services/              # logique metier (storage, face_recognition, face_indexing, email,
+                           # retention, packs, payments, sms, rate_limit, ...)
+  alembic/versions/        # migrations de la base
+  scripts/                 # seed admin, verification des migrations, mesure de vitesse de l'IA
+  tests/                   # pytest, Postgres reel (pas de mock DB)
+frontend/                  # application Next.js (pages invite, borne, espace photographe/admin)
+  app/  components/  lib/  types/  store/
+nginx/                     # reverse proxy (config + Dockerfile)
+site-vitrine/              # site public myfaceci.online (HTML statique, publie par Cloudflare
+                           # depuis la branche main)
+watched-photos/            # dossier surveille (photos copiees depuis la carte SD), hors GitHub
+
+docs/
+  technique/               # ARCHITECTURE.md, API.md, DEPLOYMENT.md
+  cahier-des-charges/      # cahier des charges produit
+  word/                    # business plan et cahier en Word/PDF + generateurs (hors GitHub)
+  artci/                   # dossier ARTCI : fiche technique, politique de cookies (hors GitHub)
+
+marketing/
+  marque/                  # logos et icones
+  affiches/                # affiches A4 et posts (PNG/PDF) + generateur
+  fiches/                  # fiches PDF (kit de lancement, plan marketing...) + sources HTML
+  video/                   # video du parcours invite + generateur
+  motion-design/           # films v1 a v4, scenarios de pub, voix (fichiers lourds hors GitHub)
+  captures/                # captures d'ecran de l'app (hors GitHub)
+  prospection/             # fichier de prospects (hors GitHub)
 ```
+
+Le depot GitHub est **public** : les secrets (`.env`, cle Gemini), la prospection, les documents
+d'affaires et le dossier ARTCI restent sur le PC (voir `.gitignore`).
 
 ## Tests
 
 ```bash
-docker compose exec backend pytest
+docker compose run --rm --no-deps -w /app backend python3 -m pytest
 ```
+
+Sans demarrer l'application, et toujours contre la base locale `myface_test` (jamais Neon).
 
 La base `myface_test` est creee automatiquement au premier demarrage du conteneur `db` (voir
 `backend/docker/init-test-db.sql`). Les tables sont creees/supprimees par les fixtures pytest a
@@ -224,32 +275,39 @@ chaque run, contre un vrai Postgres, pas de mock de la base de donnees. Aucun ap
 pendant les tests : stockage en memoire, SMS simules, dossier surveille redirige vers un dossier
 temporaire. Parcours couverts notamment : QR → "j'ai paye" → validation → telechargement,
 expiration des commandes, filigrane/mode borne, cache des groupes de visages, dossier surveille,
-formats de telephone.
+formats de telephone, verification de l'e-mail, mot de passe oublie, sessions fermees au
+changement de mot de passe, limites de connexion, suppression automatique des donnees.
+
+**Copie de test complete** (pour essayer les parcours dans un navigateur sans toucher a Neon ni a
+R2) : `docker compose -f docker-compose.e2e.yml -p myface-e2e up -d --build`, puis
+http://localhost:8088 (base et stockage a elle, IA sur le processeur, liens « e-mail » lus dans
+`docker compose -f docker-compose.e2e.yml -p myface-e2e logs backend`). Pour tout effacer :
+`docker compose -f docker-compose.e2e.yml -p myface-e2e down -v`.
 
 ## Documentation complementaire
 
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), architecture detaillee, modele de donnees, choix
-  techniques et leurs justifications
-- [docs/API.md](docs/API.md), reference complete des endpoints REST par domaine
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), deploiement local/self-hosted (Docker Compose, Neon,
-  Cloudflare R2, Cloudflare Tunnel, generation des cles VAPID)
-- [docs/MYFACE_cahier_des_charges_v2.1.md](docs/MYFACE_cahier_des_charges_v2.1.md), cahier des
-  charges produit original
+- [docs/technique/ARCHITECTURE.md](docs/technique/ARCHITECTURE.md), architecture detaillee, modele
+  de donnees, choix techniques et leurs justifications
+- [docs/technique/API.md](docs/technique/API.md), reference des endpoints REST par domaine
+- [docs/technique/DEPLOYMENT.md](docs/technique/DEPLOYMENT.md), deploiement local/self-hosted
+  (Docker Compose, Neon, Cloudflare R2, Cloudflare Tunnel, generation des cles VAPID)
+- [docs/cahier-des-charges/](docs/cahier-des-charges/MYFACE_cahier_des_charges_v2.1.md), cahier
+  des charges produit original
 
 ## Limites connues / non branche
 
 - **Aucun operateur Mobile Money n'a d'API reellement integree** (Wave, Orange Money, MTN Money,
   Moov Money) : le paiement fonctionne via QR marchand statique + validation manuelle organisateur,
   qui est la vraie solution retenue (pas une simulation en attendant mieux).
-- **Conformite ARTCI** (donnees biometriques, droit ivoirien) non verifiee formellement, a traiter
-  avant tout lancement public a grande echelle.
-- **Tunnel Cloudflare "quick"** (sans compte) genere une URL ephemere qui change a chaque
-  redemarrage du conteneur `tunnel-app` ; un nom de domaine + tunnel nomme est necessaire pour une
-  URL stable en production.
-- **GeniusPay** : endpoints backend presents (`/payments/geniuspay/*`, sandbox) mais aucun ecran
-  invite et secret webhook non configure, laisse en l'etat, decision produit en attente.
-- **Donnees biometriques** : droit a l'effacement, chiffrement des embeddings au repos et texte de
-  consentement a revoir (voir cahier des charges section 8), reporte.
+- **Conformite ARTCI** (donnees biometriques, droit ivoirien) : demande d'autorisation en cours
+  (dossier en brouillon sur le portail de l'ARTCI), a finaliser avant tout lancement public.
+- **GeniusPay** : endpoints backend presents (`/payments/geniuspay/*`, sandbox), fermes tant que
+  `GENIUSPAY_ENABLED=false` ; aucun ecran invite, decision produit en attente.
+- **SMS** : compte Africa's Talking de test (sandbox), aucun SMS n'arrive vraiment ; les pages
+  invites ne promettent un SMS que si un vrai compte est configure (`GET /meta/features`).
+- **E-mails** : aucun fournisseur SMTP configure pour l'instant (liens dans les logs du backend).
+- **Modeles InsightFace buffalo_l** : licence non commerciale, licence a obtenir ou modeles a
+  remplacer avant de vendre.
 - Animation "vol vers le panier" : code present (`lib/fly-to-cart.ts`) mais inactive (aucun element
   cible dans les pages), laissee en l'etat pour le moment.
 - Pas de suite CI automatisee configuree dans ce depot (tests a lancer manuellement).

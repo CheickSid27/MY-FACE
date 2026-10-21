@@ -143,7 +143,12 @@ export default function EventHomePage() {
         )}
       </div>
 
-      {locked ? (
+      {event.photos_purged ? (
+        <p className="relative z-10 mt-12 max-w-md text-sm text-ink-300">
+          Les photos de cet événement ne sont plus en ligne : elles sont supprimées automatiquement quelque temps
+          après l&apos;événement, pour protéger les invités.
+        </p>
+      ) : locked ? (
         <form onSubmit={handleUnlock} className="relative z-10 mt-12 w-full max-w-sm">
           <p className="mb-3 text-sm text-ink-300">
             Cette galerie est privée : saisissez le mot de passe donné par l&apos;organisateur.
@@ -181,6 +186,17 @@ export default function EventHomePage() {
           Scanner mon visage
         </button>
       </div>
+      )}
+
+      {!event.photos_purged && event.photos_available_until && (
+        <p className="relative z-10 mt-6 text-xs text-ink-300">
+          Photos en ligne jusqu&apos;au{" "}
+          {new Date(event.photos_available_until).toLocaleDateString("fr-FR", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
+        </p>
       )}
 
       <div className="relative z-10 mt-14 flex items-center gap-2 opacity-60">

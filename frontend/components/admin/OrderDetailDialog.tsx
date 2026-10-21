@@ -18,7 +18,7 @@ interface OrderDetailDialogProps {
 type Action = "approve" | "reject" | "cancel";
 
 const ACTION_CONFIRMATIONS: Record<Action, string> = {
-  approve: "Valider cette commande ? Le client recevra ses photos (et un SMS).",
+  approve: "Valider cette commande ? Le client pourra télécharger ses photos.",
   reject: "Rejeter cette commande ? Le paiement annonce n'est pas arrive.",
   cancel: "Annuler cette commande jamais payée ?",
 };

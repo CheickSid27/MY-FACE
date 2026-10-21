@@ -1,4 +1,6 @@
 import uuid
+from dataclasses import asdict
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import case, func, select
@@ -6,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import get_settings
-from app.core.database import get_db
+from app.core.database import get_db, get_session_factory
 from app.core.security import hash_password
 from app.deps import get_current_user, require_admin
 from app.models.event import Event
@@ -15,11 +17,13 @@ from app.models.pack_purchase import PackPurchase, PackPurchaseStatus
 from app.models.photo import IndexingStatus, Photo
 from app.models.user import User
 from app.schemas.order import OrderConfirmRequest, OrderDetailRead, OrderItemRead, OrderRead
+from app.schemas.retention import RetentionExemptUpdate, RetentionReportRead
 from app.schemas.stats import DailySales, EventStats
 from app.schemas.user import UserAdminRead, UserAdminUpdate, UserCreate, UserRead
 from app.services.access import can_manage_event, get_manageable_event
 from app.services.orders import EXPIRABLE_STATUSES, expire_stale_orders, set_order_status
 from app.services.photo_urls import to_photo_read
+from app.services.retention import build_report, run_retention
 from app.services.storage import StorageService, get_storage_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -156,7 +160,7 @@ async def _get_owned_order(order_id: uuid.UUID, current_user: User, db: AsyncSes
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Commande introuvable")
     event = await db.get(Event, order.event_id)
     if event is None or not can_manage_event(event, current_user):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acces refuse")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès refusé")
     return order
 
 
@@ -236,13 +240,13 @@ async def confirm_order(
     order = await _get_owned_order(order_id, current_user, db)
     if payload.approved:
         if order.status == OrderStatus.SUCCESS:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Commande deja payee")
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Commande déjà payée")
         new_status = OrderStatus.SUCCESS
     else:
         if order.status not in _REJECTABLE:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Commande au statut '{order.status.value}', rien a rejeter",
+                detail=f"Commande au statut '{order.status.value}', rien à rejeter",
             )
         new_status = OrderStatus.FAILED
 
@@ -335,6 +339,12 @@ async def update_user(
         if user.id == current_user.id and not payload.is_active:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Impossible de suspendre votre propre compte")
         user.is_active = payload.is_active
+    if payload.email_verified is not None:
+        # confirmation a la main (photographe qui ne recoit pas l'e-mail)
+        if payload.email_verified and user.email_verified_at is None:
+            user.email_verified_at = datetime.now(timezone.utc)
+        elif not payload.email_verified:
+            user.email_verified_at = None
     await db.commit()
     await db.refresh(user)
     return user
@@ -346,11 +356,17 @@ async def create_user(
     current_user: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    existing = await db.execute(select(User).where(User.email == payload.email))
-    if existing.scalar_one_or_none() is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cet email est deja utilise")
+    existing = await db.execute(select(User.id).where(func.lower(User.email) == payload.email))
+    if existing.first() is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cet e-mail est déjà utilisé")
 
-    user = User(email=payload.email, hashed_password=hash_password(payload.password), role=payload.role)
+    # compte cree par MYFACE : l'adresse est celle que l'admin a saisie
+    user = User(
+        email=payload.email,
+        hashed_password=hash_password(payload.password),
+        role=payload.role,
+        email_verified_at=datetime.now(timezone.utc),
+    )
     db.add(user)
     await db.commit()
     await db.refresh(user)
@@ -374,8 +390,53 @@ async def delete_user(
     if owned_events.scalar_one() > 0:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Impossible de supprimer un utilisateur organisateur d'evenements existants",
+            detail="Impossible de supprimer un utilisateur qui organise des événements",
         )
 
     await db.delete(user)
     await db.commit()
+
+
+def _report_read(report) -> RetentionReportRead:
+    return RetentionReportRead(**asdict(report))
+
+
+@router.get("/retention", response_model=RetentionReportRead)
+async def get_retention_report(
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> RetentionReportRead:
+    """Ce que la suppression automatique supprime a son prochain passage :
+    evenements dont les photos ont depasse leur duree de conservation,
+    commandes dont le numero sera efface."""
+    return _report_read(await build_report(db))
+
+
+@router.post("/retention/run", response_model=RetentionReportRead)
+async def run_retention_now(
+    current_user: User = Depends(require_admin),
+    storage: StorageService = Depends(get_storage_service),
+    session_factory=Depends(get_session_factory),
+) -> RetentionReportRead:
+    """Lance un passage tout de suite. Sans RETENTION_ENABLED=true, rien
+    n'est supprime : la reponse liste seulement ce qui le serait."""
+    return _report_read(await run_retention(storage, session_factory))
+
+
+@router.put("/events/{event_id}/retention", response_model=RetentionExemptUpdate)
+async def set_event_retention_exempt(
+    event_id: uuid.UUID,
+    payload: RetentionExemptUpdate,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> RetentionExemptUpdate:
+    """Exempter un evenement de la suppression automatique (evenement de
+    demonstration aux photos de banque d'images). Reserve aux admins : un
+    photographe ne peut pas garder les visages de ses invites plus
+    longtemps que la duree declaree."""
+    event = await db.get(Event, event_id)
+    if event is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Événement introuvable")
+    event.retention_exempt = payload.exempt
+    await db.commit()
+    return RetentionExemptUpdate(exempt=event.retention_exempt)

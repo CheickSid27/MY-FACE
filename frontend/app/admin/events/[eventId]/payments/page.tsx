@@ -10,6 +10,11 @@ import MethodIcon, { METHOD_LABELS } from "@/components/payments/MethodIcon";
 import { api, ApiError } from "@/lib/api-client";
 import { ORDER_STATUS_LABELS } from "@/lib/order-labels";
 import type { EventPaymentMethodRead, OrderRead, PaymentMethod } from "@/types/api";
+import { formatPhone } from "@/lib/phone";
+
+// Memes limites que le serveur (routers/events.py, QR marchand)
+const QR_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const QR_MAX_BYTES = 5 * 1024 * 1024;
 
 const METHODS: PaymentMethod[] = ["wave", "orange_money", "mtn_money", "moov_money"];
 // Nouvelles commandes a confirmer visibles sans recharger la page (en plus
@@ -48,6 +53,14 @@ function MethodCard({
       setError("Image du QR requise.");
       return;
     }
+    if (file && !QR_TYPES.includes(file.type)) {
+      setError("Image du QR en JPEG, PNG ou WebP.");
+      return;
+    }
+    if (file && file.size > QR_MAX_BYTES) {
+      setError("Image du QR trop lourde (5 Mo maximum).");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -76,7 +89,7 @@ function MethodCard({
         </span>
         {configured && !editing && (
           <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-            Configure
+            Configuré
           </span>
         )}
       </div>
@@ -85,7 +98,7 @@ function MethodCard({
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={configured.qr_image_url} alt={`QR ${label}`} className="h-16 w-16 rounded-lg object-cover" />
-          <div className="flex-1 text-sm text-ink-500">Numéro : {configured.phone_number}</div>
+          <div className="flex-1 text-sm text-ink-500">Numéro : {formatPhone(configured.phone_number)}</div>
           <button type="button" onClick={() => setEditing(true)} className="text-xs font-semibold text-brand hover:underline">
             Modifier
           </button>
@@ -97,14 +110,15 @@ function MethodCard({
         <div className="flex flex-col gap-2.5">
           <input
             type="tel"
-            placeholder={`Numéro ${label}`}
+            placeholder={`Numéro ${label} (07 01 02 03 04)`}
+            maxLength={32}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             className="rounded-lg border border-ink-900/10 bg-white/70 px-3 py-2 text-sm outline-none focus:border-brand-accent"
           />
-          <input type="file" accept="image/*" onChange={handleFile} className="text-xs text-ink-500" />
+          <input type="file" accept={QR_TYPES.join(",")} onChange={handleFile} className="text-xs text-ink-500" />
           {configured && !file && (
-            <p className="text-xs text-ink-300">Sans nouveau fichier, le QR actuel est conserve.</p>
+            <p className="text-xs text-ink-300">Sans nouveau fichier, le QR actuel est conservé.</p>
           )}
           {error && <p className="text-xs text-red-600">{error}</p>}
           <div className="flex gap-2">
@@ -153,7 +167,7 @@ function OrderRow({
         <div>
           <p className="font-semibold text-ink-900">
             {order.total_amount.toLocaleString("fr-FR")} {order.currency}{" "}
-            <span className="font-normal text-ink-500">&middot; {order.photo_count} photo(s)</span>
+            <span className="font-normal text-ink-500">&middot; {order.photo_count} photo{order.photo_count > 1 ? "s" : ""}</span>
           </p>
           <p className="text-sm text-ink-500">
             {order.contact_phone} &middot; {METHOD_LABELS[order.payment_method] ?? order.payment_method}
@@ -175,7 +189,7 @@ function OrderRow({
           onClick={() => onOpen(order.id)}
           className="rounded-lg border border-ink-900/15 bg-white px-3 py-2 text-xs font-semibold text-ink-700 transition hover:bg-surface-alt"
         >
-          Details
+          Détails
         </button>
         {onDecision && (
           <>
@@ -273,7 +287,7 @@ function OrdersToHandle({ eventId }: { eventId: string }) {
         En attente de paiement ({awaitingPayment.length})
       </h2>
       <p className="mb-3 text-xs text-ink-500">
-        Le client n&apos;a pas encore déclare avoir payé. Ces commandes sont annulées
+        Le client n&apos;a pas encore déclaré avoir payé. Ces commandes sont annulées
         automatiquement si elles ne sont pas payées à temps (1 h par défaut) ; ouvrez-en une
         pour l&apos;annuler tout de suite ou la valider si vous avez reçu le paiement.
       </p>
@@ -381,7 +395,7 @@ function PaymentsContent() {
 
         <h1 className="mb-1 text-xl font-bold text-ink-900">Paiements</h1>
         <p className="mb-6 text-sm text-ink-500">
-          Aucun opérateur mobile money n&apos;est branche via API pour le moment. Configurez ici le
+          Aucun opérateur mobile money n&apos;est branché via API pour le moment. Configurez ici le
           QR code marchand et le numéro de chaque moyen de paiement que vous acceptez : le client
           scanne, paie hors-app, puis vous confirmez manuellement ci-dessous après vérification.
         </p>

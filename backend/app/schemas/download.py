@@ -29,6 +29,10 @@ class DownloadResponse(BaseModel):
     printed_at: datetime | None = None
     # Photos offertes par l'organisateur (pas de « paiement confirme »)
     offert: bool = False
+    # Conservation des donnees : photos telechargeables jusqu'a cette date
+    # (None = pas de suppression prevue), ou deja supprimees.
+    photos_available_until: datetime | None = None
+    photos_purged: bool = False
 
 
 class PrintedResponse(BaseModel):

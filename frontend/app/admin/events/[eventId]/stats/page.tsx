@@ -82,7 +82,7 @@ function StatsContent() {
 
         <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
           <StatTile label="Commandes payées" value={stats.orders_success} />
-          <StatTile label="A confirmer" value={stats.orders_awaiting_confirmation} />
+          <StatTile label="À confirmer" value={stats.orders_awaiting_confirmation} />
           <StatTile label="En attente de paiement" value={stats.orders_pending + stats.orders_processing} />
           <StatTile label="Rejetees" value={stats.orders_failed} />
           <StatTile label="Annulées / expirées" value={stats.orders_cancelled} />

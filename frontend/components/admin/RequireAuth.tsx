@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import EmailVerificationBanner from "@/components/admin/EmailVerificationBanner";
 import { api } from "@/lib/api-client";
 import { isAuthenticated } from "@/lib/auth";
 import { useAuthStore } from "@/store/auth-store";
@@ -19,6 +20,7 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   const [status, setStatus] = useState<"checking" | "ok" | "denied">("checking");
   const setUser = useAuthStore((s) => s.setUser);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -55,5 +57,10 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {user && <EmailVerificationBanner user={user} />}
+      {children}
+    </>
+  );
 }

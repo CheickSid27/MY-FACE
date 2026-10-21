@@ -15,6 +15,15 @@ logger = logging.getLogger("myface.sms")
 settings = get_settings()
 
 
+def sms_delivery_enabled() -> bool:
+    """True si un SMS peut vraiment arriver sur le telephone d'un invite :
+    Africa's Talking configure, et pas avec le compte « sandbox » (simulateur
+    de test, aucun SMS n'est remis). Les pages invites ne promettent un SMS
+    que dans ce cas."""
+    username = (settings.africastalking_username or "").strip().lower()
+    return bool(username and settings.africastalking_api_key and username != "sandbox")
+
+
 class SmsService:
     def __init__(self) -> None:
         self._configured = bool(settings.africastalking_username and settings.africastalking_api_key)

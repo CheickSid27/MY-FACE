@@ -1,9 +1,9 @@
 "use client";
-import MyfaceLogo from "@/components/brand/Logo";
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import AuthCard, { authInputClass } from "@/components/auth/AuthCard";
 import { useAuthStore } from "@/store/auth-store";
 
 export default function AdminLoginPage() {
@@ -17,50 +17,40 @@ export default function AdminLoginPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const success = await login(email, password);
+    const success = await login(email.trim(), password);
     if (success) {
       router.push("/admin/events");
     }
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-brand to-brand-light px-4">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{
-          background:
-            "radial-gradient(circle at 20% 20%, rgba(201,161,90,0.25), transparent 45%), radial-gradient(circle at 80% 70%, rgba(201,161,90,0.15), transparent 40%)",
-        }}
-      />
-
-      <form onSubmit={handleSubmit} className="glass-strong relative z-10 w-full max-w-sm rounded-2xl p-8 animate-scale-in">
-        <div className="mb-6 flex items-center gap-3">
-          <MyfaceLogo size={44} />
-          <div>
-            <p className="text-lg font-bold leading-tight text-ink-900">
-              MY<span className="text-[#F26A1B]">FACE</span>
-            </p>
-            <p className="text-xs text-ink-500">Espace organisateur et photographe</p>
-          </div>
-        </div>
-
+    <AuthCard subtitle="Espace organisateur et photographe">
+      <form onSubmit={handleSubmit}>
         <label className="mb-1 block text-sm font-medium text-ink-700">Email</label>
         <input
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="mb-4 w-full rounded-xl border border-ink-900/10 bg-white/70 px-3.5 py-2.5 text-ink-900 outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
+          autoComplete="email"
+          className={`${authInputClass} mb-4`}
         />
 
         <label className="mb-1 block text-sm font-medium text-ink-700">Mot de passe</label>
         <input
           type="password"
           required
+          maxLength={128}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="mb-6 w-full rounded-xl border border-ink-900/10 bg-white/70 px-3.5 py-2.5 text-ink-900 outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
+          autoComplete="current-password"
+          className={`${authInputClass} mb-2`}
         />
+        <p className="mb-5 text-right text-xs">
+          <Link href="/mot-de-passe-oublie" className="font-medium text-brand hover:underline">
+            Mot de passe oublié ?
+          </Link>
+        </p>
 
         {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
@@ -74,6 +64,6 @@ export default function AdminLoginPage() {
           </Link>
         </p>
       </form>
-    </main>
+    </AuthCard>
   );
 }

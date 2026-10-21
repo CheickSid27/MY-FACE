@@ -6,6 +6,7 @@ import RequireAuth from "@/components/admin/RequireAuth";
 import { api, ApiError } from "@/lib/api-client";
 import { useAuthStore } from "@/store/auth-store";
 import { formatFcfa, whatsappLink } from "@/lib/packs";
+import { PASSWORD_HINT, passwordProblem } from "@/lib/password";
 import type { UserAdmin, UserRole } from "@/types/api";
 
 function UsersContent() {
@@ -39,6 +40,11 @@ function UsersContent() {
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
+    const problem = passwordProblem(password);
+    if (problem) {
+      setError(problem);
+      return;
+    }
     setCreating(true);
     setError(null);
     try {
@@ -64,6 +70,16 @@ function UsersContent() {
       return;
     try {
       await api.updateUser(user.id, { is_active: !suspend });
+      await loadUsers();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Action impossible.");
+    }
+  }
+
+  async function confirmEmail(user: UserAdmin) {
+    if (!confirm(`Confirmer l'adresse ${user.email} sans le lien envoyé par e-mail ?`)) return;
+    try {
+      await api.updateUser(user.id, { email_verified: true });
       await loadUsers();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Action impossible.");
@@ -117,10 +133,12 @@ function UsersContent() {
                 type="password"
                 required
                 minLength={8}
+                maxLength={128}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-xl border border-ink-900/10 bg-white/70 px-3.5 py-2.5 outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
               />
+              <p className="mt-1 text-xs text-ink-500">{PASSWORD_HINT}</p>
             </div>
             <div className="mb-4">
               <label className="mb-1 block text-sm font-medium text-ink-700">Role</label>
@@ -155,6 +173,11 @@ function UsersContent() {
                         Suspendu
                       </span>
                     )}
+                    {user.email_verified === false && (
+                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                        E-mail non confirmé
+                      </span>
+                    )}
                   </p>
                   <p className="text-sm text-ink-500">
                     {user.role === "admin" ? "Administrateur" : "Photographe"}
@@ -178,6 +201,15 @@ function UsersContent() {
                     <a href={wa} target="_blank" rel="noreferrer" className="text-sm font-medium text-emerald-700 hover:underline">
                       WhatsApp
                     </a>
+                  )}
+                  {user.email_verified === false && (
+                    <button
+                      type="button"
+                      onClick={() => confirmEmail(user)}
+                      className="text-sm font-medium text-ink-500 transition hover:text-brand"
+                    >
+                      Confirmer l&apos;e-mail
+                    </button>
                   )}
                   {user.id !== currentUser?.id && (
                     <button

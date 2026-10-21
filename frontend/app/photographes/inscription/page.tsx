@@ -3,16 +3,17 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import MyfaceLogo from "@/components/brand/Logo";
+import AuthCard, { authInputClass } from "@/components/auth/AuthCard";
 import PhoneInput from "@/components/payments/PhoneInput";
 import { api, ApiError } from "@/lib/api-client";
+import { PASSWORD_HINT, passwordProblem } from "@/lib/password";
 import { useAuthStore } from "@/store/auth-store";
 
-const inputClass =
-  "w-full rounded-xl border border-ink-900/10 bg-white/70 px-3.5 py-2.5 text-ink-900 outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20";
-
 /** Inscription libre d'un photographe : compte cree et connecte tout de
- * suite, chaque evenement demarre au pack Decouverte (10 photos gratuites). */
+ * suite, chaque evenement demarre au pack Decouverte (10 photos gratuites).
+ * Un e-mail de confirmation part aussitot : tant que l'adresse n'est pas
+ * confirmee, l'espace photographe affiche un bandeau et bloque la creation
+ * d'evenements. */
 export default function InscriptionPhotographePage() {
   const router = useRouter();
   const [displayName, setDisplayName] = useState("");
@@ -21,6 +22,7 @@ export default function InscriptionPhotographePage() {
   const [phone, setPhone] = useState<string | null>(null);
   const [city, setCity] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +30,17 @@ export default function InscriptionPhotographePage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    if (displayName.trim().length < 2) {
+      setError("Indiquez votre nom et prénom.");
+      return;
+    }
     if (!phone) {
       setError("Indiquez un numéro de téléphone valide (WhatsApp).");
+      return;
+    }
+    const problem = passwordProblem(password, confirmation);
+    if (problem) {
+      setError(problem);
       return;
     }
     if (!acceptTerms) {
@@ -47,7 +58,8 @@ export default function InscriptionPhotographePage() {
         city: city.trim() || null,
         accept_terms: acceptTerms,
       });
-      // la session est ouverte : l'espace photographe charge le profil
+      // la session est ouverte : l'espace photographe charge le profil et
+      // affiche le bandeau « confirmez votre adresse »
       useAuthStore.setState({ isLoggedIn: true });
       router.push("/admin/events");
     } catch (err) {
@@ -57,47 +69,35 @@ export default function InscriptionPhotographePage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-brand to-brand-light px-4 py-10">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{
-          background:
-            "radial-gradient(circle at 20% 20%, rgba(201,161,90,0.25), transparent 45%), radial-gradient(circle at 80% 70%, rgba(201,161,90,0.15), transparent 40%)",
-        }}
-      />
-
-      <form onSubmit={handleSubmit} className="glass-strong relative z-10 w-full max-w-md rounded-2xl p-7 animate-scale-in">
-        <div className="mb-5 flex items-center gap-3">
-          <MyfaceLogo size={44} />
-          <div>
-            <p className="text-lg font-bold leading-tight text-ink-900">
-              MY<span className="text-[#F26A1B]">FACE</span>
-            </p>
-            <p className="text-xs text-ink-500">Créer mon compte photographe</p>
-          </div>
-        </div>
+    <AuthCard subtitle="Créer mon compte photographe" wide>
+      <form onSubmit={handleSubmit}>
         <p className="mb-5 rounded-xl bg-brand-accent/10 px-3 py-2 text-xs text-ink-700">
           Gratuit pour commencer : 10 photos par événement. Packs Événement (10 000 F) et Pro (25 000 F) quand vous
           voulez, paiement unique par événement.
         </p>
 
         <label className="mb-1 block text-sm font-medium text-ink-700">Nom et prénom</label>
-        <input required minLength={2} maxLength={120} value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" className={`${inputClass} mb-3`} />
+        <input required minLength={2} maxLength={120} value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" className={`${authInputClass} mb-3`} />
 
         <label className="mb-1 block text-sm font-medium text-ink-700">Nom du studio (facultatif)</label>
-        <input maxLength={120} value={studioName} onChange={(e) => setStudioName(e.target.value)} placeholder="Affiché aux invités et dans votre filigrane" className={`${inputClass} mb-3`} />
+        <input maxLength={120} value={studioName} onChange={(e) => setStudioName(e.target.value)} placeholder="Affiché aux invités et dans votre filigrane" className={`${authInputClass} mb-3`} />
 
         <label className="mb-1 block text-sm font-medium text-ink-700">Email</label>
-        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className={`${inputClass} mb-3`} />
+        <input type="email" required maxLength={255} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className={`${authInputClass} mb-1`} />
+        <p className="mb-3 text-xs text-ink-500">Un lien de confirmation y sera envoyé.</p>
 
         <label className="mb-1 block text-sm font-medium text-ink-700">Téléphone (WhatsApp)</label>
         <PhoneInput onChange={setPhone} disabled={sending} className="mb-3" />
 
         <label className="mb-1 block text-sm font-medium text-ink-700">Ville</label>
-        <input maxLength={120} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Abidjan" className={`${inputClass} mb-3`} />
+        <input maxLength={120} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Abidjan" autoComplete="address-level2" className={`${authInputClass} mb-3`} />
 
-        <label className="mb-1 block text-sm font-medium text-ink-700">Mot de passe (8 caractères minimum)</label>
-        <input type="password" required minLength={8} maxLength={128} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" className={`${inputClass} mb-4`} />
+        <label className="mb-1 block text-sm font-medium text-ink-700">Mot de passe</label>
+        <input type="password" required minLength={8} maxLength={128} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" className={`${authInputClass} mb-1`} />
+        <p className="mb-3 text-xs text-ink-500">{PASSWORD_HINT}</p>
+
+        <label className="mb-1 block text-sm font-medium text-ink-700">Confirmer le mot de passe</label>
+        <input type="password" required maxLength={128} value={confirmation} onChange={(e) => setConfirmation(e.target.value)} autoComplete="new-password" className={`${authInputClass} mb-4`} />
 
         <label className="mb-4 flex items-start gap-3 text-sm text-ink-700">
           <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-0.5 h-4 w-4 accent-brand-accent" />
@@ -123,6 +123,6 @@ export default function InscriptionPhotographePage() {
           </Link>
         </p>
       </form>
-    </main>
+    </AuthCard>
   );
 }

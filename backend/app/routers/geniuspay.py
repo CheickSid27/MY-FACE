@@ -48,7 +48,7 @@ async def init_geniuspay_payment(
     if cart is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panier introuvable")
     if cart.expires_at < datetime.now(timezone.utc):
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Panier expire")
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Panier expiré")
     if not cart.items:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Panier vide")
 

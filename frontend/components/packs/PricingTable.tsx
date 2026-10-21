@@ -21,6 +21,7 @@ const FALLBACK_PACKS: Pack[] = [
       "QR code et page invités",
       "Galerie, « Trouver mon visage » et selfie",
       "Vente aux invités ou photos offertes",
+      "Photos en ligne 90 jours après l'événement",
     ],
     features: [],
     purchasable: false,

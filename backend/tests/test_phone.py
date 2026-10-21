@@ -44,7 +44,7 @@ def test_normalize_rejects_invalid_numbers(raw):
 
 
 def test_error_message_explains_expected_format():
-    with pytest.raises(ValueError, match="10 chiffres commencant par 01, 05 ou 07"):
+    with pytest.raises(ValueError, match="10 chiffres commençant par 01, 05 ou 07"):
         normalize_phone("+225 12 34 56 78")
 
 

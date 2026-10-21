@@ -24,9 +24,9 @@ def can_manage_event(event: Event, user: User) -> bool:
 async def get_manageable_event(event_id: uuid.UUID, user: User, db: AsyncSession) -> Event:
     event = await db.get(Event, event_id)
     if event is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Événement introuvable")
     if not can_manage_event(event, user):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acces refuse")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès refusé")
     return event
 
 

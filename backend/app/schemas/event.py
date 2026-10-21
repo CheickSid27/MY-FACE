@@ -1,16 +1,31 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 from app.core.config import get_settings
+
+# Plafonds de saisie : au-dela, c'est une faute de frappe (un zero de trop),
+# pas un vrai tarif.
+MAX_PRICE = 10_000_000
+EVENT_YEAR_MIN = 2000
+EVENT_YEAR_MAX = 2100
 
 
 class PricingPack(BaseModel):
     """Lot a prix fixe : `count` photos pour `price` (ex: 10 photos pour 8000)."""
 
     count: int = Field(ge=2, le=1000)
-    price: float = Field(gt=0)
+    price: float = Field(gt=0, le=MAX_PRICE)
 
 
 class PricingDiscount(BaseModel):
@@ -22,19 +37,19 @@ class PricingDiscount(BaseModel):
 
 class PricingConfig(BaseModel):
     # 0 accepte seulement quand les photos sont offertes (voir `offert`)
-    unit_price: float = Field(ge=0)
-    currency: str = "XOF"
+    unit_price: float = Field(ge=0, le=MAX_PRICE)
+    currency: str = Field(default="XOF", pattern=r"^[A-Z]{3}$")
     packs: list[PricingPack] = Field(default_factory=list, max_length=20)
     discounts: list[PricingDiscount] = Field(default_factory=list, max_length=20)
     # Prix fixe par tirage papier (en plus du prix digital), choisi photo par
     # photo dans le panier. None/0 = impression non proposee pour cet
     # evenement. Pas de remise de volume dessus pour l'instant.
-    print_unit_price: float | None = Field(default=None, ge=0)
+    print_unit_price: float | None = Field(default=None, ge=0, le=MAX_PRICE)
     # Prix « photo + tirage » a la borne : une photo achetee en numerique ET
     # imprimee coute ce prix tout compris (ex : 700 au lieu de 450 + 500).
     # Ces photos ne comptent pas dans les lots ni dans les remises. None/0 =
     # pas de prix combine (on retombe sur prix photo + print_unit_price).
-    print_bundle_price: float | None = Field(default=None, ge=0)
+    print_bundle_price: float | None = Field(default=None, ge=0, le=MAX_PRICE)
     # Photos offertes par l'organisateur : les invites telechargent sans
     # payer, il n'y a pas de page de paiement (voir POST /payments/offert).
     offert: bool = False
@@ -42,27 +57,39 @@ class PricingConfig(BaseModel):
     @model_validator(mode="after")
     def _prix_si_payant(self) -> "PricingConfig":
         if not self.offert and self.unit_price <= 0:
-            raise ValueError("Le prix par photo doit etre superieur a 0")
+            raise ValueError("Le prix par photo doit être supérieur à 0")
         return self
 
     @field_validator("packs")
     @classmethod
     def _unique_pack_sizes(cls, packs: list[PricingPack]) -> list[PricingPack]:
         if len({p.count for p in packs}) != len(packs):
-            raise ValueError("Deux lots ne peuvent pas avoir le meme nombre de photos")
+            raise ValueError("Deux lots ne peuvent pas avoir le même nombre de photos")
         return packs
 
     @field_validator("discounts")
     @classmethod
     def _unique_discount_thresholds(cls, discounts: list[PricingDiscount]) -> list[PricingDiscount]:
         if len({d.min_quantity for d in discounts}) != len(discounts):
-            raise ValueError("Deux remises ne peuvent pas avoir le meme seuil")
+            raise ValueError("Deux remises ne peuvent pas avoir le même seuil")
         return discounts
 
 
+def _check_event_date(value: datetime) -> datetime:
+    if not EVENT_YEAR_MIN <= value.year <= EVENT_YEAR_MAX:
+        raise ValueError("Date de l'événement invalide")
+    return value
+
+
+EventDate = Annotated[datetime, AfterValidator(_check_event_date)]
+
+
 class EventCreate(BaseModel):
+    # espaces en trop retires : un nom fait seulement d'espaces est refuse
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     name: str = Field(min_length=1, max_length=255)
-    date: datetime
+    date: EventDate
     location: str = Field(min_length=1, max_length=255)
     pricing: PricingConfig
     # Voir models/event.py : vide/absent = pas de cadre decoratif pour cet evenement.
@@ -70,8 +97,10 @@ class EventCreate(BaseModel):
 
 
 class EventUpdate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     name: str | None = Field(default=None, min_length=1, max_length=255)
-    date: datetime | None = None
+    date: EventDate | None = None
     location: str | None = Field(default=None, min_length=1, max_length=255)
     pricing: PricingConfig | None = None
     frame_caption: str | None = Field(default=None, max_length=255)
@@ -86,7 +115,7 @@ class EventUpdate(BaseModel):
     @classmethod
     def _password_length(cls, value: str | None) -> str | None:
         if value is not None and value.strip() and len(value.strip()) < 4:
-            raise ValueError("Le mot de passe de la galerie doit faire au moins 4 caracteres")
+            raise ValueError("Le mot de passe de la galerie doit faire au moins 4 caractères")
         return value
 
 
@@ -108,6 +137,8 @@ class EventRead(BaseModel):
     photo_limit_override: int | None = None
     watermark_text: str | None = None
     has_gallery_password: bool = False
+    retention_exempt: bool = False
+    photos_purged_at: datetime | None = None
 
     # Liens a partager, construits sur l'URL publique de l'app (APP_BASE_URL,
     # la meme que celle des SMS et du QR de telechargement) : lien invite a
@@ -122,6 +153,15 @@ class EventRead(BaseModel):
     @property
     def kiosk_url(self) -> str:
         return f"{get_settings().app_base_url}/event/{self.id}?kiosk={self.kiosk_token}"
+
+    # Conservation des donnees (voir services/retention.py) : date de
+    # suppression automatique des photos, None si l'evenement est exempte.
+    @computed_field
+    @property
+    def photos_available_until(self) -> datetime | None:
+        if self.retention_exempt:
+            return None
+        return self.date + timedelta(days=get_settings().retention_photo_days)
 
 
 class EventPublicRead(BaseModel):
@@ -147,6 +187,10 @@ class EventPublicRead(BaseModel):
     # (jeton `access` valide, borne ou organisateur connecte).
     password_required: bool = False
     gallery_access: bool = True
+    # Conservation des donnees : date jusqu'a laquelle les photos restent en
+    # ligne (None = pas de suppression prevue), et photos deja supprimees.
+    photos_available_until: datetime | None = None
+    photos_purged: bool = False
 
 
 class GalleryUnlockRequest(BaseModel):

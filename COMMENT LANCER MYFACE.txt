@@ -1,6 +1,6 @@
 =====================================================================
   MYFACE - COMMENT LANCER LE PROJET DE A A Z
-  Guide ecrit le 27 septembre 2026
+  Guide ecrit le 27 septembre 2026, mis a jour le 21 octobre 2026
 =====================================================================
 
 ---------------------------------------------------------------------
@@ -76,11 +76,14 @@ Le site ne s'ouvre pas du tout sur http://localhost
 
 Le lien public ne repond pas juste apres le demarrage
     -> Normal : il faut 1 a 2 minutes apres l'ouverture de l'acces.
-       Reessaie. S'il ne revient pas, ouvre une fenetre PowerShell et
-       tape :
-       & "C:\Program Files\Tailscale\tailscale.exe" funnel status
-       Tu dois voir "Funnel on". Sinon tape :
-       & "C:\Program Files\Tailscale\tailscale.exe" funnel --bg 80
+       Reessaie. S'il ne revient pas, ouvre une fenetre PowerShell dans
+       D:\MY FACE et tape :
+       docker compose --profile domaine up -d tunnel-domaine
+       Puis : docker ps   (la ligne myface-tunnel-domaine-1 doit etre "Up")
+
+Un autre appareil du Wi-Fi n'arrive pas a ouvrir http://192.168...
+    -> Normal depuis le 21/10 : MYFACE n'est plus ouvert sur le reseau
+       local (securite). Utilise le lien public https://app.myfaceci.online
 
 Sur un telephone, l'appareil photo ne s'ouvre pas pour le scan
     -> Il faut utiliser le lien public (https://...), jamais une
@@ -96,7 +99,32 @@ Autre message d'erreur
 
 
 ---------------------------------------------------------------------
-5. LE JOUR OU TU ACHETES LE NOM DE DOMAINE
+5. E-MAILS, SUPPRESSION AUTOMATIQUE, COPIE DE TEST (depuis le 21/10)
+---------------------------------------------------------------------
+
+E-mails (confirmation de l'adresse des photographes, mot de passe
+oublie) : tant qu'aucun fournisseur n'est branche, rien ne part. Les
+liens s'affichent dans les journaux :
+    docker compose logs backend | findstr token=
+Pour envoyer de vrais e-mails : creer un compte chez un fournisseur
+(Brevo ou Resend, gratuits pour commencer), puis remplir SMTP_HOST,
+SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD et SMTP_FROM dans .env, et
+relancer MYFACE. La confirmation d'adresse devient alors obligatoire.
+
+Suppression automatique (90 jours apres l'evenement pour les photos et
+les visages, 1 an pour les numeros des commandes) : en simulation tant
+que RETENTION_ENABLED=false dans .env. La liste de ce qui serait
+supprime est dans Administration > Reglages. Avant d'activer, exempter
+l'evenement de demonstration du site (bouton "Conserver").
+
+Copie de test (pour essayer sans toucher aux vraies donnees) :
+    docker compose -f docker-compose.e2e.yml -p myface-e2e up -d --build
+    puis http://localhost:8088
+    Tout effacer : docker compose -f docker-compose.e2e.yml -p myface-e2e down -v
+
+
+---------------------------------------------------------------------
+ANCIEN : LE JOUR OU TU ACHETES LE NOM DE DOMAINE (fait le 27/09)
 ---------------------------------------------------------------------
 
 But : remplacer https://myface.tail715f81.ts.net par une adresse
@@ -156,6 +184,10 @@ APRES :
 
   - Ne jamais envoyer ni publier le fichier .env : il contient tous
     les mots de passe (base de donnees, stockage photos, SMS).
+  - Ne jamais ecrire un mot de passe dans une conversation (meme avec
+    Claude). Si c'est arrive, le changer.
+  - Le depot GitHub est public : ne rien y mettre de prive (prospects,
+    business plan, dossier ARTCI restent dans des dossiers ignores).
   - Ne pas supprimer le dossier watched-photos : c'est le dossier
     surveille qui avale automatiquement les photos des evenements.
   - Ne pas eteindre le PC pendant un evenement : le site s'arrete.

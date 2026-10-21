@@ -3,7 +3,7 @@ import type { OrderStatus } from "@/types/api";
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   pending: "En attente de paiement",
   processing: "En cours",
-  awaiting_confirmation: "A confirmer",
+  awaiting_confirmation: "À confirmer",
   success: "Payée",
   failed: "Rejetee",
   cancelled: "Annulée / expirée",

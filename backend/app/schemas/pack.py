@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.pack_purchase import PackPurchaseStatus
-from app.services.phone import normalize_phone
+from app.services.phone import normalize_phone, normalize_phone_or_ci
 
 PackKey = Literal["decouverte", "evenement", "pro", "sur_mesure"]
 PackPaymentMethod = Literal["wave", "orange", "mtn", "moov", "djamo"]
@@ -40,7 +40,7 @@ class PackPurchaseCreate(BaseModel):
     def _strip_ref(cls, value: str) -> str:
         value = value.strip()
         if len(value) < 3:
-            raise ValueError("Reference de transaction trop courte")
+            raise ValueError("Référence de transaction trop courte")
         return value
 
 
@@ -106,6 +106,19 @@ class PackPaymentInfo(BaseModel):
     djamo: str | None = None
     whatsapp: str | None = None
     instructions: str | None = Field(default=None, max_length=500)
+
+
+class PackPaymentInfoUpdate(PackPaymentInfo):
+    """Saisie de l'admin : chaque numero est verifie et mis au format
+    international (un numero faux empecherait les photographes de payer).
+    Sans indicatif, le numero est lu comme ivoirien."""
+
+    @field_validator("wave", "orange", "mtn", "moov", "djamo", "whatsapp")
+    @classmethod
+    def _valid_phone(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        return normalize_phone_or_ci(value)
 
 
 class AdminSetPackRequest(BaseModel):

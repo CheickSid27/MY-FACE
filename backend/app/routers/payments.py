@@ -92,7 +92,7 @@ async def claim_free_photos(
     if cart is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panier introuvable")
     if cart.expires_at < datetime.now(timezone.utc):
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Panier expire")
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Panier expiré")
     if not cart.items:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Panier vide")
 
@@ -100,7 +100,7 @@ async def claim_free_photos(
     if not event.pricing.get("offert"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Les photos de cet evenement ne sont pas offertes",
+            detail="Les photos de cet événement ne sont pas offertes",
         )
 
     order = Order(
@@ -158,7 +158,7 @@ async def init_payment(
     if cart is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panier introuvable")
     if cart.expires_at < datetime.now(timezone.utc):
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Panier expire")
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Panier expiré")
     if not cart.items:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Panier vide")
 
@@ -173,7 +173,7 @@ async def init_payment(
         if not event.cash_enabled:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Le paiement en especes n'est pas active pour cet evenement",
+                detail="Le paiement en espèces n'est pas activé pour cet événement",
             )
         # Verifie serveur (et pas seulement masque cote frontend) : une
         # commande "especes" creee depuis un telephone attendrait un paiement
@@ -181,7 +181,7 @@ async def init_payment(
         if not is_kiosk_request(event, payload.kiosk_token):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Le paiement en especes est disponible uniquement a la borne de l'evenement",
+                detail="Le paiement en espèces est disponible uniquement à la borne de l'événement",
             )
 
         order = _create_order_from_cart(
@@ -224,7 +224,7 @@ async def init_payment(
     if event_payment_method is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ce moyen de paiement n'est pas configure pour cet evenement",
+            detail="Ce moyen de paiement n'est pas configuré pour cet événement",
         )
 
     order = _create_order_from_cart(cart, event, payload, OrderStatus.PENDING, f"QR-{secrets.token_hex(8)}")
@@ -289,14 +289,14 @@ async def mark_paid(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
-                "Cette commande a expire. Si vous avez deja paye, presentez-vous a "
-                "l'organisateur avec votre numero de telephone : il peut la valider."
+                "Cette commande a expiré. Si vous avez déjà payé, présentez-vous à "
+                "l'organisateur avec votre numéro de téléphone : il peut la valider."
             ),
         )
     if order.status != OrderStatus.PENDING:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Commande au statut '{order.status.value}', impossible de la marquer payee",
+            detail=f"Commande au statut '{order.status.value}', impossible de la marquer payée",
         )
 
     order.status = OrderStatus.AWAITING_CONFIRMATION
@@ -333,7 +333,7 @@ async def _apply_webhook_result(reference: str, new_status: OrderStatus, db: Asy
     result = await db.execute(select(Order).where(Order.payment_reference == reference))
     order = result.scalar_one_or_none()
     if order is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Commande introuvable pour cette reference")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Commande introuvable pour cette référence")
     await set_order_status(order, new_status, db)
 
 

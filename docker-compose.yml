@@ -1,3 +1,8 @@
+# Ports ouverts sur ce PC seulement (127.0.0.1), jamais sur le reseau local :
+# avant, n'importe quel appareil du meme Wi-Fi atteignait directement l'API
+# (sans les limites de nginx), la base de test et MinIO (mots de passe par
+# defaut). L'acces public passe par le tunnel Cloudflare, qui joint nginx a
+# l'interieur du reseau Docker.
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -10,7 +15,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./backend/docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myface}"]
       interval: 5s
@@ -30,8 +35,8 @@ services:
     volumes:
       - minio-data:/data
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 5s
@@ -54,7 +59,7 @@ services:
       minio:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./backend:/app
       - insightface-models:/root/.insightface
@@ -87,7 +92,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     # Pas de bind-mount du code source ici (contrairement au backend) : ce
     # conteneur sert le build de production compile dans l'image
     # (.next/standalone), un bind-mount de ./frontend:/app l'ecraserait par
@@ -101,7 +106,7 @@ services:
       - backend
       - frontend
     ports:
-      - "80:80"
+      - "127.0.0.1:80:80"
     volumes:
       # Site vitrine servi tel quel sur le nom de domaine principal
       # (voir le premier bloc server de nginx/nginx.conf).

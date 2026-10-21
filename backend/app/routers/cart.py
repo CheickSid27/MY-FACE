@@ -35,9 +35,9 @@ async def _get_cart_or_404(session_id: uuid.UUID, db: AsyncSession) -> CartSessi
     )
     cart = result.scalar_one_or_none()
     if cart is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panier introuvable ou expire")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panier introuvable ou expiré")
     if cart.expires_at < datetime.now(timezone.utc):
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Panier expire")
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Panier expiré")
     return cart
 
 
@@ -91,7 +91,7 @@ async def _resolve_cart_session(session_id: uuid.UUID | None, event_id: uuid.UUI
     elif cart.event_id != event_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ce panier appartient a un autre evenement",
+            detail="Ce panier appartient à un autre événement",
         )
 
     return cart
@@ -105,11 +105,11 @@ async def add_to_cart(
 ) -> CartRead:
     event = await db.get(Event, payload.event_id)
     if event is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Événement introuvable")
 
     photo = await db.get(Photo, payload.photo_id)
     if photo is None or photo.event_id != payload.event_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo introuvable pour cet evenement")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo introuvable pour cet événement")
 
     cart = await _resolve_cart_session(payload.session_id, payload.event_id, db)
     cart_id = cart.id
@@ -147,7 +147,7 @@ async def add_to_cart_bulk(
     l'affichage cote client et le clic)."""
     event = await db.get(Event, payload.event_id)
     if event is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Événement introuvable")
 
     valid_photo_ids = set(
         (
@@ -159,7 +159,7 @@ async def add_to_cart_bulk(
         .all()
     )
     if not valid_photo_ids:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Aucune photo valide pour cet evenement")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Aucune photo valide pour cet événement")
 
     cart = await _resolve_cart_session(payload.session_id, payload.event_id, db)
     cart_id = cart.id
@@ -219,7 +219,7 @@ async def update_cart_item(
         if event is None or not is_kiosk_request(event, payload.kiosk_token):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Le tirage papier se commande uniquement a la borne de l'evenement",
+                detail="Le tirage papier se commande uniquement à la borne de l'événement",
             )
     item.print_requested = payload.print_requested
     await db.commit()

@@ -34,6 +34,17 @@ def open_oriented(image_bytes: bytes) -> Image.Image:
         raise InvalidImageError("Fichier image illisible ou format non supporte") from exc
 
 
+def is_valid_image(image_bytes: bytes) -> bool:
+    """True si Pillow reconnait une image complete (le type annonce par le
+    navigateur ne prouve rien : n'importe quel fichier peut se dire PNG)."""
+    try:
+        with Image.open(io.BytesIO(image_bytes)) as img:
+            img.verify()
+        return True
+    except Exception:  # noqa: BLE001 - Pillow leve des erreurs de types tres varies
+        return False
+
+
 def _resize_jpeg(image_bytes: bytes, max_size: tuple[int, int], quality: int) -> bytes:
     img = open_oriented(image_bytes).convert("RGB")
     img.thumbnail(max_size)

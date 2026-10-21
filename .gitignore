@@ -38,39 +38,51 @@ Thumbs.db
 captures/
 
 # Kit motion design : images generees (photos de la demo) et photos fournies.
-# Se regenerent avec : python motion-design/preparer_motion.py
-motion-design/fond-vert/
-motion-design/detoure/
-motion-design/ecrans/
-motion-design/elements/
-motion-design/guides/
-motion-design/sources/
+# Se regenerent avec : python marketing/motion-design/preparer_motion.py
+marketing/motion-design/fond-vert/
+marketing/motion-design/detoure/
+marketing/motion-design/ecrans/
+marketing/motion-design/elements/
+marketing/motion-design/guides/
+marketing/motion-design/sources/
 
 # Films rendus (lourds, montrent les photos de la demo) : se refont avec
-# python motion-design/rendre_film.py
-motion-design/*.mp4
-motion-design/*.wav
-motion-design/voix/*.wav
+# python marketing/motion-design/rendre_film.py
+marketing/motion-design/*.mp4
+marketing/motion-design/*.wav
+marketing/motion-design/voix/*.wav
 
 # Motion design v2 : sorties regenerables
-motion-design/v2/*.mp4
-motion-design/v2/*.wav
-motion-design/v2/voix/*.wav
+marketing/motion-design/v2/*.mp4
+marketing/motion-design/v2/*.wav
+marketing/motion-design/v2/voix/*.wav
 
 # Motion design v3 (voix Gemini) : se regenere avec v3/voix/generer_voix_gemini.py,
 # v3/sons_v3.py et v3/assembler_v3.ps1. La cle API ne doit jamais partir sur GitHub.
-motion-design/v3/*.mp4
-motion-design/v3/*.wav
-motion-design/v3/voix/*.wav
-motion-design/v3/voix/essais/
-motion-design/v3/voix/cle-google.txt
+marketing/motion-design/v3/*.mp4
+marketing/motion-design/v3/*.wav
+marketing/motion-design/v3/voix/*.wav
+marketing/motion-design/v3/voix/essais/
+marketing/motion-design/v3/voix/cle-google.txt
 
 # Motion design v4 (2 min) : se regenere avec v4/voix/generer_voix_v4.py, v4/rendre_film_v4.py,
 # v4/sons_v4.py et v4/assembler_v4.ps1
-motion-design/v4/*.mp4
-motion-design/v4/*.wav
-motion-design/v4/voix/*.wav
-motion-design/v4/apercus/
+marketing/motion-design/v4/*.mp4
+marketing/motion-design/v4/*.wav
+marketing/motion-design/v4/voix/*.wav
+marketing/motion-design/v4/apercus/
 
-# Voix des scenarios de pub : se regenerent avec motion-design/scenarios/generer_scenarios.py
-motion-design/scenarios/voix/
+# Voix des scenarios de pub : se regenerent avec marketing/motion-design/scenarios/generer_scenarios.py
+marketing/motion-design/scenarios/voix/
+
+# Prospection commerciale (coordonnees d'entreprises) et documents d'affaires
+# (business plan, finances, dossier ARTCI) : le depot GitHub est PUBLIC, ils
+# restent sur ce PC.
+marketing/prospection/
+prospection/
+docs/word/
+docs/artci/
+
+# Fichiers locaux d'outils (configuration de l'apercu Claude, cache TypeScript)
+.claude/
+frontend/tsconfig.tsbuildinfo

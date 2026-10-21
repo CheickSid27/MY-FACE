@@ -3,13 +3,15 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import RequireAuth from "@/components/admin/RequireAuth";
+import RetentionCard from "@/components/admin/RetentionCard";
 import { api, ApiError } from "@/lib/api-client";
 import { PACK_PAYMENT_METHODS } from "@/lib/packs";
 import { useAuthStore } from "@/store/auth-store";
 import type { PackPaymentInfo } from "@/types/api";
 
 /** Reglages MYFACE : numeros Mobile Money ou les photographes envoient le
- * paiement de leurs packs, et numero WhatsApp de contact. */
+ * paiement de leurs packs, numero WhatsApp de contact, et conservation des
+ * donnees (suppression automatique). */
 function AdminSettingsContent() {
   const user = useAuthStore((s) => s.user);
   const [info, setInfo] = useState<PackPaymentInfo>({});
@@ -65,6 +67,8 @@ function AdminSettingsContent() {
             <div key={m.key} className="mb-3">
               <label className="mb-1 block text-sm font-medium text-ink-700">{m.label}</label>
               <input
+                type="tel"
+                maxLength={32}
                 value={info[m.key] ?? ""}
                 onChange={(e) => setInfo((prev) => ({ ...prev, [m.key]: e.target.value }))}
                 placeholder="Ex : 07 00 00 00 00"
@@ -75,6 +79,8 @@ function AdminSettingsContent() {
           <div className="mb-3">
             <label className="mb-1 block text-sm font-medium text-ink-700">WhatsApp de contact</label>
             <input
+              type="tel"
+              maxLength={32}
               value={info.whatsapp ?? ""}
               onChange={(e) => setInfo((prev) => ({ ...prev, whatsapp: e.target.value }))}
               placeholder="+225 07 00 00 00 00"
@@ -98,6 +104,7 @@ function AdminSettingsContent() {
             {saving ? "Enregistrement..." : "Enregistrer"}
           </button>
         </form>
+        <RetentionCard />
       </div>
     </main>
   );

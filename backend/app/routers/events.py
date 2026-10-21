@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.database import get_db, get_session_factory
 from app.core.security import hash_password, verify_password
-from app.deps import get_current_user, get_optional_user
+from app.deps import get_current_user, get_optional_user, require_verified_user
 from app.models.event import Event
 from app.models.event_payment_method import EventPaymentMethod
 from app.models.face_embedding import FaceEmbedding
@@ -50,8 +50,11 @@ from app.services.packs import (
     next_pack,
     watermark_text_for,
 )
+from app.services.phone import normalize_phone_or_ci
 from app.services.rate_limit import client_ip, limiter
+from app.services.retention import photos_deadline
 from app.services.qr import generate_qr_png
+from app.services.thumbnails import is_valid_image
 from app.services.storage import StorageService, get_storage_service
 from app.services.watermark import regenerate_event_watermarks
 
@@ -60,7 +63,7 @@ settings = get_settings()
 
 router = APIRouter(prefix="/events", tags=["events"])
 
-QR_ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
+QR_ALLOWED_CONTENT_TYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
 QR_MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 REINDEXABLE_STATUSES = (IndexingStatus.FAILED, IndexingStatus.PENDING, IndexingStatus.PROCESSING)
 
@@ -72,9 +75,25 @@ def _generate_kiosk_token() -> str:
 @router.post("", response_model=EventRead, status_code=status.HTTP_201_CREATED)
 async def create_event(
     payload: EventCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_verified_user),
     db: AsyncSession = Depends(get_db),
 ) -> Event:
+    if current_user.role != UserRole.ADMIN:
+        # Pack Decouverte = 10 photos gratuites par evenement : sans limite du
+        # nombre d'evenements gratuits, il suffirait d'en creer plusieurs.
+        free_events = await db.execute(
+            select(func.count(Event.id)).where(Event.organizer_id == current_user.id, Event.pack == DEFAULT_PACK)
+        )
+        max_free = settings.free_events_per_account
+        if free_events.scalar_one() >= max_free:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    f"Vous avez déjà {max_free} événements gratuits : passez l'un d'eux au pack "
+                    "Événement ou supprimez-en un pour en créer un autre"
+                ),
+            )
+
     event = Event(
         name=payload.name,
         date=payload.date,
@@ -169,7 +188,7 @@ async def get_event_public(
     invalide, `is_kiosk` vaut simplement False (comportement invite normal)."""
     event = await db.get(Event, event_id)
     if event is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Événement introuvable")
     owner = await get_owner(db, event)
     photographer_name = owner.public_name if owner is not None and owner.role == UserRole.PHOTOGRAPHE else None
     return EventPublicRead(
@@ -184,6 +203,8 @@ async def get_event_public(
         photographer_name=photographer_name,
         password_required=event.has_gallery_password,
         gallery_access=has_gallery_access(event, kiosk_token=kiosk_token, access_token=access, user=current_user),
+        photos_available_until=photos_deadline(event),
+        photos_purged=event.photos_purged_at is not None,
     )
 
 
@@ -199,7 +220,7 @@ async def unlock_gallery(
     montrent des photos. Tentatives limitees par adresse et par evenement."""
     event = await db.get(Event, event_id)
     if event is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Événement introuvable")
     limiter.check("gallery-unlock", f"{client_ip(request)}:{event_id}", 10, 600)
     if not event.gallery_password_hash:
         return GalleryUnlockResponse(access_token=issue_gallery_token(event))
@@ -231,14 +252,14 @@ async def update_event(
 
     # Options des packs payants (voir services/packs.py)
     upgrade = next_pack(event.pack)
-    upgrade_hint = f" : disponible a partir du pack {upgrade.name}" if upgrade else ""
+    upgrade_hint = f" : disponible à partir du pack {upgrade.name}" if upgrade else ""
     old_watermark = watermark_text_for(event, owner)
     if "watermark_text" in update_data:
         text = (update_data.pop("watermark_text") or "").strip() or None
         if text and not event_has_feature(event, owner, FEATURE_CUSTOM_WATERMARK):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Filigrane personnalise{upgrade_hint}",
+                detail=f"Filigrane personnalisé{upgrade_hint}",
             )
         event.watermark_text = text
     if "gallery_password" in update_data:
@@ -372,7 +393,7 @@ async def get_event_face_clusters_public(
     dernier resultat est servi immediatement et recalcule en arriere-plan."""
     event = await db.get(Event, event_id)
     if event is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Événement introuvable")
     require_gallery_access(event, kiosk_token=kiosk_token, access_token=access, user=current_user)
     snapshot = await face_cluster_cache.get(
         event_id, db, storage, allow_stale=True, session_factory=session_factory
@@ -437,12 +458,16 @@ async def upsert_event_payment_method(
     paiement pour cet evenement. L'image QR est obligatoire a la creation,
     optionnelle ensuite (changer seulement le numero). Reserve a
     l'organisateur de l'evenement (ou a un admin)."""
-    if method in (PaymentMethod.MANUAL, PaymentMethod.CASH, PaymentMethod.GENIUSPAY):
+    if method in (PaymentMethod.MANUAL, PaymentMethod.CASH, PaymentMethod.GENIUSPAY, PaymentMethod.OFFERT):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"'{method.value}' ne se configure pas avec un QR marchand",
         )
     await get_manageable_event(event_id, current_user, db)
+    try:
+        phone_number = normalize_phone_or_ci(phone_number)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     result = await db.execute(
         select(EventPaymentMethod).where(
@@ -454,13 +479,19 @@ async def upsert_event_payment_method(
     qr_key: str | None = None
     if qr_image is not None:
         if qr_image.content_type not in QR_ALLOWED_CONTENT_TYPES:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Type d'image non supporte")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Type d'image non pris en charge")
+        if qr_image.size is not None and qr_image.size > QR_MAX_FILE_SIZE_BYTES:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Image trop volumineuse (max 5 Mo)")
         data = await qr_image.read()
         if len(data) > QR_MAX_FILE_SIZE_BYTES:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Image trop volumineuse (max 5 Mo)")
         if not data:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Image vide")
-        extension = (qr_image.filename or "qr.jpg").rsplit(".", 1)[-1].lower()
+        if not await asyncio.to_thread(is_valid_image, data):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ce fichier n'est pas une image lisible")
+        # Extension tiree du type verifie, jamais du nom de fichier envoye
+        # (qui pourrait contenir « / » ou « .. »).
+        extension = QR_ALLOWED_CONTENT_TYPES[qr_image.content_type]
         qr_key = f"events/{event_id}/payment_qr/{method.value}.{extension}"
         await storage.upload(qr_key, data, qr_image.content_type)
     elif existing is None:
@@ -500,7 +531,7 @@ async def delete_event_payment_method(
     )
     existing = result.scalar_one_or_none()
     if existing is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Moyen de paiement non configure")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Moyen de paiement non configuré")
     await db.delete(existing)
     await db.commit()
 
@@ -536,8 +567,8 @@ async def delete_event(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
-                "Cet evenement a des commandes payees : suppression impossible, les clients "
-                "doivent pouvoir retelecharger leurs photos"
+                "Cet événement a des commandes payées : suppression impossible, les clients "
+                "doivent pouvoir retélécharger leurs photos"
             ),
         )
 

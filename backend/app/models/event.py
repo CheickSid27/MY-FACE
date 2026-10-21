@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -49,6 +49,12 @@ class Event(Base):
     # Galerie protegee par mot de passe (packs Evenement et Pro) : hash bcrypt,
     # jamais le mot de passe en clair (voir services/gallery_access.py).
     gallery_password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Conservation des donnees (voir services/retention.py) : les photos et
+    # les empreintes faciales sont supprimees 90 jours apres `date`, sauf si
+    # un admin exempte l'evenement (evenement de demonstration du site, aux
+    # photos de banque d'images). `photos_purged_at` : date de cette suppression.
+    retention_exempt: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+    photos_purged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     organizer_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(

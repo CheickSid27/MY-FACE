@@ -5,9 +5,8 @@ import { useRouter } from "next/navigation";
 import RequireAuth from "@/components/admin/RequireAuth";
 import { CheckIcon } from "@/components/icons";
 import { api, ApiError } from "@/lib/api-client";
+import { PASSWORD_HINT, PASSWORD_MIN_LENGTH, passwordProblem } from "@/lib/password";
 import { useAuthStore } from "@/store/auth-store";
-
-const MIN_PASSWORD_LENGTH = 8;
 
 const inputClass =
   "w-full rounded-xl border border-ink-900/10 bg-white/70 px-3.5 py-2.5 outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20";
@@ -32,12 +31,16 @@ function ProfileForm() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setSaving(true);
     setError(null);
     setDone(false);
+    if (displayName.trim().length < 2) {
+      setError("Indiquez votre nom et prénom (2 caractères minimum).");
+      return;
+    }
+    setSaving(true);
     try {
       const updated = await api.updateMe({
-        ...(displayName.trim().length >= 2 ? { display_name: displayName.trim() } : {}),
+        display_name: displayName.trim(),
         studio_name: studioName.trim() || null,
         phone: phone.trim() || null,
         city: city.trim() || null,
@@ -59,11 +62,11 @@ function ProfileForm() {
         Événement et Pro.
       </p>
       <label className="mb-1 block text-sm font-medium text-ink-700">Nom et prénom</label>
-      <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={120} className={`${inputClass} mb-3`} />
+      <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required minLength={2} maxLength={120} autoComplete="name" className={`${inputClass} mb-3`} />
       <label className="mb-1 block text-sm font-medium text-ink-700">Nom du studio (facultatif)</label>
       <input value={studioName} onChange={(e) => setStudioName(e.target.value)} maxLength={120} className={`${inputClass} mb-3`} />
-      <label className="mb-1 block text-sm font-medium text-ink-700">Téléphone (WhatsApp, format +225...)</label>
-      <input value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={32} className={`${inputClass} mb-3`} />
+      <label className="mb-1 block text-sm font-medium text-ink-700">Téléphone (WhatsApp)</label>
+      <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={32} placeholder="07 01 02 03 04 ou +225 07..." autoComplete="tel" className={`${inputClass} mb-3`} />
       <label className="mb-1 block text-sm font-medium text-ink-700">Ville</label>
       <input value={city} onChange={(e) => setCity(e.target.value)} maxLength={120} className={`${inputClass} mb-4`} />
       {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
@@ -93,12 +96,9 @@ function AccountContent() {
     e.preventDefault();
     setError(null);
     setDone(false);
-    if (next.length < MIN_PASSWORD_LENGTH) {
-      setError(`Le nouveau mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caracteres.`);
-      return;
-    }
-    if (next !== confirmation) {
-      setError("La confirmation ne correspond pas au nouveau mot de passe.");
+    const problem = passwordProblem(next, confirmation);
+    if (problem) {
+      setError(problem);
       return;
     }
     if (next === current) {
@@ -158,18 +158,21 @@ function AccountContent() {
           <input
             type="password"
             required
-            minLength={MIN_PASSWORD_LENGTH}
+            minLength={PASSWORD_MIN_LENGTH}
+            maxLength={128}
             autoComplete="new-password"
             value={next}
             onChange={(e) => setNext(e.target.value)}
-            className={`${inputClass} mb-3`}
+            className={`${inputClass} mb-1`}
           />
+          <p className="mb-3 text-xs text-ink-500">{PASSWORD_HINT}</p>
 
           <label className="mb-1 block text-sm font-medium text-ink-700">Confirmer le nouveau mot de passe</label>
           <input
             type="password"
             required
-            minLength={MIN_PASSWORD_LENGTH}
+            minLength={PASSWORD_MIN_LENGTH}
+            maxLength={128}
             autoComplete="new-password"
             value={confirmation}
             onChange={(e) => setConfirmation(e.target.value)}
@@ -179,7 +182,7 @@ function AccountContent() {
           {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
           {done && (
             <p className="mb-3 flex items-center gap-1.5 text-sm text-emerald-700">
-              <CheckIcon /> Mot de passe modifié.
+              <CheckIcon /> Mot de passe modifié. Vos autres appareils ont été déconnectés.
             </p>
           )}
 

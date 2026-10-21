@@ -13,6 +13,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
     body: [
       "MYFACE permet à un photographe ou à un organisateur de déposer les photos d'un événement, de les faire analyser par une IA de reconnaissance faciale, et de les mettre à disposition de ses invités par un lien ou un QR code.",
       "Chaque événement dispose d'un pack : Découverte (gratuit, 10 photos), Événement (10 000 F, 500 photos), Pro (25 000 F, 2 000 photos) ou Sur mesure. Le prix d'un pack est payé une seule fois par événement ; il n'y a pas d'abonnement.",
+      "Un compte peut avoir au plus trois événements gratuits (pack Découverte) en même temps.",
     ],
   },
   {
@@ -40,13 +41,16 @@ const SECTIONS: { title: string; body: string[] }[] = [
     title: "5. Données personnelles et reconnaissance faciale",
     body: [
       "L'analyse des visages sert uniquement à permettre à chaque invité de retrouver ses propres photos. Le selfie d'un invité n'est pas enregistré : il sert à la recherche puis il est effacé. L'invité donne son accord avant toute recherche.",
+      "Durée de conservation : les photos et les empreintes des visages sont supprimées automatiquement 90 jours après la date de l'événement. Le photographe prévient ses clients et leurs invités de télécharger leurs photos avant cette date. Le numéro de téléphone laissé par un invité à la commande est effacé un an après la commande.",
       "Pour toute demande d'accès ou de suppression, les invités et les photographes écrivent à contact@myfaceci.online. Le photographe peut supprimer à tout moment une photo ou un événement depuis son espace.",
     ],
   },
   {
     title: "6. Compte",
     body: [
+      "L'adresse e-mail du compte est confirmée par un lien envoyé à l'inscription : sans cette confirmation, il n'est pas possible de créer un événement ni de déposer des photos.",
       "Le photographe est responsable de la confidentialité de son mot de passe et des contenus déposés depuis son compte. MYFACE peut suspendre un compte en cas d'usage frauduleux, de contenu illicite ou de paiement déclaré mais non reçu.",
+      "Le photographe peut demander la fermeture de son compte à contact@myfaceci.online : ses données de compte sont alors supprimées, au plus tard un an après la fermeture.",
     ],
   },
   {

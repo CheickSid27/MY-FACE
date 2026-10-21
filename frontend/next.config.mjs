@@ -4,11 +4,11 @@ const nextConfig = {
   // Image de prod plus legere/fiable : ne copie que le sous-ensemble de
   // node_modules reellement utilise par le build, voir Dockerfile.
   output: "standalone",
+  // L'application n'utilise pas next/image (les photos sont servies par des
+  // liens signes R2) : optimiseur d'images desactive, il ne sert qu'a
+  // exposer une route de plus aux failles connues de Next.js 14.
   images: {
-    remotePatterns: [
-      { protocol: "http", hostname: "localhost" },
-      { protocol: "http", hostname: "minio" },
-    ],
+    unoptimized: true,
   },
   // Docker Desktop sur Windows ne propage pas toujours fiablement les
   // evenements filesystem natifs (inotify) a travers le bind-mount vers le

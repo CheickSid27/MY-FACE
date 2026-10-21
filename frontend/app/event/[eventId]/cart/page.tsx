@@ -11,8 +11,10 @@ import { getCartSessionId } from "@/lib/cart";
 import { getKioskToken, isKioskMode } from "@/lib/kiosk";
 import { useKioskInactivityReset } from "@/lib/kiosk-inactivity-reset";
 import type { CartRead, EventPaymentMethodRead, PaymentMethod } from "@/types/api";
+import { useSmsEnabled } from "@/lib/features";
 
 export default function CartPage() {
+  const smsEnabled = useSmsEnabled();
   const { eventId } = useParams<{ eventId: string }>();
   const router = useRouter();
 
@@ -373,7 +375,9 @@ export default function CartPage() {
             </div>
             <label className="mb-1.5 block text-sm font-medium text-ink-700">
               Numéro de téléphone{" "}
-              <span className="font-normal text-ink-500">(pour recevoir vos photos par SMS)</span>
+              <span className="font-normal text-ink-500">
+                {smsEnabled ? "(pour recevoir vos photos par SMS)" : "(pour retrouver votre commande)"}
+              </span>
             </label>
             <PhoneInput onChange={setPhone} disabled={submitting} className="mb-4" />
             {error && <p className="mb-3 text-sm text-red-600">{error}</p>}

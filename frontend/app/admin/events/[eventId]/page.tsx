@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import RequireAuth from "@/components/admin/RequireAuth";
 import Pagination from "@/components/gallery/Pagination";
+import EventRetentionCard from "@/components/admin/EventRetentionCard";
 import GalleryOptionsCard from "@/components/packs/GalleryOptionsCard";
 import PackCard from "@/components/packs/PackCard";
 import BatchUploader from "@/components/upload/BatchUploader";
@@ -859,6 +860,7 @@ function AdminEventDetailContent() {
             onSaved={setEvent}
           />
         )}
+        <EventRetentionCard event={event} isAdmin={isAdmin} onChanged={loadData} />
 
         <div className="mb-6">
           <BatchUploader

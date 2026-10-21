@@ -38,6 +38,7 @@ import type {
   PricingPack,
   ProfileUpdate,
   RegisterPayload,
+  RetentionReport,
   TokenResponse,
   User,
   UserAdmin,
@@ -178,10 +179,32 @@ export const api = {
     return request<User>("/auth/me", { method: "PATCH", body: JSON.stringify(payload) });
   },
 
-  changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    return request<void>("/auth/password", {
+  /** Les autres sessions sont fermees ; celle-ci recoit de nouveaux jetons. */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const data = await request<TokenResponse>("/auth/password", {
       method: "POST",
       body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    });
+    setTokens(data.access_token, data.refresh_token);
+  },
+
+  /** Lien de confirmation recu par e-mail (sans connexion). */
+  verifyEmail(token: string): Promise<{ status: string; email: string }> {
+    return request("/auth/verify-email", { method: "POST", body: JSON.stringify({ token }) });
+  },
+
+  resendVerification(): Promise<{ status: "sent" | "already_verified" }> {
+    return request("/auth/resend-verification", { method: "POST" });
+  },
+
+  forgotPassword(email: string): Promise<{ detail: string }> {
+    return request("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) });
+  },
+
+  resetPassword(token: string, newPassword: string): Promise<void> {
+    return request<void>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, new_password: newPassword }),
     });
   },
 
@@ -365,6 +388,11 @@ export const api = {
     return request<void>(`/events/${eventId}/payment-methods/${method}`, { method: "DELETE" });
   },
 
+  /** Ce que le serveur peut vraiment faire (SMS reels ou non). */
+  getFeatures(): Promise<{ sms: boolean }> {
+    return request<{ sms: boolean }>("/meta/features");
+  },
+
   getPhoneCountries(): Promise<PhoneCountry[]> {
     return request<PhoneCountry[]>("/meta/phone-countries");
   },
@@ -478,7 +506,7 @@ export const api = {
   },
 
   /** Suspendre / reactiver un compte (admin). */
-  updateUser(userId: string, payload: { is_active: boolean }): Promise<User> {
+  updateUser(userId: string, payload: { is_active?: boolean; email_verified?: boolean }): Promise<User> {
     return request<User>(`/admin/users/${userId}`, { method: "PATCH", body: JSON.stringify(payload) });
   },
 
@@ -540,6 +568,20 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(payload),
     });
+  },
+
+  // --- Conservation des donnees (admin) ----------------------------------
+  getRetentionReport(): Promise<RetentionReport> {
+    return request<RetentionReport>("/admin/retention");
+  },
+
+  runRetention(): Promise<RetentionReport> {
+    return request<RetentionReport>("/admin/retention/run", { method: "POST" });
+  },
+
+  /** Exempter un evenement de la suppression automatique (evenement de demonstration). */
+  setEventRetentionExempt(eventId: string, exempt: boolean): Promise<{ exempt: boolean }> {
+    return request(`/admin/events/${eventId}/retention`, { method: "PUT", body: JSON.stringify({ exempt }) });
   },
 
   createUser(payload: UserCreate): Promise<User> {

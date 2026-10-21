@@ -1,6 +1,6 @@
 // Logo MYFACE. Le carre de detection (comme celui que l'app dessine autour
 // d'un visage reconnu), un visage souriant, un coin en vert : voir le dossier
-// /marque a la racine du projet pour les fichiers sources et les variantes.
+// marketing/marque du projet pour les fichiers sources et les variantes.
 // Dessine en SVG inline pour rester net a l'impression (affiche, recu) et
 // pouvoir changer de couleurs selon le fond.
 

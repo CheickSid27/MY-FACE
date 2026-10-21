@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.deps import get_current_user, require_admin
+from app.deps import get_current_user, require_admin, require_verified_user
 from app.models.app_setting import AppSetting
 from app.models.event import Event
 from app.models.pack_purchase import PackPurchase, PackPurchaseStatus
@@ -20,6 +20,7 @@ from app.schemas.pack import (
     AdminSetPackRequest,
     EventPackRead,
     PackPaymentInfo,
+    PackPaymentInfoUpdate,
     PackPurchaseAdminRead,
     PackPurchaseCreate,
     PackPurchaseRead,
@@ -157,7 +158,7 @@ async def _event_pack_read(event: Event, db: AsyncSession) -> EventPackRead:
 async def create_pack_purchase(
     event_id: uuid.UUID,
     payload: PackPurchaseCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_verified_user),
     db: AsyncSession = Depends(get_db),
 ) -> PackPurchase:
     """Le photographe declare avoir paye un pack (Mobile Money vers MYFACE) :
@@ -169,19 +170,19 @@ async def create_pack_purchase(
     if is_unlimited_owner(owner):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Les evenements MYFACE n'ont pas de pack a acheter",
+            detail="Les événements MYFACE n'ont pas de pack à acheter",
         )
 
     target = PACKS[payload.pack]
     if not target.purchasable:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ce pack ne s'achete pas en ligne : contactez MYFACE sur WhatsApp",
+            detail="Ce pack ne s'achète pas en ligne : contactez MYFACE sur WhatsApp",
         )
     if pack_rank(target.key) <= pack_rank(event.pack):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"L'evenement a deja le pack {get_pack(event.pack).name} ou superieur",
+            detail=f"L'événement a déjà le pack {get_pack(event.pack).name} ou supérieur",
         )
 
     existing = await db.execute(
@@ -192,13 +193,13 @@ async def create_pack_purchase(
     if existing.first() is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Un paiement est deja en cours de verification pour cet evenement",
+            detail="Un paiement est déjà en cours de vérification pour cet événement",
         )
 
     paid = await amount_paid_for_event(db, event_id)
     due = amount_due(target.key, paid)
     if due <= 0:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Rien a payer pour ce pack")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Rien à payer pour ce pack")
 
     purchase = PackPurchase(
         event_id=event_id,
@@ -238,7 +239,7 @@ async def cancel_pack_purchase(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Achat introuvable")
     event = await db.get(Event, purchase.event_id)
     if event is None or not can_manage_event(event, current_user):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acces refuse")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès refusé")
     if purchase.status != PackPurchaseStatus.PENDING:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cet achat n'est plus en attente")
     purchase.status = PackPurchaseStatus.CANCELLED
@@ -288,7 +289,7 @@ async def _get_purchase_for_decision(purchase_id: uuid.UUID, db: AsyncSession) -
     if purchase.status != PackPurchaseStatus.PENDING:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Achat deja traite (statut : {purchase.status.value})",
+            detail=f"Achat déjà traité (statut : {purchase.status.value})",
         )
     return purchase
 
@@ -350,7 +351,7 @@ async def admin_set_event_pack(
     negocie, geste commercial). Garde une trace dans l'historique des achats."""
     event = await db.get(Event, event_id)
     if event is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Événement introuvable")
     event.pack = payload.pack
     event.photo_limit_override = payload.photo_limit_override
     db.add(
@@ -382,7 +383,7 @@ async def admin_get_pack_payment(
 
 @router.put("/admin/settings/pack-payment", response_model=PackPaymentInfo)
 async def admin_set_pack_payment(
-    payload: PackPaymentInfo,
+    payload: PackPaymentInfoUpdate,
     current_user: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> PackPaymentInfo:

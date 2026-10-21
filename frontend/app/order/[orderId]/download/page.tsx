@@ -98,6 +98,22 @@ export default function DownloadPage() {
     );
   }
 
+  if (data.photos_purged) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gradient-to-b from-surface-alt to-surface px-6 text-center">
+        <h1 className="text-2xl font-bold text-brand">Photos plus disponibles</h1>
+        <p className="max-w-md text-ink-500">
+          Les photos de cette commande ont été supprimées : elles restent en ligne un temps limité après
+          l&apos;événement, pour protéger les invités. Pour toute question, écrivez à contact@myfaceci.online.
+        </p>
+      </main>
+    );
+  }
+
+  const availableUntil = data.photos_available_until
+    ? new Date(data.photos_available_until).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : null;
+
   return (
     <main className="flex min-h-screen flex-col items-center gap-8 bg-gradient-to-b from-surface-alt to-surface px-6 py-12 animate-fade-in">
       <div className="text-center">
@@ -109,8 +125,10 @@ export default function DownloadPage() {
         </h1>
         <p className="mx-auto mt-1 max-w-md text-ink-500">
           {data.photos.length > 1 ? `Vos ${data.photos.length} photos` : "Votre photo"} en qualité originale{" "}
-          {data.photos.length > 1 ? "sont prêtes" : "est prête"}. Elles restent
-          disponibles à tout moment depuis ce lien ou le QR code ci-dessous.
+          {data.photos.length > 1 ? "sont prêtes" : "est prête"}.{" "}
+          {availableUntil
+            ? `Elles restent disponibles depuis ce lien ou le QR code ci-dessous jusqu'au ${availableUntil} : enregistrez-les sur votre téléphone avant cette date.`
+            : "Elles restent disponibles depuis ce lien ou le QR code ci-dessous."}
         </p>
       </div>
 

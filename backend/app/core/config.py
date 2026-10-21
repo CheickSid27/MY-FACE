@@ -125,6 +125,43 @@ class Settings(BaseSettings):
     vapid_private_key: str = ""
     vapid_subject: str = ""
 
+    # E-mails (verification de l'adresse des photographes, mot de passe
+    # oublie), voir services/email.py. SMTP_HOST vide : rien ne part, le
+    # message (avec son lien) est seulement ecrit dans les logs du backend.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "MYFACE <no-reply@myfaceci.online>"
+    # 587 = STARTTLS (le plus courant) ; 465 = SSL direct.
+    smtp_use_ssl: bool = False
+    # Adresse e-mail confirmee obligatoire avant de creer un evenement,
+    # d'envoyer des photos ou d'acheter un pack. "auto" : seulement si
+    # l'envoi d'e-mails est configure (sans SMTP, personne ne pourrait
+    # confirmer son adresse) ; "true" / "false" pour forcer.
+    email_verification_required: str = "auto"
+    email_verification_ttl_hours: int = 48
+    password_reset_ttl_minutes: int = 60
+
+    # Conservation des donnees (declaree a l'ARTCI), voir services/retention.py :
+    # photos et empreintes faciales supprimees N jours apres la date de
+    # l'evenement, numero de telephone des commandes efface apres N jours.
+    # Desactive par defaut : le backend journalise seulement ce qu'il
+    # supprimerait (mode simulation) tant que RETENTION_ENABLED n'est pas a true.
+    retention_enabled: bool = False
+    retention_photo_days: int = 90
+    retention_order_days: int = 365
+    retention_interval_hours: int = 24
+
+    # Evenements gratuits (pack Decouverte) qu'un photographe peut avoir en
+    # meme temps : au-dela, il passe un evenement au pack superieur ou en
+    # supprime un (sinon 10 photos x N evenements = photos illimitees).
+    free_events_per_account: int = 3
+
+    # Chemin GeniusPay (sandbox, voir routers/geniuspay.py) : ferme tant qu'il
+    # n'est pas valide, il n'est appele par aucune page du site.
+    geniuspay_enabled: bool = False
+
     # Utilise pour construire les liens de telechargement/QR renvoyes a l'invite
     app_base_url: str = "http://localhost:3000"
 
@@ -148,6 +185,23 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment.lower() == "production"
+
+    @property
+    def email_sending_configured(self) -> bool:
+        return bool(self.smtp_host.strip())
+
+    @property
+    def email_verification_enforced(self) -> bool:
+        value = self.email_verification_required.strip().lower()
+        if value in ("true", "1", "yes", "oui"):
+            return True
+        if value in ("false", "0", "no", "non"):
+            return False
+        return self.email_sending_configured
 
 
 @lru_cache

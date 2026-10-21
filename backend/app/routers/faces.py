@@ -41,12 +41,12 @@ async def scan_face(
     if not consent:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Consentement requis avant tout traitement de donnees biometriques",
+            detail="Consentement requis avant tout traitement de données biométriques",
         )
 
     event = await db.get(Event, event_id)
     if event is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Événement introuvable")
     require_gallery_access(event, kiosk_token=kiosk_token, access_token=access, user=current_user)
 
     if selfie.content_type not in ALLOWED_CONTENT_TYPES:
@@ -55,6 +55,8 @@ async def scan_face(
             detail=f"Type de fichier non supporte: {selfie.content_type}",
         )
 
+    if selfie.size is not None and selfie.size > MAX_SELFIE_SIZE_BYTES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Fichier invalide ou trop volumineux")
     data = await selfie.read()
     if not data or len(data) > MAX_SELFIE_SIZE_BYTES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Fichier invalide ou trop volumineux")
@@ -65,7 +67,7 @@ async def scan_face(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     if not faces:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Aucun visage detecte dans la photo")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Aucun visage détecté dans la photo")
 
     def _bbox_area(face) -> float:
         x1, y1, x2, y2 = face.bounding_box

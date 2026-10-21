@@ -84,7 +84,8 @@ async def test_init_qr_payment_creates_pending_order(client, cart_factory):
     assert data["payment_method"] == "wave"
     assert data["total_amount"] == 1000
     assert data["qr_image_url"]
-    assert data["merchant_phone"] == "0700000000"
+    # numero ivoirien saisi sans indicatif : enregistre au format international
+    assert data["merchant_phone"] == "+2250700000000"
 
 
 async def test_init_payment_requires_payment_method(client, cart_factory):

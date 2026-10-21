@@ -20,6 +20,7 @@ from app.models.user import User
 from app.schemas.download import DownloadPhoto, DownloadResponse, PrintedResponse
 from app.services.access import can_manage_event, is_kiosk_request
 from app.services.qr import generate_qr_png
+from app.services.retention import photos_deadline
 from app.services.storage import StorageService, content_disposition_attachment, get_storage_service
 
 router = APIRouter(prefix="/download", tags=["download"])
@@ -34,7 +35,7 @@ async def _get_paid_order(order_id: uuid.UUID, db: AsyncSession) -> Order:
     if order.status != OrderStatus.SUCCESS:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Telechargement indisponible : le paiement n'est pas confirme",
+            detail="Téléchargement indisponible : le paiement n'est pas confirmé",
         )
     return order
 
@@ -71,6 +72,7 @@ async def get_download_links(
         for photo, print_requested in rows
     ]
 
+    event = await db.get(Event, order.event_id)
     return DownloadResponse(
         order_id=order.id,
         event_id=order.event_id,
@@ -78,6 +80,8 @@ async def get_download_links(
         expires_in=ttl,
         printed_at=order.printed_at,
         offert=order.payment_method == PaymentMethod.OFFERT,
+        photos_available_until=photos_deadline(event) if event else None,
+        photos_purged=bool(event and event.photos_purged_at),
     )
 
 
@@ -100,7 +104,7 @@ async def mark_order_printed(
     if not allowed:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Impression reservee a la borne de l'evenement ou a l'organisateur",
+            detail="Impression réservée à la borne de l'événement ou à l'organisateur",
         )
 
     has_prints = await db.execute(
@@ -200,7 +204,7 @@ async def get_download_qr(order_id: uuid.UUID, db: AsyncSession = Depends(get_db
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Commande introuvable")
     if order.status != OrderStatus.SUCCESS:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Commande non payee")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Commande non payée")
 
     download_page_url = f"{settings.app_base_url}/order/{order.id}/download"
     png_bytes = generate_qr_png(download_page_url)

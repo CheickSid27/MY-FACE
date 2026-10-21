@@ -295,7 +295,7 @@ async def test_pack_payment_numbers_set_by_admin(make_client, create_user):
     resp = await admin.put("/admin/settings/pack-payment", json={"wave": " 0758509403 ", "whatsapp": "+2250758509403"})
     assert resp.status_code == 200
     info = (await photographe.get("/packs/payment-info")).json()
-    assert info["wave"] == "0758509403"
+    assert info["wave"] == "+2250758509403"
     assert info["whatsapp"] == "+2250758509403"
     assert (await photographe.put("/admin/settings/pack-payment", json={"wave": "1"})).status_code == 403
 

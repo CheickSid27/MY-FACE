@@ -83,7 +83,9 @@ async def test_change_password_success_then_login_with_new_password(
         "/auth/password",
         json={"current_password": "testpassword123", "new_password": "newpassword123"},
     )
-    assert resp.status_code == 204
+    # nouveaux jetons : la session en cours reste ouverte, les autres sont fermees
+    assert resp.status_code == 200
+    assert "access_token" in resp.json()
 
     old_login = await client.post(
         "/auth/login", json={"email": "admin@myface-test.com", "password": "testpassword123"}
