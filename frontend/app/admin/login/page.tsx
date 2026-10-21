@@ -2,6 +2,7 @@
 import MyfaceLogo from "@/components/brand/Logo";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -39,7 +40,7 @@ export default function AdminLoginPage() {
             <p className="text-lg font-bold leading-tight text-ink-900">
               MY<span className="text-[#F26A1B]">FACE</span>
             </p>
-            <p className="text-xs text-ink-500">Espace organisateur</p>
+            <p className="text-xs text-ink-500">Espace organisateur et photographe</p>
           </div>
         </div>
 
@@ -66,6 +67,12 @@ export default function AdminLoginPage() {
         <button type="submit" disabled={isLoading} className="btn-primary w-full">
           {isLoading ? "Connexion..." : "Se connecter"}
         </button>
+        <p className="mt-5 text-center text-sm text-ink-500">
+          Photographe, pas encore de compte ?{" "}
+          <Link href="/photographes/inscription" className="font-semibold text-brand hover:underline">
+            Créer mon compte gratuitement
+          </Link>
+        </p>
       </form>
     </main>
   );

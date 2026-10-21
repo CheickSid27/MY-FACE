@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.photo import IndexingStatus, Photo
 from app.services.storage import StorageService
 from app.services.thumbnails import InvalidImageError, generate_preview, generate_thumbnail
-from app.services.watermark import apply_watermark, watermarked_preview_key
+from app.services.watermark import WATERMARK_TEXT, apply_watermark, watermarked_preview_key
 
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024
@@ -24,7 +24,7 @@ class _Derivatives:
     preview_watermarked: bytes
 
 
-def _build_derivatives(data: bytes) -> _Derivatives:
+def _build_derivatives(data: bytes, watermark_text: str) -> _Derivatives:
     # Calculs Pillow purement CPU (plusieurs centaines de ms sur un original
     # de 25 Mo) : executes dans un thread par l'appelant, jamais dans la
     # boucle d'evenements.
@@ -32,7 +32,7 @@ def _build_derivatives(data: bytes) -> _Derivatives:
     return _Derivatives(
         thumbnail=generate_thumbnail(data),
         preview=preview,
-        preview_watermarked=apply_watermark(preview),
+        preview_watermarked=apply_watermark(preview, watermark_text),
     )
 
 
@@ -43,8 +43,12 @@ async def ingest_photo(
     data: bytes,
     db: AsyncSession,
     storage: StorageService,
+    watermark_text: str = WATERMARK_TEXT,
 ) -> Photo:
     """Valide et importe une photo, l'ajoute a la session `db` (non commit).
+
+    `watermark_text` : texte incruste dans l'apercu servi aux invites (nom du
+    photographe pour les packs payants, voir services/packs.py).
 
     Leve ValueError / InvalidImageError si le fichier est invalide, a
     l'appelant de decider comment reporter l'erreur (reponse HTTP, log, ...)."""
@@ -55,7 +59,7 @@ async def ingest_photo(
     if not data:
         raise ValueError("Fichier vide")
 
-    derivatives = await asyncio.to_thread(_build_derivatives, data)
+    derivatives = await asyncio.to_thread(_build_derivatives, data, watermark_text)
 
     photo_id = uuid.uuid4()
     extension = (filename or "photo.jpg").rsplit(".", 1)[-1].lower()

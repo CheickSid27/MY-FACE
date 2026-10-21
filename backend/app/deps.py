@@ -11,6 +11,8 @@ from app.models.user import User, UserRole
 bearer_scheme = HTTPBearer()
 optional_bearer_scheme = HTTPBearer(auto_error=False)
 
+ACCOUNT_SUSPENDED_DETAIL = "Compte suspendu : contactez MYFACE sur WhatsApp"
+
 
 async def get_optional_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(optional_bearer_scheme),
@@ -24,7 +26,8 @@ async def get_optional_user(
         user_id = uuid.UUID(decode_token(credentials.credentials, TokenType.ACCESS))
     except (InvalidTokenError, ValueError):
         return None
-    return await db.get(User, user_id)
+    user = await db.get(User, user_id)
+    return user if user is not None and user.is_active else None
 
 
 async def get_current_user(
@@ -44,6 +47,8 @@ async def get_current_user(
     user = await db.get(User, user_id)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Utilisateur introuvable")
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ACCOUNT_SUSPENDED_DETAIL)
 
     return user
 

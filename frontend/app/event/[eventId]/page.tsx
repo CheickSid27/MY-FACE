@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import MyfaceLogo from "@/components/brand/Logo";
 import FramedPhoto from "@/components/photo/FramedPhoto";
 import ScanDialog from "@/components/scan/ScanDialog";
-import { api } from "@/lib/api-client";
+import { api, ApiError } from "@/lib/api-client";
+import { forgetGalleryAccess, rememberGalleryAccess } from "@/lib/gallery-access";
 import { forgetKioskToken, getKioskToken, rememberKioskToken } from "@/lib/kiosk";
 import type { EventPublicRead, Photo } from "@/types/api";
 
@@ -18,6 +19,10 @@ export default function EventHomePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [scanOpen, setScanOpen] = useState(false);
+  // Galerie protegee par mot de passe (packs Evenement et Pro)
+  const [password, setPassword] = useState("");
+  const [unlocking, setUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState<string | null>(null);
 
   // Detection du mode borne : le lien configure sur la borne physique porte
   // ?kiosk=<le vrai kiosk_token de l'evenement> (voir admin, page evenement).
@@ -31,6 +36,8 @@ export default function EventHomePage() {
       .getEventPublic(eventId, candidate)
       .then((data) => {
         setEvent(data);
+        // Jeton memorise devenu invalide (mot de passe change) : on l'oublie.
+        if (data.password_required && !data.gallery_access) forgetGalleryAccess(eventId);
         if (data.is_kiosk && candidate) {
           rememberKioskToken(eventId, candidate);
           if (urlKioskToken) {
@@ -51,15 +58,33 @@ export default function EventHomePage() {
   // Photo vedette pour le cadre decoratif de l'accueil (voir
   // Event.frame_caption) : la plus recemment uploadee, pas de selection
   // manuelle d'une "photo de couverture" pour l'instant.
+  async function handleUnlock(e: FormEvent) {
+    e.preventDefault();
+    setUnlocking(true);
+    setUnlockError(null);
+    try {
+      const { access_token } = await api.unlockGallery(eventId, password);
+      rememberGalleryAccess(eventId, access_token);
+      setEvent(await api.getEventPublic(eventId, getKioskToken(eventId)));
+      setPassword("");
+    } catch (err) {
+      setUnlockError(err instanceof ApiError ? err.message : "Mot de passe incorrect.");
+    } finally {
+      setUnlocking(false);
+    }
+  }
+
+  const locked = Boolean(event?.password_required && !event.gallery_access);
+
   useEffect(() => {
-    if (!event?.frame_caption) return;
+    if (!event?.frame_caption || locked) return;
     api
       .listPhotos(eventId, 1, 1, event.is_kiosk ? getKioskToken(eventId) : null)
       .then((data) => setFeaturedPhoto(data.items[0] ?? null))
       .catch(() => {
         // pas de photo vedette disponible : le cadre ne s'affiche simplement pas
       });
-  }, [eventId, event?.frame_caption, event?.is_kiosk]);
+  }, [eventId, event?.frame_caption, event?.is_kiosk, locked]);
 
   if (loading) {
     return (
@@ -113,8 +138,33 @@ export default function EventHomePage() {
           })}{" "}
           &middot; {event.location}
         </p>
+        {event.photographer_name && (
+          <p className="mt-2 text-sm font-medium text-brand-accent">Photos : {event.photographer_name}</p>
+        )}
       </div>
 
+      {locked ? (
+        <form onSubmit={handleUnlock} className="relative z-10 mt-12 w-full max-w-sm">
+          <p className="mb-3 text-sm text-ink-300">
+            Cette galerie est privée : saisissez le mot de passe donné par l&apos;organisateur.
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Mot de passe"
+              autoComplete="off"
+              className="min-w-0 flex-1 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-white/50 focus:border-brand-accent"
+            />
+            <button type="submit" disabled={unlocking} className="btn-accent shrink-0 !px-5 !py-3 disabled:opacity-50">
+              {unlocking ? "..." : "Entrer"}
+            </button>
+          </div>
+          {unlockError && <p className="mt-2 text-sm text-red-300">{unlockError}</p>}
+        </form>
+      ) : (
       <div className="relative z-10 mt-12 flex w-full max-w-md flex-col gap-4 sm:flex-row">
         <button
           type="button"
@@ -131,6 +181,7 @@ export default function EventHomePage() {
           Scanner mon visage
         </button>
       </div>
+      )}
 
       <div className="relative z-10 mt-14 flex items-center gap-2 opacity-60">
         <MyfaceLogo size={22} tone="light" />

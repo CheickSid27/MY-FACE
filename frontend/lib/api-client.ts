@@ -5,11 +5,13 @@ import {
   setAccessToken,
   setTokens,
 } from "@/lib/auth";
+import { getGalleryAccess } from "@/lib/gallery-access";
 import type {
   CartRead,
   ClusterListResponse,
   DownloadResponse,
   Event,
+  EventPack,
   EventIndexingSummary,
   EventListItem,
   EventPaymentMethodRead,
@@ -19,6 +21,13 @@ import type {
   OrderDetail,
   OrderRead,
   OrderStatus,
+  Pack,
+  PackKey,
+  PackPaymentInfo,
+  PackPaymentMethod,
+  PackPurchase,
+  PackPurchaseAdmin,
+  PackPurchaseStatus,
   PaymentInitResponse,
   PaymentMethod,
   PaymentStatusResponse,
@@ -27,8 +36,11 @@ import type {
   PhotoUploadResult,
   PricingDiscount,
   PricingPack,
+  ProfileUpdate,
+  RegisterPayload,
   TokenResponse,
   User,
+  UserAdmin,
   UserCreate,
   WatchedFolderRead,
 } from "@/types/api";
@@ -152,6 +164,20 @@ export const api = {
     return request<User>("/auth/me");
   },
 
+  /** Inscription libre d'un photographe : le compte est connecte tout de suite. */
+  async register(payload: RegisterPayload): Promise<TokenResponse> {
+    const data = await request<TokenResponse>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    setTokens(data.access_token, data.refresh_token);
+    return data;
+  },
+
+  updateMe(payload: ProfileUpdate): Promise<User> {
+    return request<User>("/auth/me", { method: "PATCH", body: JSON.stringify(payload) });
+  },
+
   changePassword(currentPassword: string, newPassword: string): Promise<void> {
     return request<void>("/auth/password", {
       method: "POST",
@@ -168,7 +194,17 @@ export const api = {
   },
 
   getEventPublic(eventId: string, kioskToken?: string | null): Promise<EventPublicRead> {
-    return request<EventPublicRead>(withQuery(`/events/${eventId}/public`, { kiosk_token: kioskToken }));
+    return request<EventPublicRead>(
+      withQuery(`/events/${eventId}/public`, { kiosk_token: kioskToken, access: getGalleryAccess(eventId) })
+    );
+  },
+
+  /** Mot de passe d'une galerie protegee : renvoie le jeton d'acces. */
+  unlockGallery(eventId: string, password: string): Promise<{ access_token: string }> {
+    return request<{ access_token: string }>(`/events/${eventId}/unlock`, {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    });
   },
 
   createEvent(payload: {
@@ -193,6 +229,8 @@ export const api = {
       pricing: PricingPayload;
       frame_caption: string | null;
       cash_enabled: boolean;
+      watermark_text: string | null;
+      gallery_password: string;
     }>
   ): Promise<Event> {
     return request<Event>(`/events/${eventId}`, {
@@ -227,7 +265,12 @@ export const api = {
     kioskToken?: string | null
   ): Promise<PhotoListResponse> {
     return request<PhotoListResponse>(
-      withQuery(`/events/${eventId}/photos`, { page, page_size: pageSize, kiosk_token: kioskToken })
+      withQuery(`/events/${eventId}/photos`, {
+        page,
+        page_size: pageSize,
+        kiosk_token: kioskToken,
+        access: getGalleryAccess(eventId),
+      })
     );
   },
 
@@ -271,10 +314,13 @@ export const api = {
     const formData = new FormData();
     formData.append("consent", String(consent));
     formData.append("selfie", selfie, "selfie.jpg");
-    return request<FaceScanResponse>(withQuery("/faces/scan", { event_id: eventId, kiosk_token: kioskToken }), {
-      method: "POST",
-      body: formData,
-    });
+    return request<FaceScanResponse>(
+      withQuery("/faces/scan", { event_id: eventId, kiosk_token: kioskToken, access: getGalleryAccess(eventId) }),
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
   },
 
   getClusters(eventId: string): Promise<ClusterListResponse> {
@@ -283,7 +329,10 @@ export const api = {
 
   getClustersPublic(eventId: string, kioskToken?: string | null): Promise<ClusterListResponse> {
     return request<ClusterListResponse>(
-      withQuery(`/events/${eventId}/clusters/public`, { kiosk_token: kioskToken })
+      withQuery(`/events/${eventId}/clusters/public`, {
+        kiosk_token: kioskToken,
+        access: getGalleryAccess(eventId),
+      })
     );
   },
 
@@ -424,8 +473,73 @@ export const api = {
     return request<void>(`/admin/orders/${orderId}/cancel`, { method: "POST" });
   },
 
-  listUsers(): Promise<User[]> {
-    return request<User[]>("/admin/users");
+  listUsers(): Promise<UserAdmin[]> {
+    return request<UserAdmin[]>("/admin/users");
+  },
+
+  /** Suspendre / reactiver un compte (admin). */
+  updateUser(userId: string, payload: { is_active: boolean }): Promise<User> {
+    return request<User>(`/admin/users/${userId}`, { method: "PATCH", body: JSON.stringify(payload) });
+  },
+
+  // --- Service photographe : packs -------------------------------------
+  listPacks(): Promise<Pack[]> {
+    return request<Pack[]>("/packs");
+  },
+
+  getPackPaymentInfo(): Promise<PackPaymentInfo> {
+    return request<PackPaymentInfo>("/packs/payment-info");
+  },
+
+  getEventPack(eventId: string): Promise<EventPack> {
+    return request<EventPack>(`/events/${eventId}/pack`);
+  },
+
+  createPackPurchase(
+    eventId: string,
+    payload: { pack: PackKey; payment_method: PackPaymentMethod; payer_phone: string; transaction_ref: string }
+  ): Promise<PackPurchase> {
+    return request<PackPurchase>(`/events/${eventId}/pack-purchases`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  cancelPackPurchase(purchaseId: string): Promise<PackPurchase> {
+    return request<PackPurchase>(`/pack-purchases/${purchaseId}/cancel`, { method: "POST" });
+  },
+
+  listPackPurchases(status?: PackPurchaseStatus): Promise<PackPurchaseAdmin[]> {
+    return request<PackPurchaseAdmin[]>(withQuery("/admin/pack-purchases", { status }));
+  },
+
+  approvePackPurchase(purchaseId: string): Promise<PackPurchase> {
+    return request<PackPurchase>(`/admin/pack-purchases/${purchaseId}/approve`, { method: "POST" });
+  },
+
+  rejectPackPurchase(purchaseId: string, note: string | null): Promise<PackPurchase> {
+    return request<PackPurchase>(`/admin/pack-purchases/${purchaseId}/reject`, {
+      method: "POST",
+      body: JSON.stringify({ note }),
+    });
+  },
+
+  adminSetEventPack(
+    eventId: string,
+    payload: { pack: PackKey; photo_limit_override?: number | null; note?: string | null }
+  ): Promise<EventPack> {
+    return request<EventPack>(`/admin/events/${eventId}/pack`, { method: "PUT", body: JSON.stringify(payload) });
+  },
+
+  getAdminPackPayment(): Promise<PackPaymentInfo> {
+    return request<PackPaymentInfo>("/admin/settings/pack-payment");
+  },
+
+  setAdminPackPayment(payload: PackPaymentInfo): Promise<PackPaymentInfo> {
+    return request<PackPaymentInfo>("/admin/settings/pack-payment", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
   },
 
   createUser(payload: UserCreate): Promise<User> {

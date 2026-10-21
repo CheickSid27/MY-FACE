@@ -17,6 +17,9 @@ _BCRYPT_MAX_BYTES = 72
 class TokenType(str, Enum):
     ACCESS = "access"
     REFRESH = "refresh"
+    # Acces invite a une galerie protegee par mot de passe (voir
+    # services/gallery_access.py) : sujet = id de l'evenement.
+    GALLERY = "gallery"
 
 
 def hash_password(password: str) -> str:
@@ -29,13 +32,16 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(password_bytes, hashed_password.encode("utf-8"))
 
 
-def _create_token(subject: str, token_type: TokenType, expires_delta: timedelta) -> str:
+def _create_token(
+    subject: str, token_type: TokenType, expires_delta: timedelta, extra: dict[str, Any] | None = None
+) -> str:
     now = datetime.now(timezone.utc)
     payload: dict[str, Any] = {
         "sub": subject,
         "type": token_type.value,
         "iat": now,
         "exp": now + expires_delta,
+        **(extra or {}),
     }
     return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
 
@@ -56,8 +62,26 @@ def create_refresh_token(subject: str) -> str:
     )
 
 
+def create_gallery_token(event_id: str, password_fingerprint: str, hours: int) -> str:
+    """`password_fingerprint` change avec le mot de passe : changer le mot de
+    passe de la galerie invalide les acces deja donnes."""
+    return _create_token(event_id, TokenType.GALLERY, timedelta(hours=hours), {"pwd": password_fingerprint})
+
+
 class InvalidTokenError(Exception):
     pass
+
+
+def decode_token_payload(token: str, expected_type: TokenType) -> dict[str, Any]:
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])
+    except jwt.PyJWTError as exc:
+        raise InvalidTokenError("Token invalide ou expire") from exc
+    if payload.get("type") != expected_type.value:
+        raise InvalidTokenError(f"Type de token invalide, attendu '{expected_type.value}'")
+    if not payload.get("sub"):
+        raise InvalidTokenError("Token sans sujet")
+    return payload
 
 
 def decode_token(token: str, expected_type: TokenType) -> str:

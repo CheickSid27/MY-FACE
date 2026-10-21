@@ -4,18 +4,20 @@ import secrets
 import uuid
 from typing import Literal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.database import get_db, get_session_factory
-from app.deps import get_current_user
+from app.core.security import hash_password, verify_password
+from app.deps import get_current_user, get_optional_user
 from app.models.event import Event
 from app.models.event_payment_method import EventPaymentMethod
 from app.models.face_embedding import FaceEmbedding
 from app.models.order import Order, OrderStatus, PaymentMethod
+from app.models.pack_purchase import PackPurchase, PackPurchaseStatus
 from app.models.photo import IndexingStatus, Photo
 from app.models.user import User, UserRole
 from app.schemas.event import (
@@ -25,6 +27,8 @@ from app.schemas.event import (
     EventPublicRead,
     EventRead,
     EventUpdate,
+    GalleryUnlockRequest,
+    GalleryUnlockResponse,
     ReindexResponse,
 )
 from app.schemas.face import ClusterListResponse
@@ -34,8 +38,22 @@ from app.services.access import get_manageable_event, is_kiosk_request
 from app.services.face_clusters import build_cluster_response, face_cluster_cache
 from app.services.face_indexing import index_photos_faces, is_scheduled
 from app.services.folder_watcher import folder_watcher
+from app.services.gallery_access import has_gallery_access, issue_gallery_token, require_gallery_access
+from app.services.packs import (
+    DEFAULT_PACK,
+    FEATURE_CUSTOM_WATERMARK,
+    FEATURE_GALLERY_PASSWORD,
+    UNLIMITED_PACK,
+    effective_photo_limit,
+    event_has_feature,
+    get_owner,
+    next_pack,
+    watermark_text_for,
+)
+from app.services.rate_limit import client_ip, limiter
 from app.services.qr import generate_qr_png
 from app.services.storage import StorageService, get_storage_service
+from app.services.watermark import regenerate_event_watermarks
 
 logger = logging.getLogger("myface.events")
 settings = get_settings()
@@ -65,6 +83,9 @@ async def create_event(
         frame_caption=payload.frame_caption,
         organizer_id=current_user.id,
         kiosk_token=_generate_kiosk_token(),
+        # Service photographe : un photographe commence au pack Decouverte
+        # (10 photos gratuites) ; les evenements MYFACE ne sont pas limites.
+        pack=UNLIMITED_PACK if current_user.role == UserRole.ADMIN else DEFAULT_PACK,
     )
     db.add(event)
     await db.commit()
@@ -84,16 +105,28 @@ async def list_events(
     admin (avec l'email de l'organisateur de chacun)."""
     is_admin = current_user.role == UserRole.ADMIN
     query = (
-        select(Event, func.count(Photo.id).label("photo_count"), User.email)
+        select(Event, func.count(Photo.id).label("photo_count"), User)
         .outerjoin(Photo, Photo.event_id == Event.id)
         .join(User, User.id == Event.organizer_id)
-        .group_by(Event.id, User.email)
+        .group_by(Event.id, User.id)
         .order_by(Event.date.desc())
     )
     if not is_admin:
         query = query.where(Event.organizer_id == current_user.id)
 
-    result = await db.execute(query)
+    rows = (await db.execute(query)).all()
+    pending_ids: set[uuid.UUID] = set()
+    if rows:
+        pending = await db.execute(
+            select(PackPurchase.event_id)
+            .where(
+                PackPurchase.status == PackPurchaseStatus.PENDING,
+                PackPurchase.event_id.in_([event.id for event, _, _ in rows]),
+            )
+            .distinct()
+        )
+        pending_ids = set(pending.scalars().all())
+
     return [
         EventListItem(
             id=event.id,
@@ -101,9 +134,12 @@ async def list_events(
             date=event.date,
             location=event.location,
             photo_count=photo_count,
-            organizer_email=organizer_email if is_admin else None,
+            organizer_email=organizer.email if is_admin else None,
+            pack=event.pack,
+            photo_limit=effective_photo_limit(event, organizer),
+            pack_pending=event.id in pending_ids,
         )
-        for event, photo_count, organizer_email in result.all()
+        for event, photo_count, organizer in rows
     ]
 
 
@@ -120,6 +156,8 @@ async def get_event(
 async def get_event_public(
     event_id: uuid.UUID,
     kiosk_token: str | None = Query(default=None),
+    access: str | None = Query(default=None),
+    current_user: User | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
 ) -> EventPublicRead:
     """Vue publique pour l'ecran Accueil borne/invite : pas d'authentification.
@@ -132,6 +170,8 @@ async def get_event_public(
     event = await db.get(Event, event_id)
     if event is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
+    owner = await get_owner(db, event)
+    photographer_name = owner.public_name if owner is not None and owner.role == UserRole.PHOTOGRAPHE else None
     return EventPublicRead(
         id=event.id,
         name=event.name,
@@ -141,17 +181,45 @@ async def get_event_public(
         frame_caption=event.frame_caption,
         cash_enabled=event.cash_enabled,
         is_kiosk=is_kiosk_request(event, kiosk_token),
+        photographer_name=photographer_name,
+        password_required=event.has_gallery_password,
+        gallery_access=has_gallery_access(event, kiosk_token=kiosk_token, access_token=access, user=current_user),
     )
+
+
+@router.post("/{event_id}/unlock", response_model=GalleryUnlockResponse)
+async def unlock_gallery(
+    event_id: uuid.UUID,
+    payload: GalleryUnlockRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> GalleryUnlockResponse:
+    """Mot de passe de la galerie (packs Evenement et Pro) : renvoie un jeton
+    d'acces valable 7 jours, a passer en parametre `access` aux routes qui
+    montrent des photos. Tentatives limitees par adresse et par evenement."""
+    event = await db.get(Event, event_id)
+    if event is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
+    limiter.check("gallery-unlock", f"{client_ip(request)}:{event_id}", 10, 600)
+    if not event.gallery_password_hash:
+        return GalleryUnlockResponse(access_token=issue_gallery_token(event))
+    if not verify_password(payload.password.strip(), event.gallery_password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Mot de passe incorrect")
+    return GalleryUnlockResponse(access_token=issue_gallery_token(event))
 
 
 @router.patch("/{event_id}", response_model=EventRead)
 async def update_event(
     event_id: uuid.UUID,
     payload: EventUpdate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    storage: StorageService = Depends(get_storage_service),
+    session_factory=Depends(get_session_factory),
 ) -> Event:
     event = await get_manageable_event(event_id, current_user, db)
+    owner = await get_owner(db, event)
 
     update_data = payload.model_dump(exclude_unset=True)
     if "pricing" in update_data:
@@ -161,11 +229,43 @@ async def update_event(
         # le frontend renvoie toujours la grille complete.
         update_data["pricing"] = payload.pricing.model_dump()
 
+    # Options des packs payants (voir services/packs.py)
+    upgrade = next_pack(event.pack)
+    upgrade_hint = f" : disponible a partir du pack {upgrade.name}" if upgrade else ""
+    old_watermark = watermark_text_for(event, owner)
+    if "watermark_text" in update_data:
+        text = (update_data.pop("watermark_text") or "").strip() or None
+        if text and not event_has_feature(event, owner, FEATURE_CUSTOM_WATERMARK):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Filigrane personnalise{upgrade_hint}",
+            )
+        event.watermark_text = text
+    if "gallery_password" in update_data:
+        password = (update_data.pop("gallery_password") or "").strip()
+        if password and not event_has_feature(event, owner, FEATURE_GALLERY_PASSWORD):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Mot de passe de galerie{upgrade_hint}",
+            )
+        event.gallery_password_hash = hash_password(password) if password else None
+
     for field, value in update_data.items():
         setattr(event, field, value)
 
     await db.commit()
     await db.refresh(event)
+
+    new_watermark = watermark_text_for(event, owner)
+    if new_watermark != old_watermark:
+        background_tasks.add_task(
+            regenerate_event_watermarks,
+            event.id,
+            new_watermark,
+            storage,
+            session_factory,
+            face_cluster_cache.invalidate,
+        )
     return event
 
 
@@ -257,6 +357,8 @@ async def get_event_face_clusters(
 async def get_event_face_clusters_public(
     event_id: uuid.UUID,
     kiosk_token: str | None = Query(default=None),
+    access: str | None = Query(default=None),
+    current_user: User | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
     storage: StorageService = Depends(get_storage_service),
     session_factory=Depends(get_session_factory),
@@ -271,6 +373,7 @@ async def get_event_face_clusters_public(
     event = await db.get(Event, event_id)
     if event is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
+    require_gallery_access(event, kiosk_token=kiosk_token, access_token=access, user=current_user)
     snapshot = await face_cluster_cache.get(
         event_id, db, storage, allow_stale=True, session_factory=session_factory
     )

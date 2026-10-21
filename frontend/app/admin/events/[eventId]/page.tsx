@@ -4,10 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import RequireAuth from "@/components/admin/RequireAuth";
 import Pagination from "@/components/gallery/Pagination";
+import GalleryOptionsCard from "@/components/packs/GalleryOptionsCard";
+import PackCard from "@/components/packs/PackCard";
 import BatchUploader from "@/components/upload/BatchUploader";
+import { useAuthStore } from "@/store/auth-store";
 import { AlertIcon, CheckIcon, CrossIcon, PrinterIcon } from "@/components/icons";
 import { api, ApiError } from "@/lib/api-client";
-import type { Event, EventIndexingSummary, Photo, WatchedFolderRead } from "@/types/api";
+import type { Event, EventIndexingSummary, EventPack, Photo, WatchedFolderRead } from "@/types/api";
 
 const WATCHED_FOLDER_POLL_MS = 5000;
 const PHOTOS_PAGE_SIZE = 60;
@@ -674,6 +677,11 @@ function AdminEventDetailContent() {
   const [error, setError] = useState<string | null>(null);
   const [watchedFolder, setWatchedFolder] = useState<WatchedFolderRead | null>(null);
   const [indexing, setIndexing] = useState<EventIndexingSummary | null>(null);
+  // Service photographe : pack de l'evenement (limite de photos, options)
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === "admin";
+  const [eventPack, setEventPack] = useState<EventPack | null>(null);
+  const [packRefresh, setPackRefresh] = useState(0);
 
   const loadPhotos = useCallback(
     async (pageToLoad: number) => {
@@ -692,6 +700,7 @@ function AdminEventDetailContent() {
     try {
       const [eventData] = await Promise.all([api.getEvent(eventId), loadPhotos(pageRef.current)]);
       setEvent(eventData);
+      setPackRefresh((n) => n + 1);
     } catch {
       setError("Impossible de charger l'événement.");
     }
@@ -762,6 +771,7 @@ function AdminEventDetailContent() {
       await api.deletePhoto(photo.id);
       setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
       setTotal((t) => t - 1);
+      setPackRefresh((n) => n + 1);
     } catch (err) {
       alert(errorText(err, "Impossible de supprimer cette photo."));
     } finally {
@@ -792,7 +802,7 @@ function AdminEventDetailContent() {
               {new Date(event.date).toLocaleDateString("fr-FR")} &middot; {event.location}
             </p>
             <p className="mt-1 text-sm text-ink-500">
-              {event.pricing.offert ? "Photos offertes par l&apos;organisateur" : `Prix unitaire : ${event.pricing.unit_price.toLocaleString("fr-FR")} ${event.pricing.currency}`}
+              {event.pricing.offert ? "Photos offertes par l'organisateur" : `Prix unitaire : ${event.pricing.unit_price.toLocaleString("fr-FR")} ${event.pricing.currency}`}
             </p>
           </div>
           <button
@@ -803,6 +813,14 @@ function AdminEventDetailContent() {
             Supprimer
           </button>
         </div>
+
+        <PackCard
+          eventId={eventId}
+          eventName={event.name}
+          isAdmin={isAdmin}
+          refreshKey={packRefresh}
+          onLoaded={setEventPack}
+        />
 
         <div className="mb-6 flex flex-wrap gap-3">
           <button
@@ -832,9 +850,22 @@ function AdminEventDetailContent() {
         <EventInfoEditor key={`info-${event.updated_at}`} event={event} onSaved={setEvent} />
         <FrameCaptionEditor key={`frame-${event.updated_at}`} event={event} onSaved={setEvent} />
         <PricingEditor key={`pricing-${event.updated_at}`} event={event} onSaved={setEvent} />
+        {eventPack && (
+          <GalleryOptionsCard
+            key={`options-${event.updated_at}`}
+            event={event}
+            features={eventPack.features}
+            studioName={user?.studio_name || user?.display_name || null}
+            onSaved={setEvent}
+          />
+        )}
 
         <div className="mb-6">
-          <BatchUploader eventId={eventId} onUploaded={loadData} />
+          <BatchUploader
+            eventId={eventId}
+            onUploaded={loadData}
+            remaining={eventPack && !eventPack.unlimited ? eventPack.remaining : null}
+          />
         </div>
 
         {watchedFolder && (

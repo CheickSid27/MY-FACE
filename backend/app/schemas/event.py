@@ -76,6 +76,18 @@ class EventUpdate(BaseModel):
     pricing: PricingConfig | None = None
     frame_caption: str | None = Field(default=None, max_length=255)
     cash_enabled: bool | None = None
+    # Packs Evenement et Pro (voir services/packs.py) : texte du filigrane des
+    # apercus invites (vide = nom du studio) et mot de passe de la galerie
+    # (chaine vide = retirer la protection).
+    watermark_text: str | None = Field(default=None, max_length=40)
+    gallery_password: str | None = Field(default=None, max_length=64)
+
+    @field_validator("gallery_password")
+    @classmethod
+    def _password_length(cls, value: str | None) -> str | None:
+        if value is not None and value.strip() and len(value.strip()) < 4:
+            raise ValueError("Le mot de passe de la galerie doit faire au moins 4 caracteres")
+        return value
 
 
 class EventRead(BaseModel):
@@ -92,6 +104,10 @@ class EventRead(BaseModel):
     organizer_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+    pack: str = "decouverte"
+    photo_limit_override: int | None = None
+    watermark_text: str | None = None
+    has_gallery_password: bool = False
 
     # Liens a partager, construits sur l'URL publique de l'app (APP_BASE_URL,
     # la meme que celle des SMS et du QR de telechargement) : lien invite a
@@ -125,6 +141,20 @@ class EventPublicRead(BaseModel):
     frame_caption: str | None
     cash_enabled: bool
     is_kiosk: bool = False
+    # Service photographe : nom du studio affiche aux invites
+    photographer_name: str | None = None
+    # Galerie protegee par mot de passe, et acces deja accorde a ce visiteur
+    # (jeton `access` valide, borne ou organisateur connecte).
+    password_required: bool = False
+    gallery_access: bool = True
+
+
+class GalleryUnlockRequest(BaseModel):
+    password: str = Field(min_length=1, max_length=64)
+
+
+class GalleryUnlockResponse(BaseModel):
+    access_token: str
 
 
 class EventListItem(BaseModel):
@@ -137,6 +167,11 @@ class EventListItem(BaseModel):
     photo_count: int = 0
     # Renseigne pour la vue admin (tous les evenements, tous organisateurs).
     organizer_email: str | None = None
+    pack: str = "decouverte"
+    # None = illimite (evenement d'un admin, ou sur mesure sans limite)
+    photo_limit: int | None = None
+    # Un achat de pack attend la validation de MYFACE
+    pack_pending: bool = False
 
 
 class EventIndexingSummary(BaseModel):

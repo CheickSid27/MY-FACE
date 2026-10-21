@@ -14,3 +14,6 @@
 
 /confidentialite.html
   Cache-Control: public, max-age=0, must-revalidate
+
+/photographes.html
+  Cache-Control: public, max-age=0, must-revalidate

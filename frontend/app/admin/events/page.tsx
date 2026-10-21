@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import NotificationSetup from "@/components/admin/NotificationSetup";
 import RequireAuth from "@/components/admin/RequireAuth";
+import PackBadge from "@/components/packs/PackBadge";
 import { api } from "@/lib/api-client";
 import { useAuthStore } from "@/store/auth-store";
 import type { EventListItem } from "@/types/api";
@@ -71,16 +72,29 @@ function AdminEventsContent() {
       <div className="mx-auto max-w-3xl">
         <div className="glass mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-5 py-4">
           <div>
-            <h1 className="text-xl font-bold text-ink-900">Événements</h1>
-            {user && <p className="text-xs text-ink-500">{user.email}</p>}
+            <h1 className="text-xl font-bold text-ink-900">{isAdmin ? "Événements" : "Espace photographe"}</h1>
+            {user && (
+              <p className="text-xs text-ink-500">
+                {user.studio_name || user.display_name ? `${user.studio_name || user.display_name} · ` : ""}
+                {user.email}
+              </p>
+            )}
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             {/* Gestion des comptes reservee aux admins (l'API renvoie 403 aux
                 photographes) : lien masque plutôt que menant à une erreur. */}
             {isAdmin && (
-              <Link href="/admin/users" className="text-sm font-medium text-ink-500 transition hover:text-brand">
-                Utilisateurs
-              </Link>
+              <>
+                <Link href="/admin/packs" className="text-sm font-medium text-ink-500 transition hover:text-brand">
+                  Packs
+                </Link>
+                <Link href="/admin/users" className="text-sm font-medium text-ink-500 transition hover:text-brand">
+                  Utilisateurs
+                </Link>
+                <Link href="/admin/settings" className="text-sm font-medium text-ink-500 transition hover:text-brand">
+                  Réglages
+                </Link>
+              </>
             )}
             <Link href="/admin/account" className="text-sm font-medium text-ink-500 transition hover:text-brand">
               Mon compte
@@ -96,6 +110,17 @@ function AdminEventsContent() {
         </div>
 
         <NotificationSetup />
+
+        {!isAdmin && (
+          <div className="glass mb-4 rounded-2xl p-4 text-sm text-ink-700">
+            Chaque événement démarre au <strong>pack Découverte</strong> : 10 photos gratuites pour essayer. Passez
+            ensuite au pack <strong>Événement</strong> (10 000 F, 500 photos) ou <strong>Pro</strong> (25 000 F, 2 000
+            photos) depuis la page de l&apos;événement. Paiement unique, sans abonnement.{" "}
+            <Link href="/photographes#tarifs" className="font-semibold text-brand hover:underline">
+              Voir les tarifs
+            </Link>
+          </div>
+        )}
 
         <button type="button" onClick={() => setShowForm((v) => !v)} className="btn-primary mb-4 !px-5 !py-2.5 text-sm">
           {showForm ? "Annuler" : "+ Nouvel événement"}
@@ -181,8 +206,19 @@ function AdminEventsContent() {
                     {event.organizer_email && event.organizer_email !== user?.email && (
                       <p className="mt-0.5 text-xs text-ink-300">Organisateur : {event.organizer_email}</p>
                     )}
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <PackBadge pack={event.pack} />
+                      {event.pack_pending && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                          Paiement en vérification
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-sm text-ink-300">{event.photo_count} photos</span>
+                  <span className="shrink-0 text-sm text-ink-300">
+                    {event.photo_count}
+                    {event.photo_limit !== null ? ` / ${event.photo_limit.toLocaleString("fr-FR")}` : ""} photos
+                  </span>
                 </div>
               </Link>
             </li>

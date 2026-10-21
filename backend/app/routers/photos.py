@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db, get_session_factory
-from app.deps import get_current_user
+from app.deps import get_current_user, get_optional_user
 from app.models.event import Event
 from app.models.face_embedding import FaceEmbedding
 from app.models.order import Order, OrderItem, OrderStatus
@@ -16,7 +16,15 @@ from app.services.access import get_manageable_event, is_kiosk_request
 from app.services.face_clusters import face_cluster_cache
 from app.services.face_crops import face_crop_key
 from app.services.face_indexing import index_photos_faces
+from app.services.gallery_access import require_gallery_access
 from app.services.ingestion import InvalidImageError, ingest_photo
+from app.services.packs import (
+    count_event_photos,
+    effective_photo_limit,
+    get_owner,
+    limit_reached_message,
+    watermark_text_for,
+)
 from app.services.photo_urls import to_photo_reads
 from app.services.storage import StorageService, get_storage_service
 
@@ -37,18 +45,39 @@ async def upload_photos(
     storage: StorageService = Depends(get_storage_service),
     session_factory=Depends(get_session_factory),
 ) -> PhotoUploadResult:
-    await get_manageable_event(event_id, current_user, db)
+    event = await get_manageable_event(event_id, current_user, db)
+
+    # Service photographe : nombre de photos limite par le pack de
+    # l'evenement (voir services/packs.py). Les fichiers au-dela de la limite
+    # sont refuses un par un, avec un message qui propose le pack superieur.
+    owner = await get_owner(db, event)
+    limit = effective_photo_limit(event, owner)
+    remaining = None if limit is None else max(0, limit - await count_event_photos(db, event_id))
+    watermark_text = watermark_text_for(event, owner)
 
     uploaded: list[Photo] = []
     errors: list[PhotoUploadError] = []
 
     for file in files:
+        if remaining is not None and remaining <= 0:
+            errors.append(
+                PhotoUploadError(filename=file.filename or "unknown", error=limit_reached_message(event, limit))
+            )
+            continue
         try:
             data = await file.read()
             photo = await ingest_photo(
-                event_id, file.filename or "photo.jpg", file.content_type or "", data, db, storage
+                event_id,
+                file.filename or "photo.jpg",
+                file.content_type or "",
+                data,
+                db,
+                storage,
+                watermark_text=watermark_text,
             )
             uploaded.append(photo)
+            if remaining is not None:
+                remaining -= 1
         except (ValueError, InvalidImageError) as exc:
             errors.append(PhotoUploadError(filename=file.filename or "unknown", error=str(exc)))
 
@@ -132,14 +161,18 @@ async def list_event_photos(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=1, le=200),
     kiosk_token: str | None = Query(default=None),
+    access: str | None = Query(default=None),
+    current_user: User | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
     storage: StorageService = Depends(get_storage_service),
 ) -> PhotoListResponse:
     """Galerie publique. Apercus grand format filigranes, sauf a la borne
-    (kiosk_token valide) : voir services/photo_urls.py."""
+    (kiosk_token valide) : voir services/photo_urls.py. Galerie protegee par
+    mot de passe : jeton `access` requis (voir services/gallery_access.py)."""
     event = await db.get(Event, event_id)
     if event is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
+    require_gallery_access(event, kiosk_token=kiosk_token, access_token=access, user=current_user)
 
     # Compte total + page de resultats en UNE requete (window function) plutot
     # que deux allers-retours separes (COUNT puis SELECT) : chaque

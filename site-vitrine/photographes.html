@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Photographes · MYFACE</title>
+<meta name="description" content="Photographes : déposez les photos de vos événements, notre IA de reconnaissance faciale les range par invité. Pack Découverte gratuit, Événement 10 000 F, Pro 25 000 F.">
+<link rel="canonical" href="https://myfaceci.online/photographes.html">
+<link rel="icon" href="img/logo.svg?v=2" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --ink: #0E2429; --sand: #F4EFE6; --sand-2: #EAE3D6; --orange: #F26A1B; --orange-2: #FF8A3D;
+    --orange-ink: #B34A08; --green: #00854B; --muted-dark: #9BB0B3; --muted-light: #5E7378;
+    --line-light: #DCD2C2; --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+    --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif; --pad: clamp(20px, 5vw, 64px);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--sand); color: var(--ink); font: 400 17.5px/1.7 var(--body); -webkit-font-smoothing: antialiased; }
+  a { color: var(--orange-ink); }
+  :focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; border-radius: 6px; }
+  .nav { background: var(--ink); }
+  .nav-in { display: flex; align-items: center; gap: 18px; padding: 13px var(--pad); max-width: 1240px; margin: 0 auto; }
+  .marque { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--sand); }
+  .marque img { width: 34px; height: 34px; border-radius: 9px; }
+  .marque span { font: 800 19px/1 var(--display); letter-spacing: -.01em; }
+  .marque span i { font-style: normal; color: var(--orange); }
+  .nav-in nav { margin-left: auto; display: flex; gap: 22px; flex-wrap: wrap; }
+  .nav-in nav a { color: #C9D6D7; text-decoration: none; font-size: 15px; }
+  .nav-in nav a:hover, .nav-in nav a[aria-current] { color: #fff; }
+  .entete { background: var(--ink); color: var(--sand); padding: clamp(46px, 8vw, 96px) var(--pad) clamp(40px, 6vw, 70px); position: relative; overflow: hidden; }
+  .entete::after { content: ""; position: absolute; right: -120px; top: -120px; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle, rgba(242,106,27,.28), transparent 65%); }
+  .entete-in { max-width: 860px; margin: 0 auto; position: relative; z-index: 1; }
+  .entete .sur-titre { margin: 0 0 14px; font: 700 13px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--orange-2); }
+  h1 { margin: 0; font: 800 clamp(30px, 5vw, 54px)/1.08 var(--display); letter-spacing: -.02em; text-wrap: balance; }
+  h1 em { font-style: normal; color: var(--orange); }
+  .entete p.chapo { margin: 18px 0 0; max-width: 62ch; color: #C9D6D7; font-size: 19px; }
+  main { max-width: 860px; margin: 0 auto; padding: clamp(36px, 6vw, 70px) var(--pad) 80px; }
+  h2 { margin: 46px 0 12px; font: 700 clamp(21px, 2.6vw, 27px)/1.25 var(--display); text-wrap: balance; }
+  h2:first-child { margin-top: 0; }
+  h3 { margin: 22px 0 6px; font-size: 18px; }
+  p, li { max-width: 68ch; }
+  ul { padding-left: 1.2em; }
+  li { margin-bottom: 8px; }
+  .encadre { border-left: 4px solid var(--orange); background: #fff; border-radius: 0 16px 16px 0; padding: 18px 22px; margin: 22px 0; }
+  .encadre p { margin: 0; }
+  .grille { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 24px 0; }
+  .grille div { background: #fff; border: 1px solid var(--line-light); border-radius: 18px; padding: 20px; }
+  .grille b { display: block; font: 700 17px/1.3 var(--display); margin-bottom: 6px; }
+  .grille span { color: var(--muted-light); font-size: 15.5px; }
+  @media (max-width: 760px) { .grille { grid-template-columns: minmax(0, 1fr); } .nav-in nav { display: none; } }
+  .appel { margin-top: 50px; background: var(--ink); color: var(--sand); border-radius: 24px; padding: clamp(24px, 4vw, 40px); display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: space-between; }
+  .appel p { margin: 0; font: 700 clamp(19px, 2.4vw, 24px)/1.3 var(--display); }
+  .btn { display: inline-flex; align-items: center; gap: 9px; padding: 14px 22px; border-radius: 999px; font: 700 15.5px/1 var(--body); text-decoration: none; background: var(--orange); color: #fff; box-shadow: 0 10px 26px rgba(242,106,27,.34); transition: transform .2s ease, background .2s ease; }
+  .btn:hover { background: var(--orange-2); transform: translateY(-2px); }
+  .maj { color: var(--muted-light); font-size: 14.5px; }
+  footer { background: #091518; color: var(--muted-dark); padding: 34px var(--pad); font-size: 14.5px; }
+  footer .in { max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; }
+  footer a { color: #C9D6D7; }
+  footer .liens { margin-left: auto; }
+
+  .tarifs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 26px 0 10px; }
+  .pack { background: #fff; border: 1px solid var(--line-light); border-radius: 22px; padding: 22px; display: flex; flex-direction: column; position: relative; }
+  .pack.vedette { background: var(--ink); color: var(--sand); border-color: var(--ink); box-shadow: 0 18px 40px rgba(14,36,41,.25); }
+  .pack .nom { font: 700 15px/1.2 var(--body); color: var(--orange-ink); margin: 0; }
+  .pack.vedette .nom { color: var(--orange-2); }
+  .pack .prix { font: 800 30px/1.1 var(--display); margin: 8px 0 2px; }
+  .pack .unite { font-size: 13.5px; color: var(--muted-light); margin: 0; }
+  .pack.vedette .unite { color: var(--muted-dark); }
+  .pack ul { list-style: none; padding: 0; margin: 14px 0 18px; flex: 1; font-size: 15.5px; }
+  .pack li { margin-bottom: 7px; padding-left: 22px; position: relative; }
+  .pack li::before { content: "\2713"; position: absolute; left: 0; color: var(--orange); font-weight: 700; }
+  .pack .btn { justify-content: center; }
+  .pack .btn.clair { background: transparent; color: var(--ink); border: 1.5px solid var(--line-light); box-shadow: none; }
+  .ruban { position: absolute; top: -12px; left: 18px; background: var(--orange); color: #fff; font: 700 12px/1 var(--body); padding: 7px 12px; border-radius: 999px; }
+  .etapes { counter-reset: e; list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .etapes li { counter-increment: e; background: #fff; border: 1px solid var(--line-light); border-radius: 18px; padding: 18px 18px 18px 60px; position: relative; max-width: none; }
+  .etapes li::before { content: counter(e); position: absolute; left: 18px; top: 18px; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: #fff; font: 700 15px/30px var(--body); text-align: center; }
+  .boutons { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+  .btn.secondaire { background: transparent; color: var(--sand); border: 1.5px solid rgba(255,255,255,.35); box-shadow: none; }
+  @media (max-width: 1000px) { .tarifs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 760px) { .tarifs, .etapes { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-in">
+    <a class="marque" href="index.html"><img src="img/logo.svg?v=2" alt=""><span>MY<i>FACE</i></span></a>
+    <nav aria-label="Navigation">
+      <a href="index.html#fonctionnement">Comment ça marche</a>
+      <a href="index.html#borne">La borne</a>
+      <a href="index.html#prix">Les prix</a>
+      <a href="photographes.html" aria-current="page">Photographes</a>
+      <a href="a-propos.html">À propos</a>
+    </nav>
+  </div>
+</header>
+
+<section class="entete">
+  <div class="entete-in">
+    <p class="sur-titre">Photographes</p>
+    <h1>Vos invités retrouvent leurs photos <em>en un selfie</em>. Vous vendez plus, sans rien trier.</h1>
+    <p class="chapo">Déposez les photos de vos événements sur MYFACE : notre IA de reconnaissance faciale les range par invité, et chacun repart avec les siennes. Vous fixez vos prix, les invités vous paient directement.</p>
+    <div class="boutons">
+      <a class="btn" href="https://app.myfaceci.online/photographes/inscription">Essayer gratuitement</a>
+      <a class="btn secondaire" href="#tarifs">Voir les tarifs</a>
+    </div>
+  </div>
+</section>
+<main>
+  <h2>Comment ça marche</h2>
+  <ol class="etapes">
+    <li><b>Créez l'événement.</b> En une minute : vous obtenez un QR code et un lien à partager avec les invités.</li>
+    <li><b>Déposez vos photos,</b> même pendant la soirée. L'IA détecte chaque visage et regroupe les photos de chaque invité.</li>
+    <li><b>Chaque invité retrouve les siennes</b> en scannant le QR code : la galerie, « Trouver mon visage » ou un selfie.</li>
+    <li><b>Vendez ou offrez.</b> Les invités paient sur votre Wave ou votre Orange Money. MYFACE ne prend aucune commission sur vos ventes.</li>
+  </ol>
+
+  <h2 id="tarifs">Des tarifs simples, par événement</h2>
+  <p>Paiement unique par Mobile Money, sans abonnement. Vous ne payez la différence que si vous passez au pack supérieur.</p>
+  <div class="tarifs">
+    <div class="pack">
+      <p class="nom">Découverte</p>
+      <p class="prix">Gratuit</p>
+      <p class="unite">pour essayer, sans carte</p>
+      <ul><li>10 photos par événement</li><li>IA de reconnaissance faciale</li><li>QR code et page invités</li><li>Galerie, « Trouver mon visage » et selfie</li><li>Vente aux invités ou photos offertes</li></ul>
+      <a class="btn clair" href="https://app.myfaceci.online/photographes/inscription">Commencer</a>
+    </div>
+    <div class="pack vedette">
+      <span class="ruban">Le plus choisi</span>
+      <p class="nom">Événement</p>
+      <p class="prix">10 000 F</p>
+      <p class="unite">par événement</p>
+      <ul><li>500 photos par événement</li><li>Tout le pack Découverte</li><li>Mot de passe de galerie</li><li>Filigrane à votre nom</li></ul>
+      <a class="btn" href="https://app.myfaceci.online/photographes/inscription">Créer mon compte</a>
+    </div>
+    <div class="pack">
+      <p class="nom">Pro</p>
+      <p class="prix">25 000 F</p>
+      <p class="unite">par événement</p>
+      <ul><li>2 000 photos par événement</li><li>Tout le pack Événement</li><li>Assistance prioritaire le jour J</li></ul>
+      <a class="btn clair" href="https://app.myfaceci.online/photographes/inscription">Créer mon compte</a>
+    </div>
+    <div class="pack">
+      <p class="nom">Sur mesure</p>
+      <p class="prix">Sur devis</p>
+      <p class="unite">studios, agences, organisateurs réguliers</p>
+      <ul><li>Carnet d'événements prépayés à prix réduit</li><li>Limite de photos adaptée</li><li>Assistance le jour J</li><li>Facture au nom de votre entreprise</li></ul>
+      <a class="btn clair" href="https://wa.me/2250758509403?text=Bonjour%20MYFACE%2C%20je%20suis%20photographe%20et%20je%20voudrais%20en%20savoir%20plus." target="_blank" rel="noopener">Discuter sur WhatsApp</a>
+    </div>
+  </div>
+  <p class="maj">Vous avez déjà un compte ? <a href="https://app.myfaceci.online/admin/login">Se connecter</a></p>
+
+  <h2>Et la borne ?</h2>
+  <p>Pour vos grands événements, MYFACE peut aussi venir avec la borne : selfie sur place, paiement en espèces et tirage 10×15 en 20 secondes. <a href="index.html#borne">Voir la borne</a>.</p>
+
+  <div class="appel">
+    <p>Votre prochain événement, sans tri et sans tirages par terre.</p>
+    <a class="btn" href="https://app.myfaceci.online/photographes/inscription">Essayer gratuitement</a>
+  </div>
+</main>
+
+<footer>
+  <div class="in">
+    <a class="marque" href="index.html"><img src="img/logo.svg?v=2" alt=""><span>MY<i>FACE</i></span></a>
+    <span>Scanne. Retrouve. Repars avec.</span>
+    <span class="liens"><a href="photographes.html">Photographes</a> · <a href="a-propos.html">À propos</a> · <a href="confidentialite.html">Confidentialité</a> · <a href="mailto:contact@myfaceci.online">contact@myfaceci.online</a></span>
+  </div>
+</footer>
+</body>
+</html>

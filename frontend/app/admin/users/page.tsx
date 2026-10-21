@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import RequireAuth from "@/components/admin/RequireAuth";
 import { api, ApiError } from "@/lib/api-client";
 import { useAuthStore } from "@/store/auth-store";
-import type { User, UserRole } from "@/types/api";
+import { formatFcfa, whatsappLink } from "@/lib/packs";
+import type { UserAdmin, UserRole } from "@/types/api";
 
 function UsersContent() {
   const router = useRouter();
   const currentUser = useAuthStore((s) => s.user);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -51,6 +52,21 @@ function UsersContent() {
       setError(err instanceof ApiError ? err.message : "Erreur lors de la création.");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function toggleActive(user: UserAdmin) {
+    const suspend = user.is_active !== false;
+    if (
+      suspend &&
+      !confirm(`Suspendre ${user.email} ? Le compte ne pourra plus se connecter (ses événements restent en ligne).`)
+    )
+      return;
+    try {
+      await api.updateUser(user.id, { is_active: !suspend });
+      await loadUsers();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Action impossible.");
     }
   }
 
@@ -127,27 +143,65 @@ function UsersContent() {
         {loading && <p className="text-ink-500">Chargement...</p>}
 
         <ul className="space-y-2">
-          {users.map((user) => (
-            <li key={user.id} className="glass flex items-center justify-between rounded-2xl p-4">
-              <div>
-                <p className="font-semibold text-ink-900">{user.email}</p>
-                <p className="text-sm text-ink-500">
-                  {user.role === "admin" ? "Administrateur" : "Photographe"}
-                  {user.id === currentUser?.id && " · vous"}
-                </p>
-              </div>
-              {/* Suppression de son propre compte refusee par l'API : bouton masque. */}
-              {user.id !== currentUser?.id && (
-                <button
-                  type="button"
-                  onClick={() => handleDelete(user.id)}
-                  className="text-sm font-medium text-red-600 transition hover:text-red-800"
-                >
-                  Supprimer
-                </button>
-              )}
-            </li>
-          ))}
+          {users.map((user) => {
+            const wa = whatsappLink(user.phone);
+            return (
+              <li key={user.id} className={`glass flex flex-wrap items-start justify-between gap-3 rounded-2xl p-4 ${user.is_active === false ? "opacity-60" : ""}`}>
+                <div className="min-w-0">
+                  <p className="font-semibold text-ink-900">
+                    {user.studio_name || user.display_name || user.email}
+                    {user.is_active === false && (
+                      <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">
+                        Suspendu
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-sm text-ink-500">
+                    {user.role === "admin" ? "Administrateur" : "Photographe"}
+                    {user.id === currentUser?.id && " · vous"}
+                    {(user.studio_name || user.display_name) && ` · ${user.email}`}
+                  </p>
+                  {user.role === "photographe" && (
+                    <p className="mt-1 text-xs text-ink-500">
+                      {user.display_name && user.studio_name ? `${user.display_name} · ` : ""}
+                      {user.city ? `${user.city} · ` : ""}
+                      {user.event_count} événement{user.event_count > 1 ? "s" : ""} · {user.photo_count} photos · packs
+                      payés : {formatFcfa(user.packs_paid_total)}
+                      {user.packs_pending > 0 && (
+                        <span className="ml-1 font-semibold text-amber-700">· {user.packs_pending} paiement(s) à vérifier</span>
+                      )}
+                    </p>
+                  )}
+                </div>
+                <div className="flex shrink-0 items-center gap-4">
+                  {wa && (
+                    <a href={wa} target="_blank" rel="noreferrer" className="text-sm font-medium text-emerald-700 hover:underline">
+                      WhatsApp
+                    </a>
+                  )}
+                  {user.id !== currentUser?.id && (
+                    <button
+                      type="button"
+                      onClick={() => toggleActive(user)}
+                      className="text-sm font-medium text-ink-500 transition hover:text-brand"
+                    >
+                      {user.is_active === false ? "Réactiver" : "Suspendre"}
+                    </button>
+                  )}
+                  {/* Suppression de son propre compte refusee par l'API : bouton masque. */}
+                  {user.id !== currentUser?.id && (
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(user.id)}
+                      className="text-sm font-medium text-red-600 transition hover:text-red-800"
+                    >
+                      Supprimer
+                    </button>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </main>

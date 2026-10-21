@@ -9,12 +9,14 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from app.core.config import get_settings
 from app.core.database import Base
 from app.models import (  # noqa: F401  (registers models on Base.metadata)
+    AppSetting,
     CartItem,
     CartSession,
     Event,
     FaceEmbedding,
     Order,
     OrderItem,
+    PackPurchase,
     Photo,
     PushSubscription,
     User,

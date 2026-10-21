@@ -6,12 +6,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.deps import get_optional_user
 from app.models.event import Event
 from app.models.face_embedding import FaceEmbedding
 from app.models.photo import Photo
+from app.models.user import User
 from app.schemas.face import FaceScanMatch, FaceScanResponse, PhotoIndexingStatus
 from app.services.access import is_kiosk_request
 from app.services.face_recognition import ImageDecodeError, detect_faces_async
+from app.services.gallery_access import require_gallery_access
 from app.services.photo_urls import to_photo_read
 from app.services.storage import StorageService, get_storage_service
 
@@ -30,6 +33,8 @@ async def scan_face(
     consent: bool = Form(...),
     selfie: UploadFile = File(...),
     kiosk_token: str | None = Query(default=None),
+    access: str | None = Query(default=None),
+    current_user: User | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
     storage: StorageService = Depends(get_storage_service),
 ) -> FaceScanResponse:
@@ -42,6 +47,7 @@ async def scan_face(
     event = await db.get(Event, event_id)
     if event is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evenement introuvable")
+    require_gallery_access(event, kiosk_token=kiosk_token, access_token=access, user=current_user)
 
     if selfie.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(

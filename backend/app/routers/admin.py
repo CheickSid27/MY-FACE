@@ -11,11 +11,12 @@ from app.core.security import hash_password
 from app.deps import get_current_user, require_admin
 from app.models.event import Event
 from app.models.order import Order, OrderItem, OrderStatus
+from app.models.pack_purchase import PackPurchase, PackPurchaseStatus
 from app.models.photo import IndexingStatus, Photo
 from app.models.user import User
 from app.schemas.order import OrderConfirmRequest, OrderDetailRead, OrderItemRead, OrderRead
 from app.schemas.stats import DailySales, EventStats
-from app.schemas.user import UserCreate, UserRead
+from app.schemas.user import UserAdminRead, UserAdminUpdate, UserCreate, UserRead
 from app.services.access import can_manage_event, get_manageable_event
 from app.services.orders import EXPIRABLE_STATUSES, expire_stale_orders, set_order_status
 from app.services.photo_urls import to_photo_read
@@ -267,13 +268,76 @@ async def cancel_order(
     return {"status": OrderStatus.CANCELLED.value}
 
 
-@router.get("/users", response_model=list[UserRead])
+@router.get("/users", response_model=list[UserAdminRead])
 async def list_users(
     current_user: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
-) -> list[User]:
-    result = await db.execute(select(User).order_by(User.created_at.desc()))
-    return list(result.scalars().all())
+) -> list[UserAdminRead]:
+    """Tous les comptes, avec leur activite (service photographe) : nombre
+    d'evenements et de photos, packs payes et paiements en attente."""
+    users = list((await db.execute(select(User).order_by(User.created_at.desc()))).scalars().all())
+
+    events_by_user = dict(
+        (await db.execute(select(Event.organizer_id, func.count(Event.id)).group_by(Event.organizer_id))).all()
+    )
+    photos_by_user = dict(
+        (
+            await db.execute(
+                select(Event.organizer_id, func.count(Photo.id))
+                .join(Photo, Photo.event_id == Event.id)
+                .group_by(Event.organizer_id)
+            )
+        ).all()
+    )
+    paid_by_user = dict(
+        (
+            await db.execute(
+                select(PackPurchase.user_id, func.coalesce(func.sum(PackPurchase.amount), 0))
+                .where(PackPurchase.status == PackPurchaseStatus.PAID)
+                .group_by(PackPurchase.user_id)
+            )
+        ).all()
+    )
+    pending_by_user = dict(
+        (
+            await db.execute(
+                select(PackPurchase.user_id, func.count(PackPurchase.id))
+                .where(PackPurchase.status == PackPurchaseStatus.PENDING)
+                .group_by(PackPurchase.user_id)
+            )
+        ).all()
+    )
+    return [
+        UserAdminRead(
+            **UserRead.model_validate(user).model_dump(),
+            event_count=events_by_user.get(user.id, 0),
+            photo_count=photos_by_user.get(user.id, 0),
+            packs_paid_total=int(paid_by_user.get(user.id, 0)),
+            packs_pending=pending_by_user.get(user.id, 0),
+        )
+        for user in users
+    ]
+
+
+@router.patch("/users/{user_id}", response_model=UserRead)
+async def update_user(
+    user_id: uuid.UUID,
+    payload: UserAdminUpdate,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Suspendre ou reactiver un compte. Un compte suspendu ne peut plus se
+    connecter ; ses evenements restent visibles par les invites."""
+    user = await db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Utilisateur introuvable")
+    if payload.is_active is not None:
+        if user.id == current_user.id and not payload.is_active:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Impossible de suspendre votre propre compte")
+        user.is_active = payload.is_active
+    await db.commit()
+    await db.refresh(user)
+    return user
 
 
 @router.post("/users", response_model=UserRead, status_code=status.HTTP_201_CREATED)

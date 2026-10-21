@@ -8,7 +8,7 @@ import PhotoGrid from "@/components/gallery/PhotoGrid";
 import PhotoLightbox from "@/components/gallery/PhotoLightbox";
 import { CameraIcon, CartIcon, UsersIcon } from "@/components/icons";
 import ScanDialog from "@/components/scan/ScanDialog";
-import { api } from "@/lib/api-client";
+import { api, ApiError } from "@/lib/api-client";
 import { getCartSessionId, setCartSessionId } from "@/lib/cart";
 import { useKioskInactivityReset } from "@/lib/kiosk-inactivity-reset";
 import { getKioskToken, isKioskMode } from "@/lib/kiosk";
@@ -29,12 +29,17 @@ export default function GalleryPage() {
 
   useEffect(() => {
     api
-      .getEventPublic(eventId)
-      .then((event) => setFrameCaption(event.frame_caption))
+      .getEventPublic(eventId, getKioskToken(eventId))
+      .then((event) => {
+        setFrameCaption(event.frame_caption);
+        // Galerie protegee par mot de passe, pas encore deverrouillee sur cet
+        // appareil : retour a l'accueil de l'evenement, qui demande le mot de passe.
+        if (event.password_required && !event.gallery_access) router.replace(`/event/${eventId}`);
+      })
       .catch(() => {
         // cadre decoratif optionnel : silencieux si l'evenement est introuvable ici
       });
-  }, [eventId]);
+  }, [eventId, router]);
 
   useEffect(() => {
     setKiosk(isKioskMode(eventId));
@@ -92,13 +97,17 @@ export default function GalleryPage() {
         setPhotos(data.items);
         setTotal(data.total);
         setPage(pageToLoad);
-      } catch {
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 403) {
+          router.replace(`/event/${eventId}`);
+          return;
+        }
         setError("Impossible de charger la galerie.");
       } finally {
         setLoading(false);
       }
     },
-    [fetchAndCache]
+    [fetchAndCache, router, eventId]
   );
 
   useEffect(() => {

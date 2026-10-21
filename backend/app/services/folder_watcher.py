@@ -34,6 +34,13 @@ from app.models.event import Event
 from app.models.photo import Photo
 from app.services.face_indexing import index_photos_faces
 from app.services.ingestion import InvalidImageError, ingest_photo
+from app.services.packs import (
+    count_event_photos,
+    effective_photo_limit,
+    get_owner,
+    limit_reached_message,
+    watermark_text_for,
+)
 from app.services.storage import StorageService, get_storage_service
 
 logger = logging.getLogger("myface.folder_watcher")
@@ -202,7 +209,8 @@ class FolderWatcher:
             content_type = CONTENT_TYPES[os.path.splitext(filename)[1].lower()]
 
             async with self.session_factory() as db:
-                if await db.get(Event, found.event_id) is None:
+                event = await db.get(Event, found.event_id)
+                if event is None:
                     self._recent_status[key] = WatchedFileStatus(filename, "error", "evenement inconnu")
                     return None
 
@@ -217,8 +225,26 @@ class FolderWatcher:
                     self._recent_status[key] = WatchedFileStatus(filename, "ingested", "deja present")
                     return None
 
+                # Limite de photos du pack de l'evenement (service photographe,
+                # voir services/packs.py) : meme regle que l'upload manuel.
+                owner = await get_owner(db, event)
+                limit = effective_photo_limit(event, owner)
+                if limit is not None and await count_event_photos(db, event.id) >= limit:
+                    self._recent_status[key] = WatchedFileStatus(
+                        filename, "error", limit_reached_message(event, limit)
+                    )
+                    return None
+
                 data = await asyncio.to_thread(_read_file, found.path)
-                photo = await ingest_photo(found.event_id, filename, content_type, data, db, storage)
+                photo = await ingest_photo(
+                    found.event_id,
+                    filename,
+                    content_type,
+                    data,
+                    db,
+                    storage,
+                    watermark_text=watermark_text_for(event, owner),
+                )
                 await db.commit()
                 photo_id = photo.id
 

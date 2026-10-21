@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, DateTime, ForeignKey, String, func
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,6 +33,22 @@ class Event(Base):
     # frontend/lib/kiosk.ts), le client remet l'argent a un membre de
     # l'equipe qui confirme ensuite manuellement (comme le flux QR).
     cash_enabled: Mapped[bool] = mapped_column(default=False, server_default="false", nullable=False)
+    # Service photographe (voir services/packs.py) : pack achete pour CET
+    # evenement, paye une seule fois (memes tarifs que Fokevani). Le pack fixe
+    # le nombre maximum de photos et les options (mot de passe de galerie,
+    # filigrane personnalise). Les evenements d'un admin MYFACE ne sont pas
+    # limites. Les evenements anterieurs au service sont passes en
+    # « sur_mesure » par la migration 0016.
+    pack: Mapped[str] = mapped_column(String(20), nullable=False, default="decouverte", server_default="decouverte")
+    # Limite de photos negociee (pack sur mesure, fixee par un admin) ; vide =
+    # limite du pack, ou aucune limite pour le sur mesure.
+    photo_limit_override: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Texte du filigrane des apercus invites (packs Evenement et Pro) ; vide =
+    # nom du studio du photographe, ou MYFACE.
+    watermark_text: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    # Galerie protegee par mot de passe (packs Evenement et Pro) : hash bcrypt,
+    # jamais le mot de passe en clair (voir services/gallery_access.py).
+    gallery_password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     organizer_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
@@ -46,3 +62,7 @@ class Event(Base):
     photos: Mapped[list["Photo"]] = relationship(
         "Photo", back_populates="event", cascade="all, delete-orphan", passive_deletes=True
     )
+
+    @property
+    def has_gallery_password(self) -> bool:
+        return bool(self.gallery_password_hash)

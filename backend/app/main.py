@@ -17,6 +17,7 @@ from app.routers import (
     geniuspay,
     meta,
     notifications,
+    packs,
     payments,
     photos,
 )
@@ -113,6 +114,7 @@ app.include_router(admin.router)
 app.include_router(notifications.router)
 app.include_router(geniuspay.router)
 app.include_router(meta.router)
+app.include_router(packs.router)
 
 
 @app.get("/health")

@@ -8,6 +8,8 @@ import type { PhotoUploadError } from "@/types/api";
 interface BatchUploaderProps {
   eventId: string;
   onUploaded: () => void;
+  /** Photos encore autorisees par le pack de l'evenement ; null = illimite. */
+  remaining?: number | null;
 }
 
 // Plus petit que par le passe (20) : chaque photo peut peser jusqu'a 25 Mo
@@ -19,7 +21,7 @@ interface BatchUploaderProps {
 const CHUNK_SIZE = 10;
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-export default function BatchUploader({ eventId, onUploaded }: BatchUploaderProps) {
+export default function BatchUploader({ eventId, onUploaded, remaining = null }: BatchUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -82,7 +84,16 @@ export default function BatchUploader({ eventId, onUploaded }: BatchUploaderProp
 
   return (
     <div className="glass rounded-2xl p-4">
-      <p className="mb-2 text-sm font-medium text-ink-700">Ajouter des photos</p>
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-sm font-medium text-ink-700">Ajouter des photos</p>
+        {remaining !== null && (
+          <p className={`text-xs ${remaining === 0 ? "font-semibold text-red-600" : "text-ink-500"}`}>
+            {remaining === 0
+              ? "Limite du pack atteinte : passez au pack supérieur pour en ajouter"
+              : `Encore ${remaining.toLocaleString("fr-FR")} photo${remaining > 1 ? "s" : ""} dans votre pack`}
+          </p>
+        )}
+      </div>
       <div
         role="button"
         tabIndex={0}

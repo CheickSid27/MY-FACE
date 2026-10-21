@@ -155,3 +155,49 @@ async def backfill_watermarks(
             on_event_updated(event_id)
     logger.info("Filigrane : %d/%d photo(s) rattrapee(s)", done, len(photo_ids))
     return done
+
+
+async def regenerate_event_watermarks(
+    event_id,
+    text: str,
+    storage: StorageService,
+    session_factory: Callable[[], AsyncSession],
+    on_done: Callable[[object], None] | None = None,
+) -> int:
+    """Refait l'apercu filigrane de toutes les photos d'un evenement avec un
+    nouveau texte (le photographe a change son filigrane). Les cles ne
+    changent pas : les invites voient le nouveau filigrane au prochain
+    chargement (les URL signees sont regenerees a chaque requete)."""
+    async with session_factory() as db:
+        result = await db.execute(
+            select(Photo.id, Photo.preview_key, Photo.event_id).where(
+                Photo.event_id == event_id, Photo.preview_key.is_not(None)
+            )
+        )
+        rows = result.all()
+
+    semaphore = asyncio.Semaphore(BACKFILL_CONCURRENCY)
+    done = 0
+
+    async def _one(photo_id, preview_key, photo_event_id) -> None:
+        nonlocal done
+        async with semaphore:
+            try:
+                preview_bytes = await storage.download(preview_key)
+                watermarked = await asyncio.to_thread(apply_watermark, preview_bytes, text)
+                wm_key = watermarked_preview_key(photo_event_id, photo_id)
+                await storage.upload(wm_key, watermarked, "image/jpeg")
+                async with session_factory() as db:
+                    photo = await db.get(Photo, photo_id)
+                    if photo is not None and photo.preview_watermarked_key != wm_key:
+                        photo.preview_watermarked_key = wm_key
+                        await db.commit()
+                done += 1
+            except Exception:
+                logger.exception("Filigrane : echec de la mise a jour de la photo %s", photo_id)
+
+    await asyncio.gather(*(_one(*row) for row in rows))
+    if on_done is not None:
+        on_done(event_id)
+    logger.info("Filigrane « %s » : %d/%d photo(s) de l'evenement %s", text, done, len(rows), event_id)
+    return done

@@ -78,6 +78,17 @@ def fake_sms(monkeypatch) -> FakeSmsService:
     return service
 
 
+@pytest_asyncio.fixture(autouse=True)
+def reset_rate_limits():
+    """Limites de debit en memoire (inscription, mot de passe de galerie) :
+    remises a zero entre les tests, qui viennent tous de la meme adresse."""
+    from app.services.rate_limit import limiter
+
+    limiter.reset()
+    yield
+    limiter.reset()
+
+
 @pytest_asyncio.fixture(scope="session", autouse=True)
 def isolated_watched_folder(tmp_path_factory):
     """La creation d'un evenement cree son sous-dossier surveille : sans

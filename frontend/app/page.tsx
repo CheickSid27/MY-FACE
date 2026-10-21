@@ -19,6 +19,9 @@ export default function RootPage() {
       >
         Espace organisateur
       </Link>
+      <Link href="/photographes" className="text-sm font-medium text-gray-300 underline-offset-4 hover:underline">
+        Vous êtes photographe ? Découvrez MYFACE pour vos événements
+      </Link>
     </main>
   );
 }

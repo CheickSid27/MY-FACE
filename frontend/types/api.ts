@@ -5,6 +5,109 @@ export interface User {
   email: string;
   role: UserRole;
   created_at: string;
+  // Profil photographe (service photographe)
+  display_name?: string | null;
+  studio_name?: string | null;
+  phone?: string | null;
+  city?: string | null;
+  is_active?: boolean;
+}
+
+export interface UserAdmin extends User {
+  event_count: number;
+  photo_count: number;
+  packs_paid_total: number;
+  packs_pending: number;
+}
+
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  display_name: string;
+  studio_name?: string | null;
+  phone: string;
+  city?: string | null;
+  accept_terms: boolean;
+}
+
+export interface ProfileUpdate {
+  display_name?: string;
+  studio_name?: string | null;
+  phone?: string | null;
+  city?: string | null;
+}
+
+// --- Service photographe : packs par evenement (memes tarifs que Fokevani)
+export type PackKey = "decouverte" | "evenement" | "pro" | "sur_mesure";
+
+export interface Pack {
+  key: PackKey;
+  name: string;
+  price: number | null;
+  photo_limit: number | null;
+  tagline: string;
+  highlights: string[];
+  features: string[];
+  purchasable: boolean;
+}
+
+export type PackPurchaseStatus = "pending" | "paid" | "rejected" | "cancelled";
+export type PackPaymentMethod = "wave" | "orange" | "mtn" | "moov" | "djamo";
+
+export interface PackPurchase {
+  id: string;
+  event_id: string;
+  pack: PackKey;
+  amount: number;
+  currency: string;
+  status: PackPurchaseStatus;
+  payment_method: string;
+  payer_phone: string | null;
+  transaction_ref: string | null;
+  admin_note: string | null;
+  created_at: string;
+  decided_at: string | null;
+}
+
+export interface PackPurchaseAdmin extends PackPurchase {
+  event_name: string;
+  event_date: string;
+  current_pack: PackKey;
+  photographer_email: string;
+  photographer_name: string | null;
+  photographer_phone: string | null;
+}
+
+export interface PackUpgradeOption {
+  key: PackKey;
+  name: string;
+  price: number;
+  photo_limit: number | null;
+  amount_due: number;
+}
+
+export interface EventPack {
+  event_id: string;
+  pack: Pack;
+  unlimited: boolean;
+  photo_limit: number | null;
+  photo_count: number;
+  remaining: number | null;
+  amount_paid: number;
+  features: string[];
+  upgrades: PackUpgradeOption[];
+  pending_purchase: PackPurchase | null;
+  purchases: PackPurchase[];
+}
+
+export interface PackPaymentInfo {
+  wave?: string | null;
+  orange?: string | null;
+  mtn?: string | null;
+  moov?: string | null;
+  djamo?: string | null;
+  whatsapp?: string | null;
+  instructions?: string | null;
 }
 
 export interface UserCreate {
@@ -48,6 +151,10 @@ export interface Event {
   updated_at: string;
   guest_url: string;
   kiosk_url: string;
+  pack: PackKey;
+  photo_limit_override: number | null;
+  watermark_text: string | null;
+  has_gallery_password: boolean;
 }
 
 export interface EventPublicRead {
@@ -59,6 +166,9 @@ export interface EventPublicRead {
   frame_caption: string | null;
   cash_enabled: boolean;
   is_kiosk: boolean;
+  photographer_name: string | null;
+  password_required: boolean;
+  gallery_access: boolean;
 }
 
 export interface EventListItem {
@@ -68,6 +178,9 @@ export interface EventListItem {
   location: string;
   photo_count: number;
   organizer_email: string | null;
+  pack: PackKey;
+  photo_limit: number | null;
+  pack_pending: boolean;
 }
 
 export interface EventIndexingSummary {

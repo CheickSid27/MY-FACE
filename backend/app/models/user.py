@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, String, func
+from sqlalchemy import Boolean, DateTime, Enum, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -25,4 +25,20 @@ class User(Base):
         nullable=False,
         default=UserRole.PHOTOGRAPHE,
     )
+    # Profil du photographe (compte cree par inscription libre, voir
+    # routers/auth.py register) : nom affiche aux invites sur la page de
+    # l'evenement et dans le filigrane par defaut des packs payants.
+    display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    studio_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    city: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # Compte suspendu par un admin : plus de connexion ni d'appel authentifie
+    # (voir deps.get_current_user), ses evenements restent en ligne.
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    @property
+    def public_name(self) -> str | None:
+        """Nom montre aux invites : le studio s'il est renseigne, sinon le nom."""
+        return (self.studio_name or self.display_name or "").strip() or None
