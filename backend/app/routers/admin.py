@@ -21,6 +21,7 @@ from app.schemas.retention import RetentionExemptUpdate, RetentionReportRead
 from app.schemas.stats import DailySales, EventStats
 from app.schemas.user import AdminPayoutCode, UserAdminRead, UserAdminUpdate, UserCreate, UserRead
 from app.services.access import can_manage_event, get_manageable_event
+from app.services.activity import log_activity
 from app.services.orders import EXPIRABLE_STATUSES, expire_stale_orders, set_order_status
 from app.services.photo_urls import to_photo_read
 from app.services.retention import build_report, run_retention
@@ -383,6 +384,11 @@ async def update_user(
         elif not payload.email_verified:
             user.email_verified_at = None
     await db.commit()
+    if payload.is_active is not None:
+        await log_activity(
+            db, "compte_reactive" if payload.is_active else "compte_suspendu",
+            actor=current_user, details={"compte": user.email},
+        )
     await db.refresh(user)
     return user
 
@@ -406,6 +412,7 @@ async def create_user(
     )
     db.add(user)
     await db.commit()
+    await log_activity(db, "compte_cree", actor=current_user, details={"compte": payload.email, "role": payload.role})
     await db.refresh(user)
     return user
 
@@ -432,8 +439,10 @@ async def delete_user(
         )
 
     avatar = user.avatar_key
+    deleted_email = user.email
     await db.delete(user)
     await db.commit()
+    await log_activity(db, "compte_supprime", actor=current_user, details={"compte": deleted_email})
     if avatar:
         await storage.delete(avatar)
 

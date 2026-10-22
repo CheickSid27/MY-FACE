@@ -94,7 +94,7 @@ def create_email_verification_token(user_id: str, email: str) -> str:
     return _create_token(
         user_id,
         TokenType.EMAIL_VERIFY,
-        timedelta(hours=settings.email_verification_ttl_hours),
+        timedelta(minutes=settings.unverified_account_ttl_minutes),
         {"email": email.lower()},
     )
 

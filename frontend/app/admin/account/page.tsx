@@ -11,6 +11,7 @@ import {
   BellIcon,
   CalendarIcon,
   CameraIcon,
+  ChartIcon,
   ChatIcon,
   ChevronRightIcon,
   LockIcon,
@@ -236,6 +237,11 @@ function AccountContent() {
               <Link href="/admin/ventes" className={row}>
                 <span className={ic}><ReceiptIcon size={18} /></span>
                 <span className="flex-1">Ventes</span>
+                <ChevronRightIcon size={18} className="text-ink-500" />
+              </Link>
+              <Link href="/admin/statistiques" className={row}>
+                <span className={ic}><ChartIcon size={18} /></span>
+                <span className="flex-1">{isAdmin ? "Statistiques : toutes les actions sur MYFACE" : "Statistiques et historique"}</span>
                 <ChevronRightIcon size={18} className="text-ink-500" />
               </Link>
               <Link href="/admin/notifications" className={row}>

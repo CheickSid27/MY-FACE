@@ -37,6 +37,7 @@ from app.schemas.auth import (
     VerifyEmailRequest,
 )
 from app.schemas.user import PayoutRead, PayoutUpdate, UserProfileUpdate, UserRead
+from app.services.activity import log_activity
 from app.services import paystack
 from app.services.avatars import AVATAR_CONTENT_TYPES, AVATAR_MAX_BYTES, avatar_key, make_avatar
 from app.services.email import (
@@ -114,6 +115,7 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ACCOUNT_SUSPENDED_DETAIL)
 
+    await log_activity(db, "connexion", actor=user)
     return _tokens_for(user)
 
 
@@ -176,6 +178,7 @@ async def register(
     await db.refresh(user)
 
     background_tasks.add_task(_send_verification, user, email_service)
+    await log_activity(db, "inscription", actor=user)
     return _tokens_for(user)
 
 
@@ -189,6 +192,7 @@ async def verify_email(payload: VerifyEmailRequest, db: AsyncSession = Depends(g
     if user.email_verified_at is None:
         user.email_verified_at = datetime.now(timezone.utc)
         await db.commit()
+        await log_activity(db, "email_confirme", actor=user)
     return {"status": "verified", "email": user.email}
 
 
@@ -246,6 +250,7 @@ async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depen
     if user.email_verified_at is None:
         user.email_verified_at = now
     await db.commit()
+    await log_activity(db, "mot_de_passe_reinitialise", actor=user)
 
 
 @router.get("/me", response_model=UserRead)
@@ -321,6 +326,8 @@ async def save_payout(
     current_user.payout_enabled = True
     await db.commit()
     await db.refresh(current_user)
+    await log_activity(db, "versements_actives", actor=current_user, details={"moyen": payload.method})
+    await db.refresh(current_user)
     return _payout_read(current_user)
 
 
@@ -362,6 +369,8 @@ async def upload_avatar(
     await db.refresh(current_user)
     if old_key:
         await storage.delete(old_key)
+    await log_activity(db, "photo_profil", actor=current_user)
+    await db.refresh(current_user)
     return current_user
 
 
@@ -430,4 +439,5 @@ async def change_password(
     current_user.hashed_password = hash_password(payload.new_password)
     current_user.password_changed_at = datetime.now(timezone.utc)
     await db.commit()
+    await log_activity(db, "mot_de_passe_change", actor=current_user)
     return _tokens_for(current_user)

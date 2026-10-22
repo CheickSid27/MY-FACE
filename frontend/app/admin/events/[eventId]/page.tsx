@@ -8,7 +8,9 @@ import Pagination from "@/components/gallery/Pagination";
 import EventRetentionCard from "@/components/admin/EventRetentionCard";
 import GalleryOptionsCard from "@/components/packs/GalleryOptionsCard";
 import PackCard from "@/components/packs/PackCard";
+import PackLimitDialog from "@/components/packs/PackLimitDialog";
 import BatchUploader from "@/components/upload/BatchUploader";
+import LocalFolderSync from "@/components/upload/LocalFolderSync";
 import PageHeader from "@/components/pro/PageHeader";
 import { useWorkspace } from "@/components/pro/WorkspaceProvider";
 import EventFacesPanel from "@/components/pro/event/EventFacesPanel";
@@ -718,6 +720,9 @@ function AdminEventDetailContent() {
   const isAdmin = user?.role === "admin";
   const [eventPack, setEventPack] = useState<EventPack | null>(null);
   const [packRefresh, setPackRefresh] = useState(0);
+  // Pack plein et tentative d'ajout : proposition du pack superieur.
+  const [limitOpen, setLimitOpen] = useState(false);
+  const openLimit = useCallback(() => setLimitOpen(true), []);
   const { refresh: refreshWorkspace } = useWorkspace();
   const [tab, setTab] = useState<Tab>("photos");
   const uploaderRef = useRef<HTMLDivElement | null>(null);
@@ -763,6 +768,11 @@ function AdminEventDetailContent() {
       setError("Impossible de charger l'événement.");
     }
   }, [eventId, loadPhotos]);
+
+  const handleFolderUploaded = useCallback(() => {
+    loadData();
+    refreshWorkspace();
+  }, [loadData, refreshWorkspace]);
 
   useEffect(() => {
     loadData();
@@ -868,6 +878,16 @@ function AdminEventDetailContent() {
 
       <EventHero event={event} pack={eventPack} />
 
+      {limitOpen && eventPack && (
+        <PackLimitDialog
+          eventId={eventId}
+          eventName={event.name}
+          pack={eventPack}
+          onClose={() => setLimitOpen(false)}
+          onPurchased={() => setPackRefresh((n) => n + 1)}
+        />
+      )}
+
       <div
         className="sticky top-2 z-20 mb-5 flex gap-1 rounded-2xl bg-[#EAE3D6] p-1 shadow-[0_4px_14px_rgba(14,36,41,0.06)] lg:max-w-xl"
         role="tablist"
@@ -900,10 +920,21 @@ function AdminEventDetailContent() {
                   refreshWorkspace();
                 }}
                 remaining={eventPack && !eventPack.unlimited ? eventPack.remaining : null}
+                onLimitReached={openLimit}
               />
             </div>
             {indexing && <IndexingCard summary={indexing} onReindex={handleReindex} />}
-            {watchedFolder && (
+            {/* Dossier choisi par le photographe sur son ordinateur */}
+            {!isAdmin && (
+              <LocalFolderSync
+                eventId={eventId}
+                remaining={eventPack && !eventPack.unlimited ? eventPack.remaining : null}
+                onUploaded={handleFolderUploaded}
+                onLimitReached={openLimit}
+              />
+            )}
+            {/* Dossier du PC de la borne MYFACE (equipe seulement) */}
+            {isAdmin && watchedFolder && (
               <div className="glass mb-6 rounded-2xl p-5">
                 <h2 className="mb-1 text-sm font-semibold text-ink-900">Dossier surveillé</h2>
                 <p className="mb-3 text-xs text-ink-500">

@@ -10,6 +10,7 @@ import WorkspaceProvider from "@/components/pro/WorkspaceProvider";
 function isBare(pathname: string): boolean {
   return (
     pathname === "/admin/login" ||
+    pathname === "/admin/confirmation" ||
     /^\/admin\/events\/[^/]+\/poster/.test(pathname) ||
     /^\/admin\/orders\/[^/]+\/receipt/.test(pathname)
   );

@@ -32,6 +32,11 @@ export const CalendarIcon = (p: IconProps) => (
     <path d="M8 3v4M16 3v4M3 10h18" />
   </Svg>
 );
+export const ChartIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+  </Svg>
+);
 export const ReceiptIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="M4 4h16v16l-3-2-3 2-2-2-2 2-3-2-3 2z" />

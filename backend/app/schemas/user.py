@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator
@@ -36,6 +36,19 @@ class UserRead(BaseModel):
             and not self.email_verified
             and get_settings().email_verification_enforced
         )
+
+    @computed_field
+    @property
+    def verification_deadline(self) -> datetime | None:
+        """Heure a laquelle l'inscription sera annulee si l'adresse n'est pas
+        confirmee (page d'attente) ; None pour les comptes anciens, gardes."""
+        if not self.must_verify_email:
+            return None
+        settings = get_settings()
+        created = self.created_at if self.created_at.tzinfo else self.created_at.replace(tzinfo=timezone.utc)
+        if created < settings.unverified_account_purge_since:
+            return None
+        return created + timedelta(minutes=settings.unverified_account_ttl_minutes)
 
 
 class UserProfileUpdate(BaseModel):

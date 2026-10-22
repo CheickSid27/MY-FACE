@@ -1,3 +1,4 @@
+from app.models.activity_log import ActivityLog
 from app.models.app_setting import AppSetting
 from app.models.cart import CartItem, CartSession
 from app.models.event import Event
@@ -10,6 +11,7 @@ from app.models.push_subscription import PushSubscription
 from app.models.user import User, UserRole
 
 __all__ = [
+    "ActivityLog",
     "AppSetting",
     "CartItem",
     "CartSession",

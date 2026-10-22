@@ -3,6 +3,7 @@
 import { ChangeEvent, DragEvent, useRef, useState } from "react";
 import { ImageIcon } from "@/components/icons";
 import { api } from "@/lib/api-client";
+import { ACCEPTED_TYPES, RAW_EXTENSIONS, chunksOf, isPackLimitError, rejectionReason } from "@/lib/photo-files";
 import type { PhotoUploadError } from "@/types/api";
 
 interface BatchUploaderProps {
@@ -10,67 +11,45 @@ interface BatchUploaderProps {
   onUploaded: () => void;
   /** Photos encore autorisees par le pack de l'evenement ; null = illimite. */
   remaining?: number | null;
+  /** Pack plein : ouvre la proposition de pack superieur. */
+  onLimitReached?: () => void;
 }
 
-// Lots de 10 photos au plus ET de 300 Mo au plus : les photos peuvent peser
-// jusqu'a 70 Mo (originaux sans compression, RAW), et nginx refuse une
-// requete de plus de 500 Mo (voir nginx/nginx.conf, /api/photos/upload).
-const CHUNK_SIZE = 10;
-const CHUNK_MAX_BYTES = 300 * 1024 * 1024;
-const MAX_FILE_BYTES = 70 * 1024 * 1024;
-const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-// RAW des boitiers : reconnus a l'extension (le navigateur ne connait pas
-// leur type). Le serveur garde le RAW et en tire un JPEG pleine resolution.
-const RAW_EXTENSIONS = [
-  ".3fr", ".arw", ".cr2", ".cr3", ".dng", ".erf", ".iiq", ".kdc", ".mef", ".mos", ".mrw",
-  ".nef", ".nrw", ".orf", ".pef", ".raf", ".raw", ".rw2", ".rwl", ".sr2", ".srf", ".srw", ".x3f",
-];
+const LIMIT_MESSAGE = "Limite du pack atteinte : passez au pack supérieur pour l'ajouter";
 
-function isAccepted(file: File): boolean {
-  const name = file.name.toLowerCase();
-  return ACCEPTED_TYPES.includes(file.type) || RAW_EXTENSIONS.some((ext) => name.endsWith(ext));
-}
-
-/** Decoupe en lots de 10 fichiers et 300 Mo au plus. */
-function chunksOf(files: File[]): File[][] {
-  const chunks: File[][] = [];
-  let current: File[] = [];
-  let bytes = 0;
-  for (const file of files) {
-    if (current.length > 0 && (current.length >= CHUNK_SIZE || bytes + file.size > CHUNK_MAX_BYTES)) {
-      chunks.push(current);
-      current = [];
-      bytes = 0;
-    }
-    current.push(file);
-    bytes += file.size;
-  }
-  if (current.length > 0) chunks.push(current);
-  return chunks;
-}
-
-export default function BatchUploader({ eventId, onUploaded, remaining = null }: BatchUploaderProps) {
+export default function BatchUploader({ eventId, onUploaded, remaining = null, onLimitReached }: BatchUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [errors, setErrors] = useState<PhotoUploadError[]>([]);
+  const full = remaining === 0;
+
+  function openPicker() {
+    if (uploading) return;
+    if (full && onLimitReached) {
+      onLimitReached();
+      return;
+    }
+    inputRef.current?.click();
+  }
 
   async function uploadFiles(selected: File[]) {
     // Un dossier glisse-depose peut contenir d'autres fichiers (videos,
     // .xmp...) : ils sont signales, pas envoyes.
-    const files = selected.filter((file) => isAccepted(file) && file.size <= MAX_FILE_BYTES);
+    const valid = selected.filter((file) => rejectionReason(file) === null);
     const skipped: PhotoUploadError[] = selected
-      .filter((file) => !isAccepted(file) || file.size > MAX_FILE_BYTES)
-      .map((file) => ({
-        filename: file.name,
-        error: isAccepted(file)
-          ? "Fichier trop volumineux (70 Mo maximum)"
-          : "Format non pris en charge (JPEG, PNG, WebP ou RAW)",
-      }));
+      .filter((file) => rejectionReason(file) !== null)
+      .map((file) => ({ filename: file.name, error: rejectionReason(file) as string }));
+
+    // Pas d'envoi inutile au-dela du pack (le serveur refuserait ces photos).
+    const files = remaining === null ? valid : valid.slice(0, remaining);
+    const overLimit = valid.slice(files.length);
+    skipped.push(...overLimit.map((file) => ({ filename: file.name, error: LIMIT_MESSAGE })));
 
     if (files.length === 0) {
-      setErrors(skipped);
+      setErrors(skipped.filter((e) => e.error !== LIMIT_MESSAGE));
+      if (overLimit.length > 0) onLimitReached?.();
       return;
     }
 
@@ -97,10 +76,14 @@ export default function BatchUploader({ eventId, onUploaded, remaining = null }:
       setProgress((p) => ({ ...p, done: Math.min(p.total, sent) }));
     }
 
-    setErrors(allErrors);
+    // Les photos refusees pour cause de pack plein ne sont pas listees en
+    // erreur : la boite « Passer au pack superieur » les explique.
+    const limited = allErrors.filter((e) => e.error === LIMIT_MESSAGE || isPackLimitError(e.error));
+    setErrors(allErrors.filter((e) => !limited.includes(e)));
     setUploading(false);
     if (inputRef.current) inputRef.current.value = "";
     onUploaded();
+    if (limited.length > 0) onLimitReached?.();
   }
 
   function handleFiles(e: ChangeEvent<HTMLInputElement>) {
@@ -111,6 +94,10 @@ export default function BatchUploader({ eventId, onUploaded, remaining = null }:
     e.preventDefault();
     setDragOver(false);
     if (uploading) return;
+    if (full && onLimitReached) {
+      onLimitReached();
+      return;
+    }
     uploadFiles(Array.from(e.dataTransfer.files));
   }
 
@@ -120,20 +107,27 @@ export default function BatchUploader({ eventId, onUploaded, remaining = null }:
     <div className="glass rounded-2xl p-4">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-sm font-medium text-ink-700">Ajouter des photos</p>
-        {remaining !== null && (
-          <p className={`text-xs ${remaining === 0 ? "font-semibold text-red-600" : "text-ink-500"}`}>
-            {remaining === 0
-              ? "Limite du pack atteinte : passez au pack supérieur pour en ajouter"
-              : `Encore ${remaining.toLocaleString("fr-FR")} photo${remaining > 1 ? "s" : ""} dans votre pack`}
+        {remaining !== null && !full && (
+          <p className="text-xs text-ink-500">
+            Encore {remaining.toLocaleString("fr-FR")} photo{remaining > 1 ? "s" : ""} dans votre pack
           </p>
+        )}
+        {full && (
+          <button
+            type="button"
+            onClick={onLimitReached}
+            className="rounded-full bg-[#FDE7D9] px-2.5 py-1 text-xs font-semibold text-[#9A3F06]"
+          >
+            Pack plein · voir les packs
+          </button>
         )}
       </div>
       <div
         role="button"
         tabIndex={0}
-        onClick={() => !uploading && inputRef.current?.click()}
+        onClick={openPicker}
         onKeyDown={(e) => {
-          if ((e.key === "Enter" || e.key === " ") && !uploading) inputRef.current?.click();
+          if (e.key === "Enter" || e.key === " ") openPicker();
         }}
         onDragOver={(e) => {
           e.preventDefault();

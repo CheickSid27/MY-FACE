@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.database import AsyncSessionLocal
 from app.routers import (
+    activity,
     admin,
     auth,
     cart,
@@ -28,6 +29,7 @@ from app.services.face_recognition import preload_face_analysis
 from app.services.folder_watcher import folder_watcher
 from app.services.orders import run_startup_maintenance
 from app.services.retention import retention_loop
+from app.services.unverified_accounts import unverified_accounts_loop
 from app.services.storage import get_storage_service
 from app.services.watermark import backfill_watermarks
 
@@ -91,9 +93,12 @@ async def lifespan(app: FastAPI):
     # Suppression des photos et numeros arrives au bout de leur duree de
     # conservation (simulation tant que RETENTION_ENABLED=false).
     retention_task = asyncio.create_task(retention_loop(get_storage_service(), AsyncSessionLocal))
+    # Inscriptions non confirmees dans le delai : annulees (voir services/unverified_accounts.py)
+    unverified_task = asyncio.create_task(unverified_accounts_loop(get_storage_service(), AsyncSessionLocal))
     yield
     startup_task.cancel()
     retention_task.cancel()
+    unverified_task.cancel()
     if eveil_task:
         eveil_task.cancel()
     await folder_watcher.stop()
@@ -127,6 +132,7 @@ if settings.geniuspay_enabled:
 app.include_router(meta.router)
 app.include_router(packs.router)
 app.include_router(workspace.router)
+app.include_router(activity.router)
 
 
 @app.get("/health")

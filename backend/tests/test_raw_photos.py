@@ -45,7 +45,7 @@ async def test_unreadable_raw_is_reported(auth_client: AsyncClient):
     assert "RAW" in resp.json()["errors"][0]["error"]
 
 
-def test_raw_detection_and_limit():
+async def test_raw_detection_and_limit():
     assert raw_images.is_raw_filename("a.ARW") and raw_images.is_raw_filename("b.dng")
     assert not raw_images.is_raw_filename("c.jpg")
     assert ingestion.MAX_FILE_SIZE_BYTES == 70 * 1024 * 1024

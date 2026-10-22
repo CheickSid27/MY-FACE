@@ -13,6 +13,7 @@ from app.models.photo import Photo
 from app.models.user import User
 from app.schemas.photo import PhotoListResponse, PhotoUploadError, PhotoUploadResult
 from app.services.access import get_manageable_event, is_kiosk_request
+from app.services.activity import log_activity
 from app.services.face_clusters import face_cluster_cache
 from app.services.face_crops import face_crop_key
 from app.services.face_indexing import index_photos_faces
@@ -95,6 +96,12 @@ async def upload_photos(
         # completement l'indexation d'un gros lot au lieu de recouvrir les
         # I/O reseau (storage, DB) entre photos.
         background_tasks.add_task(index_photos_faces, [p.id for p in uploaded], storage, session_factory)
+        await log_activity(
+            db, "photos_ajoutees", actor=current_user, event=event,
+            details={"photos": len(uploaded), "refusees": len(errors)},
+        )
+        for photo in uploaded:
+            await db.refresh(photo)
 
     return PhotoUploadResult(uploaded=await to_photo_reads(uploaded, storage, clean_preview=True), errors=errors)
 
@@ -147,8 +154,13 @@ async def delete_photo(
     # order_items/cart_items/face_embeddings d'orders non payes partent en
     # cascade DB (ON DELETE CASCADE, voir models/order.py, models/cart.py,
     # models/face_embedding.py).
+    deleted_name = photo.original_filename
     await db.delete(photo)
     await db.commit()
+    await log_activity(
+        db, "photo_supprimee", actor=current_user, event=await db.get(Event, event_id),
+        details={"fichier": deleted_name},
+    )
     # Retrait immediat : une photo supprimee ne doit plus apparaitre, meme
     # le temps d'un recalcul (mode tolerant des invites).
     face_cluster_cache.invalidate(event_id, drop=True)

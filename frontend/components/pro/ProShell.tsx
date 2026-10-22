@@ -9,6 +9,7 @@ import { useWorkspace } from "@/components/pro/WorkspaceProvider";
 import {
   BellIcon,
   CalendarIcon,
+  ChartIcon,
   HomeIcon,
   ImageIcon,
   LogoutIcon,
@@ -25,13 +26,14 @@ import { useAuthStore } from "@/store/auth-store";
  * tablette, menu lateral a gauche sur ordinateur. Le bouton central « + »
  * ajoute des photos a l'evenement du moment ou en cree un. */
 
-type NavKey = "accueil" | "evenements" | "ventes" | "notifications" | "compte";
+type NavKey = "accueil" | "evenements" | "ventes" | "statistiques" | "notifications" | "compte";
 
 function activeKey(pathname: string): NavKey {
   if (pathname === "/admin") return "accueil";
   if (pathname.startsWith("/admin/events")) return "evenements";
   if (pathname.startsWith("/admin/ventes")) return "ventes";
   if (pathname.startsWith("/admin/notifications")) return "notifications";
+  if (pathname.startsWith("/admin/statistiques")) return "statistiques";
   return "compte";
 }
 
@@ -156,6 +158,9 @@ export default function ProShell({ children }: { children: React.ReactNode }) {
                 {toConfirm}
               </span>
             )}
+          </Link>
+          <Link href="/admin/statistiques" className={side("statistiques")}>
+            <ChartIcon size={20} /> Statistiques
           </Link>
           <Link href="/admin/notifications" className={side("notifications")}>
             <BellIcon size={20} /> Notifications

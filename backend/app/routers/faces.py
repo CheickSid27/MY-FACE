@@ -13,6 +13,7 @@ from app.models.photo import Photo
 from app.models.user import User
 from app.schemas.face import FaceScanMatch, FaceScanResponse, PhotoIndexingStatus
 from app.services.access import is_kiosk_request
+from app.services.activity import log_activity
 from app.services.face_recognition import ImageDecodeError, detect_faces_async
 from app.services.gallery_access import require_gallery_access
 from app.services.photo_urls import to_photo_read
@@ -107,6 +108,11 @@ async def scan_face(
         for photo, distance in result.all()
     ]
 
+    await log_activity(
+        db, "selfie", event=event,
+        actor_label="Borne" if clean_preview else "Invité",
+        details={"photos_trouvees": len(matches), "visages_dans_le_selfie": len(faces)},
+    )
     return FaceScanResponse(matches=matches, faces_detected_in_selfie=len(faces))
 
 

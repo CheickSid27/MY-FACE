@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -148,6 +149,14 @@ class Settings(BaseSettings):
     # confirmer son adresse) ; "true" / "false" pour forcer.
     email_verification_required: str = "auto"
     email_verification_ttl_hours: int = 48
+    # Inscription annulee (compte et tout ce qu'il contient supprimes) si
+    # l'adresse n'est pas confirmee dans ce delai : c'est aussi la duree de
+    # validite du lien envoye (voir services/unverified_accounts.py).
+    unverified_account_ttl_minutes: int = 5
+    # Seules les inscriptions faites apres la mise en service de cette regle
+    # sont annulees : les comptes plus anciens jamais confirmes restent
+    # (bloques sur la page d'attente tant qu'ils n'ont pas confirme).
+    unverified_account_purge_since: datetime = datetime(2026, 10, 22, 17, 0, tzinfo=timezone.utc)
     password_reset_ttl_minutes: int = 60
 
     # Conservation des donnees (declaree a l'ARTCI), voir services/retention.py :

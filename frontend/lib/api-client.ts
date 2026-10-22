@@ -7,7 +7,9 @@ import {
 } from "@/lib/auth";
 import { getGalleryAccess } from "@/lib/gallery-access";
 import type {
+  ActivityFilters,
   ActivityItem,
+  ActivityPage,
   CartRead,
   ClusterListResponse,
   DownloadResponse,
@@ -536,6 +538,28 @@ export const api = {
 
   getWorkspaceActivity(): Promise<ActivityItem[]> {
     return request<ActivityItem[]>("/workspace/activity");
+  },
+
+  // --- Statistiques : journal des actions ---
+  listActivity(filters: ActivityFilters & { page?: number }): Promise<ActivityPage> {
+    return request<ActivityPage>(withQuery("/activity", { ...filters }));
+  },
+
+  activityExportUrl(filters: ActivityFilters): string {
+    return `${API_URL}${withQuery("/activity/export.csv", { ...filters })}`;
+  },
+
+  /** Telecharge l'export CSV (la requete porte le jeton, un simple lien ne suffit pas). */
+  async downloadActivityCsv(filters: ActivityFilters): Promise<void> {
+    const resp = await rawRequest(withQuery("/activity/export.csv", { ...filters }));
+    const url = URL.createObjectURL(await resp.blob());
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `myface-activite-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   },
 
   listOrders(eventId: string, status?: OrderStatus): Promise<OrderRead[]> {

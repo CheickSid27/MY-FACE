@@ -140,7 +140,7 @@ L'équipe MYFACE, Abidjan · <a href="https://myfaceci.online" style="color:#5e7
 
 
 def verification_email(to: str, name: str | None, link: str) -> OutgoingEmail:
-    hours = get_settings().email_verification_ttl_hours
+    minutes = get_settings().unverified_account_ttl_minutes
     return OutgoingEmail(
         to=to,
         subject="Confirmez votre adresse e-mail MYFACE",
@@ -149,8 +149,8 @@ def verification_email(to: str, name: str | None, link: str) -> OutgoingEmail:
             "Merci d'avoir créé votre compte photographe MYFACE.\n"
             "Pour confirmer votre adresse e-mail, ouvrez ce lien :\n\n"
             f"{link}\n\n"
-            f"Le lien est valable {hours} heures. Tant que l'adresse n'est pas confirmée, "
-            "vous ne pouvez ni créer d'événement ni envoyer de photos.\n\n"
+            f"Le lien est valable {minutes} minutes. Sans confirmation dans ce délai, "
+            "votre inscription est annulée : il suffira de recommencer.\n\n"
             "Si vous n'avez pas créé de compte, ignorez ce message.\n\n"
             "L'équipe MYFACE\nhttps://myfaceci.online"
         ),
@@ -159,7 +159,7 @@ def verification_email(to: str, name: str | None, link: str) -> OutgoingEmail:
             greeting=_greeting(name),
             paragraphs=[
                 "Merci d'avoir créé votre compte photographe MYFACE.",
-                f"Confirmez votre adresse pour créer vos événements et envoyer vos photos. Le lien est valable {hours} heures.",
+                f"Confirmez votre adresse pour accéder à votre espace. Le lien est valable {minutes} minutes : sans confirmation, l'inscription est annulée et il faudra recommencer.",
             ],
             button_label="Confirmer mon adresse",
             link=link,

@@ -15,6 +15,8 @@ export interface User {
   email_verified?: boolean;
   // Photographe bloque tant qu'il n'a pas confirme (envoi d'e-mails en place)
   must_verify_email?: boolean;
+  /** Heure d'annulation de l'inscription si l'adresse n'est pas confirmee (null : compte ancien, garde). */
+  verification_deadline?: string | null;
   // Photo de profil (components/pro/UserAvatar.tsx), null = initiales
   avatar_version?: string | null;
 }
@@ -512,4 +514,31 @@ export interface ActivityItem {
   body: string;
   href: string;
   at: string;
+}
+
+// Volet Statistiques : journal des actions realisees sur MYFACE.
+export interface ActivityLogRow {
+  id: string;
+  at: string;
+  action: string;
+  label: string;
+  actor: string;
+  event_id: string | null;
+  event_name: string | null;
+  details: Record<string, unknown> | null;
+}
+
+export interface ActivityPage {
+  items: ActivityLogRow[];
+  total: number;
+  counts: Record<string, number>;
+  actions: Record<string, string>;
+}
+
+export interface ActivityFilters {
+  action?: string;
+  event_id?: string;
+  start?: string;
+  end?: string;
+  q?: string;
 }

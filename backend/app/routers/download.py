@@ -19,6 +19,7 @@ from app.models.photo import Photo
 from app.models.user import User
 from app.schemas.download import DownloadPhoto, DownloadResponse, PrintedResponse
 from app.services.access import can_manage_event, is_kiosk_request
+from app.services.activity import log_activity
 from app.services.qr import generate_qr_png
 from app.services.retention import photos_deadline
 from app.services.storage import StorageService, content_disposition_attachment, get_storage_service
@@ -190,6 +191,11 @@ async def get_download_zip(
     photos = list(result.scalars().all())
     if not photos:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aucune photo pour cette commande")
+    order = await db.get(Order, order_id)
+    await log_activity(
+        db, "telechargement", event=await db.get(Event, order.event_id) if order else None,
+        details={"photos": len(photos), "commande": str(order_id)[:8]},
+    )
 
     return StreamingResponse(
         _zip_stream(photos, storage),

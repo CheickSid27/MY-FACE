@@ -34,6 +34,7 @@ from app.schemas.event import (
 from app.schemas.face import ClusterListResponse
 from app.schemas.payment_method import EventPaymentMethodRead
 from app.schemas.watched_folder import WatchedFileRead, WatchedFolderRead
+from app.services.activity import log_activity
 from app.services import paystack
 from app.services.access import get_manageable_event, is_kiosk_request
 from app.services.face_clusters import build_cluster_response, face_cluster_cache
@@ -116,6 +117,8 @@ async def create_event(
     # Le chemin du dossier surveille est affiche a l'organisateur des la
     # creation : il doit exister pour qu'il puisse y deposer ses photos.
     folder_watcher.ensure_event_folder(event.id)
+    await log_activity(db, "evenement_cree", actor=current_user, event=event)
+    await db.refresh(event)
     return event
 
 
@@ -294,6 +297,8 @@ async def update_event(
             session_factory,
             face_cluster_cache.invalidate,
         )
+    await log_activity(db, "evenement_modifie", actor=current_user, event=event, details={"champs": sorted(update_data)})
+    await db.refresh(event)
     return event
 
 
@@ -579,8 +584,12 @@ async def delete_event(
             ),
         )
 
+    snapshot = {"name": event.name, "owner": event.organizer_id}
     await db.delete(event)
     await db.commit()
     face_cluster_cache.invalidate(event_id, drop=True)
+    await log_activity(
+        db, "evenement_supprime", actor=current_user, details={"evenement": snapshot["name"]}
+    )
     # Apres le commit : si la base refuse la suppression, aucun fichier n'est perdu.
     background_tasks.add_task(_delete_event_files, event_id, storage)

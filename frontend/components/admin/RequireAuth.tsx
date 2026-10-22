@@ -11,6 +11,8 @@ import { useAuthStore } from "@/store/auth-store";
 // une page encore enveloppee dans RequireAuth ne la reverifie pas.
 const AuthChecked = createContext(false);
 
+export const WAITING_PAGE = "/admin/confirmation";
+
 export default function RequireAuth({
   children,
   bannerClassName,
@@ -49,6 +51,12 @@ function RequireAuthCheck({ children, bannerClassName }: { children: React.React
       .me()
       .then((user) => {
         setUser(user);
+        // Adresse pas encore confirmee : aucun acces a l'espace, seulement la
+        // page d'attente (l'inscription est annulee si rien n'est confirme).
+        if (user.must_verify_email && window.location.pathname !== WAITING_PAGE) {
+          router.replace(WAITING_PAGE);
+          return;
+        }
         setStatus("ok");
       })
       .catch(() => {

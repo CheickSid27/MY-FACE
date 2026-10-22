@@ -61,7 +61,7 @@ export default function InscriptionPhotographePage() {
       // la session est ouverte : l'espace photographe charge le profil et
       // affiche le bandeau « confirmez votre adresse »
       useAuthStore.setState({ isLoggedIn: true });
-      router.push("/admin");
+      router.push("/admin/confirmation");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Inscription impossible, réessayez.");
       setSending(false);

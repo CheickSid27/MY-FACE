@@ -34,6 +34,7 @@ from app.schemas.pack import (
     PaystackCheckout,
     PaystackPurchaseCreate,
 )
+from app.services.activity import log_activity
 from app.services import paystack
 from app.services.access import can_manage_event, get_manageable_event
 from app.services.packs import (
@@ -189,6 +190,11 @@ async def create_pack_purchase(
     await db.commit()
     await db.refresh(purchase)
 
+    await log_activity(
+        db, "pack_declare", actor=current_user, event=event,
+        details={"pack": target.name, "montant": due, "moyen": payload.payment_method},
+    )
+    await db.refresh(purchase)
     who = (owner.public_name or owner.email) if owner else "Un photographe"
     montant = f"{due:,}".replace(",", " ")
     await _notify_admins(
@@ -315,6 +321,12 @@ async def _settle_paystack_purchase(purchase: PackPurchase, db: AsyncSession) ->
     tx = await paystack.verify_transaction(purchase.transaction_ref)
     if tx.status == "success" and tx.currency == "XOF" and tx.amount >= purchase.amount:
         await _activate_purchase(purchase, db, decided_by=None)
+        await log_activity(
+            db, "pack_paye", actor_id=purchase.user_id, actor_label="Paiement Paystack",
+            event=await db.get(Event, purchase.event_id),
+            details={"pack": get_pack(purchase.pack).name, "montant": purchase.amount},
+        )
+        await db.refresh(purchase)
         montant = f"{purchase.amount:,}".replace(",", " ")
         await _notify_admins(
             db,
@@ -461,6 +473,11 @@ async def approve_pack_purchase(
     """Paiement recu : le pack est active tout de suite sur l'evenement."""
     purchase = await _get_purchase_for_decision(purchase_id, db)
     await _activate_purchase(purchase, db, decided_by=current_user.id)
+    await log_activity(
+        db, "pack_valide", actor=current_user, event=await db.get(Event, purchase.event_id),
+        details={"pack": get_pack(purchase.pack).name, "montant": purchase.amount},
+    )
+    await db.refresh(purchase)
     return purchase
 
 
@@ -500,6 +517,10 @@ async def reject_pack_purchase(
     purchase.decided_by = current_user.id
     purchase.admin_note = (payload.note or "").strip() or None
     await db.commit()
+    await log_activity(
+        db, "pack_refuse", actor=current_user, event=await db.get(Event, purchase.event_id),
+        details={"pack": get_pack(purchase.pack).name, "note": purchase.admin_note},
+    )
     await db.refresh(purchase)
     return purchase
 
