@@ -1,6 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion, PanInfo, useMotionValue } from "framer-motion";
+// Zoom : pincer a deux doigts, double toucher (ou double clic), molette ; la
+// photo zoomee se deplace au doigt ou a la souris.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckIcon } from "@/components/icons";
 import { flyToCart } from "@/lib/fly-to-cart";
@@ -22,10 +24,19 @@ interface PhotoLightboxProps {
 
 const SWIPE_THRESHOLD = 60;
 const SWIPE_VELOCITY_THRESHOLD = 500;
-const MAX_ZOOM = 4;
+const MAX_ZOOM = 5;
+const DOUBLE_TAP_ZOOM = 2.5;
+const DOUBLE_TAP_MS = 300;
+const TAP_MOVE_PX = 12;
 
-function distanceBetween(t1: React.Touch, t2: React.Touch) {
-  return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+type Point = { x: number; y: number };
+
+function distance(a: Point, b: Point) {
+  return Math.hypot(b.x - a.x, b.y - a.y);
+}
+
+function middle(a: Point, b: Point): Point {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
 export default function PhotoLightbox({
@@ -45,11 +56,17 @@ export default function PhotoLightbox({
   const [direction, setDirection] = useState(1);
 
   const imageWrapRef = useRef<HTMLDivElement>(null);
+  const zoomRef = useRef<HTMLDivElement>(null);
+  const areaRef = useRef<HTMLDivElement>(null);
   const scale = useMotionValue(1);
   const panX = useMotionValue(0);
   const panY = useMotionValue(0);
-  const pinchRef = useRef<{ startDist: number; startScale: number } | null>(null);
   const [isZoomed, setIsZoomed] = useState(false);
+  // Gestes du zoom (doigts, souris) : pointeurs en cours, pincement, double toucher.
+  const pointers = useRef(new Map<number, Point>());
+  const pinch = useRef<{ dist: number; mid: Point } | null>(null);
+  const tapStart = useRef<{ x: number; y: number; time: number } | null>(null);
+  const lastTap = useRef<{ x: number; y: number; time: number } | null>(null);
 
   // Chargement progressif : la miniature (deja en cache depuis la grille)
   // s'affiche immediatement, sans aucune attente visible. La version
@@ -65,6 +82,41 @@ export default function PhotoLightbox({
     setIsZoomed(false);
   }, [scale, panX, panY]);
 
+  // Deplacement de la photo zoomee, sans jamais laisser apparaitre de vide
+  // au-dela de ses bords.
+  const setPan = useCallback(
+    (x: number, y: number, s: number) => {
+      const el = zoomRef.current;
+      const maxX = el ? ((s - 1) * el.offsetWidth) / 2 : 0;
+      const maxY = el ? ((s - 1) * el.offsetHeight) / 2 : 0;
+      panX.set(Math.max(-maxX, Math.min(maxX, x)));
+      panY.set(Math.max(-maxY, Math.min(maxY, y)));
+    },
+    [panX, panY]
+  );
+
+  // Zoom autour d'un point de l'ecran (doigts, endroit touche, souris) : ce
+  // point de la photo reste sous le doigt pendant le zoom.
+  const zoomAt = useCallback(
+    (nextScale: number, focus: Point) => {
+      const current = scale.get();
+      const s = Math.min(MAX_ZOOM, Math.max(1, nextScale));
+      if (s <= 1.01) {
+        resetZoom();
+        return;
+      }
+      // Repere : le cadre non zoome de la photo (le parent de l'element qui
+      // zoome ; la ref de l'animation d'entree n'est pas fiable ici).
+      const rect = zoomRef.current?.parentElement?.getBoundingClientRect();
+      const cx = rect ? rect.left + rect.width / 2 : focus.x;
+      const cy = rect ? rect.top + rect.height / 2 : focus.y;
+      const k = s / current;
+      scale.set(s);
+      setPan((focus.x - cx) * (1 - k) + k * panX.get(), (focus.y - cy) * (1 - k) + k * panY.get(), s);
+      setIsZoomed(true);
+    },
+    [scale, panX, panY, setPan, resetZoom]
+  );
   const goPrev = useCallback(() => {
     if (hasPrev) {
       setDirection(-1);
@@ -104,34 +156,79 @@ export default function PhotoLightbox({
     return () => window.removeEventListener("keydown", handleKey);
   }, [onClose, goPrev, goNext]);
 
-  // Pincer-zoomer a deux doigts (ecran tactile). En dessous de 2 doigts on
-  // laisse le geste "drag" de framer-motion gerer le swipe navigation.
-  function handleTouchStart(e: React.TouchEvent) {
-    if (e.touches.length === 2) {
-      pinchRef.current = {
-        startDist: distanceBetween(e.touches[0], e.touches[1]),
-        startScale: scale.get(),
-      };
-    }
-  }
+  useEffect(() => {
+    resetZoom();
+  }, [photo?.id, resetZoom]);
 
-  function handleTouchMove(e: React.TouchEvent) {
-    if (e.touches.length === 2 && pinchRef.current) {
+  // Molette (ordinateur) : zoom sur l'endroit vise. Ecouteur natif non
+  // passif, sinon la page derriere la visionneuse defilerait.
+  useEffect(() => {
+    const area = areaRef.current;
+    if (!area) return;
+    function onWheel(e: WheelEvent) {
       e.preventDefault();
-      const dist = distanceBetween(e.touches[0], e.touches[1]);
-      const nextScale = Math.min(
-        MAX_ZOOM,
-        Math.max(1, pinchRef.current.startScale * (dist / pinchRef.current.startDist))
-      );
-      scale.set(nextScale);
-      setIsZoomed(nextScale > 1.02);
+      zoomAt(scale.get() * Math.exp(-e.deltaY * 0.0015), { x: e.clientX, y: e.clientY });
+    }
+    area.addEventListener("wheel", onWheel, { passive: false });
+    return () => area.removeEventListener("wheel", onWheel);
+  }, [zoomAt, scale]);
+
+  // Gestes : deux doigts = pincer pour zoomer (et deplacer) ; un doigt ou la
+  // souris sur une photo zoomee = la deplacer ; double toucher ou double clic =
+  // zoomer sur l'endroit touche, ou revenir a la taille normale. Sans zoom, un
+  // doigt fait defiler les photos (glisser de framer-motion).
+  function handlePointerDown(e: React.PointerEvent) {
+    if ((e.target as HTMLElement).closest("button")) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size === 1) {
+      tapStart.current = { x: e.clientX, y: e.clientY, time: Date.now() };
+    } else if (pointers.current.size === 2) {
+      const [a, b] = Array.from(pointers.current.values());
+      pinch.current = { dist: distance(a, b), mid: middle(a, b) };
+      tapStart.current = null;
+      setIsZoomed(true); // coupe le glisser de navigation pendant le pincement
     }
   }
 
-  function handleTouchEnd(e: React.TouchEvent) {
-    if (e.touches.length < 2) {
-      pinchRef.current = null;
-      if (scale.get() <= 1.02) resetZoom();
+  function handlePointerMove(e: React.PointerEvent) {
+    const previous = pointers.current.get(e.pointerId);
+    if (!previous) return;
+    const point = { x: e.clientX, y: e.clientY };
+    pointers.current.set(e.pointerId, point);
+    if (pointers.current.size >= 2 && pinch.current) {
+      const [a, b] = Array.from(pointers.current.values());
+      const dist = distance(a, b);
+      const mid = middle(a, b);
+      const s = scale.get();
+      zoomAt(s * (dist / pinch.current.dist), mid);
+      setIsZoomed(true); // reste bloque tant que les deux doigts sont poses
+      const now = scale.get();
+      setPan(panX.get() + mid.x - pinch.current.mid.x, panY.get() + mid.y - pinch.current.mid.y, now);
+      pinch.current = { dist, mid };
+    } else if (pointers.current.size === 1 && scale.get() > 1.01) {
+      setPan(panX.get() + point.x - previous.x, panY.get() + point.y - previous.y, scale.get());
+    }
+  }
+
+  function handlePointerUp(e: React.PointerEvent) {
+    if (!pointers.current.has(e.pointerId)) return;
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size < 2) pinch.current = null;
+    if (pointers.current.size === 0 && scale.get() <= 1.01) resetZoom();
+
+    const start = tapStart.current;
+    tapStart.current = null;
+    if (!start || e.type === "pointercancel") return;
+    const now = Date.now();
+    const isTap = now - start.time < 350 && Math.hypot(e.clientX - start.x, e.clientY - start.y) < TAP_MOVE_PX;
+    if (!isTap) return;
+    const last = lastTap.current;
+    if (last && now - last.time < DOUBLE_TAP_MS && Math.hypot(e.clientX - last.x, e.clientY - last.y) < 40) {
+      lastTap.current = null;
+      if (scale.get() > 1.01) resetZoom();
+      else zoomAt(DOUBLE_TAP_ZOOM, { x: e.clientX, y: e.clientY });
+    } else {
+      lastTap.current = { x: e.clientX, y: e.clientY, time: now };
     }
   }
 
@@ -177,11 +274,15 @@ export default function PhotoLightbox({
 
       {/* image + nav */}
       <div
-        className="relative flex flex-1 touch-none items-center justify-center overflow-hidden px-4"
+        ref={areaRef}
+        className={`relative flex flex-1 touch-none items-center justify-center overflow-hidden px-4 ${
+          isZoomed ? "cursor-grab active:cursor-grabbing" : ""
+        }`}
         onClick={(e) => e.stopPropagation()}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
       >
         {hasPrev && (
           <button
@@ -215,7 +316,7 @@ export default function PhotoLightbox({
             className="flex max-h-[70vh] max-w-full items-center justify-center"
           >
             <motion.div
-              onDoubleClick={resetZoom}
+              ref={zoomRef}
               style={{ scale, x: panX, y: panY }}
               className="relative flex max-h-[70vh] max-w-full items-center justify-center"
             >
