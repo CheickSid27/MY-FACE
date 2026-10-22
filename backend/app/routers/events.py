@@ -89,7 +89,10 @@ async def create_event(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=(
-                    f"Vous avez déjà {max_free} événements gratuits : passez l'un d'eux au pack "
+                    "Vous avez déjà un événement gratuit (pack Découverte) : passez-le au pack "
+                    "Événement pour créer un autre événement"
+                    if max_free == 1
+                    else f"Vous avez déjà {max_free} événements gratuits : passez l'un d'eux au pack "
                     "Événement ou supprimez-en un pour en créer un autre"
                 ),
             )

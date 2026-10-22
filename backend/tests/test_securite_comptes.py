@@ -306,7 +306,7 @@ async def test_free_events_are_limited(make_client, create_user, emails):
 
     resp = await photographe.post("/events", json=EVENT)
     assert resp.status_code == 403
-    assert "événements gratuits" in resp.json()["detail"]
+    assert "gratuit" in resp.json()["detail"]
 
     # un evenement passe au pack Evenement libere une place
     admin = await _admin(make_client, create_user)

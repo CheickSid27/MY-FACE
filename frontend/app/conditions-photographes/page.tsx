@@ -13,7 +13,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
     body: [
       "MYFACE permet à un photographe ou à un organisateur de déposer les photos d'un événement, de les faire analyser par une IA de reconnaissance faciale, et de les mettre à disposition de ses invités par un lien ou un QR code.",
       "Chaque événement dispose d'un pack : Découverte (gratuit, 10 photos), Événement (10 000 F, 500 photos), Pro (25 000 F, 2 000 photos) ou Sur mesure. Le prix d'un pack est payé une seule fois par événement ; il n'y a pas d'abonnement.",
-      "Un compte peut avoir au plus trois événements gratuits (pack Découverte) en même temps.",
+      "Un compte ne peut avoir qu'un seul événement gratuit (pack Découverte) à la fois : pour en créer un autre, il passe le premier à un pack payant.",
     ],
   },
   {

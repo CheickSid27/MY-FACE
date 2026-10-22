@@ -161,9 +161,10 @@ class Settings(BaseSettings):
     retention_interval_hours: int = 24
 
     # Evenements gratuits (pack Decouverte) qu'un photographe peut avoir en
-    # meme temps : au-dela, il passe un evenement au pack superieur ou en
-    # supprime un (sinon 10 photos x N evenements = photos illimitees).
-    free_events_per_account: int = 3
+    # meme temps : au-dela, il passe son evenement au pack superieur ou le
+    # supprime (sinon 10 photos x N evenements = photos illimitees). Un seul
+    # depuis le 22/10 (decision de l'utilisateur).
+    free_events_per_account: int = 1
 
     # Chemin GeniusPay (sandbox, voir routers/geniuspay.py) : ferme tant qu'il
     # n'est pas valide, il n'est appele par aucune page du site.
