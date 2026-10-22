@@ -200,9 +200,10 @@ async def init_payment(
         await send_push_to_user(
             event.organizer_id,
             db,
-            title="Nouvelle commande a confirmer (especes)",
+            title="Paiement en espèces à confirmer",
             body=f"{order.total_amount:.0f} {order.currency}, {order.contact_phone}",
             url=f"{settings.app_base_url}/admin/ventes",
+            tag=f"commande-{order.id}",
         )
 
         return PaymentInitResponse(
@@ -361,9 +362,10 @@ async def mark_paid(
         await send_push_to_user(
             event.organizer_id,
             db,
-            title="Nouvelle commande a confirmer",
+            title="Paiement à confirmer",
             body=f"{order.total_amount:.0f} {order.currency}, {order.contact_phone}",
             url=f"{settings.app_base_url}/admin/ventes",
+            tag=f"commande-{order.id}",
         )
 
     return await _build_status_response(order, db, storage)

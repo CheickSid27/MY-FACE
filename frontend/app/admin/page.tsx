@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import NotificationSetup from "@/components/admin/NotificationSetup";
 import PageHeader from "@/components/pro/PageHeader";
 import { useWorkspace } from "@/components/pro/WorkspaceProvider";
 import { CalendarIcon, ChevronRightIcon, ClockIcon, ImageIcon, ReceiptIcon, ShieldIcon, WalletIcon } from "@/components/pro/icons";
@@ -52,6 +53,7 @@ export default function ProHomePage() {
   return (
     <>
       <PageHeader title={`${greeting()}${name ? `, ${name}` : ""}`} subtitle="Votre activité MYFACE" />
+      <NotificationSetup onlyWhenOff />
 
       {!summary ? (
         <div className="grid gap-4 lg:grid-cols-3">

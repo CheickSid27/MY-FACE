@@ -11,7 +11,7 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("push", (event) => {
-  let data = { title: "MYFACE", body: "Nouvelle notification", url: "/admin/events" };
+  let data = { title: "MYFACE", body: "Nouvelle notification", url: "/admin" };
   try {
     data = event.data.json();
   } catch {
@@ -23,6 +23,14 @@ self.addEventListener("push", (event) => {
       body: data.body,
       icon: "/icon-192.png",
       badge: "/icon-192.png",
+      // Vibre comme une notification de message (Android ; l'iPhone suit ses
+      // propres reglages). Chaque paiement a sa propre notification (tag),
+      // et une nouvelle notification resonne meme si une autre est affichee.
+      vibrate: [200, 100, 200, 100, 300],
+      tag: data.tag || undefined,
+      renotify: Boolean(data.tag),
+      silent: false,
+      timestamp: Date.now(),
       data: { url: data.url },
     })
   );
@@ -30,7 +38,7 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || "/admin/events";
+  const url = event.notification.data?.url || "/admin";
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {

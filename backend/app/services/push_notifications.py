@@ -34,10 +34,16 @@ def _send_one(subscription: PushSubscription, payload: dict) -> None:
         data=json.dumps(payload),
         vapid_private_key=settings.vapid_private_key,
         vapid_claims={"sub": settings.vapid_subject},
+        # Urgence haute : livree tout de suite, meme telephone en veille
+        # (sinon Android peut la retarder) ; gardee 1 jour s'il est eteint.
+        headers={"Urgency": "high"},
+        ttl=86400,
     )
 
 
-async def send_push_to_user(user_id: uuid.UUID, db: AsyncSession, title: str, body: str, url: str) -> None:
+async def send_push_to_user(
+    user_id: uuid.UUID, db: AsyncSession, title: str, body: str, url: str, tag: str | None = None
+) -> None:
     if not settings.vapid_private_key:
         return
 
@@ -46,7 +52,7 @@ async def send_push_to_user(user_id: uuid.UUID, db: AsyncSession, title: str, bo
     if not subscriptions:
         return
 
-    payload = {"title": title, "body": body, "url": url}
+    payload = {"title": title, "body": body, "url": url, "tag": tag}
     dead_endpoints = []
 
     for subscription in subscriptions:
@@ -54,7 +60,8 @@ async def send_push_to_user(user_id: uuid.UUID, db: AsyncSession, title: str, bo
             await asyncio.to_thread(_send_one, subscription, payload)
         except WebPushException as exc:
             status_code = exc.response.status_code if exc.response is not None else None
-            if status_code in (404, 410):
+            # 401/403 : abonnement cree avec une ancienne cle VAPID, plus jamais livrable.
+            if status_code in (401, 403, 404, 410):
                 # Abonnement expire/revoque (navigateur desinstalle, permission
                 # retiree...) : on le nettoie plutot que de reessayer indefiniment.
                 dead_endpoints.append(subscription.endpoint)

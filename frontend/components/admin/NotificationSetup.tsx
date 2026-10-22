@@ -13,7 +13,9 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
 
 type Status = "unsupported" | "checking" | "off" | "on" | "denied";
 
-export default function NotificationSetup() {
+/** onlyWhenOff : rien n'est affiche tant que les notifications sont deja
+ * actives ou bloquees (rappel discret sur l'accueil de MYFACE Pro). */
+export default function NotificationSetup({ onlyWhenOff = false }: { onlyWhenOff?: boolean } = {}) {
   const [status, setStatus] = useState<Status>("checking");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +32,30 @@ export default function NotificationSetup() {
       }
       const registration = await navigator.serviceWorker.getRegistration();
       const existing = await registration?.pushManager.getSubscription();
-      setStatus(existing ? "on" : "off");
+      if (!registration || !existing) {
+        setStatus("off");
+        return;
+      }
+      // La cle du serveur a change (cle remplacee le 22/10) : l'ancien
+      // abonnement ne recoit plus rien. Permission deja accordee : on se
+      // reabonne sans rien demander.
+      try {
+        const { public_key: serverKey } = await api.getVapidPublicKey();
+        const current = existing.options.applicationServerKey;
+        const expected = serverKey ? urlBase64ToUint8Array(serverKey) : null;
+        const same =
+          current && expected && new Uint8Array(current).length === expected.length &&
+          new Uint8Array(current).every((byte, i) => byte === expected[i]);
+        if (expected && !same) {
+          await api.unsubscribeFromPush(existing.endpoint).catch(() => {});
+          await existing.unsubscribe();
+          const renewed = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: expected });
+          await api.subscribeToPush(renewed.toJSON() as never);
+        }
+        setStatus("on");
+      } catch {
+        setStatus("off");
+      }
     }
     check();
   }, []);
@@ -50,7 +75,7 @@ export default function NotificationSetup() {
 
       const { public_key: vapidPublicKey } = await api.getVapidPublicKey();
       if (!vapidPublicKey) {
-        setError("Notifications non configurees côté serveur.");
+        setError("Notifications non configurées côté serveur.");
         return;
       }
 
@@ -84,6 +109,7 @@ export default function NotificationSetup() {
   }
 
   if (status === "unsupported" || status === "checking") return null;
+  if (onlyWhenOff && status !== "off") return null;
 
   if (status === "denied") {
     return (
@@ -98,11 +124,11 @@ export default function NotificationSetup() {
     <div className="glass mb-4 flex items-center justify-between gap-3 rounded-2xl p-4">
       <div>
         <p className="text-sm font-semibold text-ink-900">
-          {status === "on" ? "Notifications activees" : "Recevoir une alerte par commande"}
+          {status === "on" ? "Notifications activées" : "Recevoir une alerte à chaque paiement"}
         </p>
         <p className="text-xs text-ink-500">
           {status === "on"
-            ? "Vous serez notifié sur cet appareil dès qu'un client déclare avoir payé."
+            ? "Ce téléphone sonne et vibre à chaque paiement, même quand MYFACE Pro est fermé."
             : "Installez cette page sur votre téléphone et activez les notifications."}
         </p>
         {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
@@ -113,7 +139,7 @@ export default function NotificationSetup() {
         onClick={status === "on" ? handleDisable : handleEnable}
         className={status === "on" ? "btn-ghost !px-4 !py-2 text-xs" : "btn-primary !px-4 !py-2 text-xs"}
       >
-        {busy ? "..." : status === "on" ? "Desactiver" : "Activer"}
+        {busy ? "..." : status === "on" ? "Désactiver" : "Activer"}
       </button>
     </div>
   );

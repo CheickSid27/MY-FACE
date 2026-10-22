@@ -119,5 +119,25 @@ async def settle_order(order, db) -> None:
     tx = await verify_transaction(order.payment_reference)
     if tx.status == "success" and tx.currency == "XOF" and tx.amount >= int(order.total_amount):
         await set_order_status(order, OrderStatus.SUCCESS, db)
+        await _notify_sale(order, db)
     elif tx.status in ("failed", "reversed") and order.status == OrderStatus.PENDING:
         await set_order_status(order, OrderStatus.FAILED, db)
+
+
+async def _notify_sale(order, db) -> None:
+    """Notification a l'organisateur pour chaque vente payee en ligne."""
+    from app.models.event import Event
+    from app.services.push_notifications import send_push_to_user
+
+    event = await db.get(Event, order.event_id)
+    if event is None:
+        return
+    amount = f"{order.total_amount:,.0f}".replace(",", " ")
+    await send_push_to_user(
+        event.organizer_id,
+        db,
+        title=f"Nouvelle vente : {amount} F",
+        body=f"Payée en ligne, {event.name}. Les photos sont déjà envoyées à l'invité.",
+        url=f"/admin/events/{event.id}?onglet=ventes",
+        tag=f"commande-{order.id}",
+    )

@@ -193,7 +193,7 @@ async def create_pack_purchase(
     montant = f"{due:,}".replace(",", " ")
     await _notify_admins(
         db,
-        title=f"Pack {target.name} a verifier",
+        title=f"Pack {target.name} à vérifier",
         body=f"{who} : {montant} F par {payload.payment_method}, ref {payload.transaction_ref}",
         url="/admin/packs",
     )
@@ -315,6 +315,13 @@ async def _settle_paystack_purchase(purchase: PackPurchase, db: AsyncSession) ->
     tx = await paystack.verify_transaction(purchase.transaction_ref)
     if tx.status == "success" and tx.currency == "XOF" and tx.amount >= purchase.amount:
         await _activate_purchase(purchase, db, decided_by=None)
+        montant = f"{purchase.amount:,}".replace(",", " ")
+        await _notify_admins(
+            db,
+            title=f"Pack {get_pack(purchase.pack).name} payé : {montant} F",
+            body="Paiement en ligne Paystack, pack déjà activé.",
+            url="/admin/packs",
+        )
     elif tx.status in ("failed", "reversed"):
         purchase.status = PackPurchaseStatus.REJECTED
         purchase.decided_at = datetime.now(timezone.utc)
@@ -473,7 +480,7 @@ async def _activate_purchase(purchase: PackPurchase, db: AsyncSession, decided_b
         await send_push_to_user(
             purchase.user_id,
             db,
-            title=f"Pack {get_pack(purchase.pack).name} active",
+            title=f"Pack {get_pack(purchase.pack).name} activé",
             body=f"{event.name} : vous pouvez ajouter vos photos.",
             url=f"/admin/events/{event.id}",
         )
