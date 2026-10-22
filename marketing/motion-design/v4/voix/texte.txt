@@ -19,7 +19,7 @@ L15|tirage_sort|Même sans smartphone, même sans Mobile Money, personne ne repa
 L16|qualite|Et partout, la qualité d'origine, le soir même.
 L17|offertes|Si l'organisateur veut faire plaisir, il offre les photos à tous ses invités : aucune page de paiement.
 L18|tableau|Depuis son espace, il suit tout en direct : les photos, les ventes, et les tirages à imprimer.
-L19|preuve|Déjà testé à Abidjan : à la remise de diplômes de l'IIT, cent dix-neuf photos en ligne, et douze commandes payées par les invités.
+L19|preuve|Déjà testé à Abidjan, sur une vraie remise de diplômes : cent dix-neuf photos en ligne, et chacun retrouve les siennes en une à deux secondes.
 L20|partout|Mariages, remises de diplômes, galas d'entreprise, églises, concerts : partout où il y a du monde et des photos.
 L21|ivoirienne|{MYFACE}, une solution ivoirienne d'intelligence artificielle, pensée pour nos événements.
 L22|fin|{MYFACE}. Scanne, retrouve, repars avec.

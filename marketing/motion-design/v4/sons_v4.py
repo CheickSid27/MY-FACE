@@ -246,8 +246,6 @@ def bruitages_nouveaux(s):
     S.poser(s, S.pop(), a("preuve", 2.0), 0.2)
     train(s, a("preuve", 3.3), a("preuve", 4.2), 0.07, 0.09)
     S.poser(s, S.coup_sourd(), a("preuve", 4.2), 0.55)
-    train(s, a("preuve", 5.0), a("preuve", 5.9), 0.09, 0.09)
-    S.poser(s, S.coup_sourd(), a("preuve", 5.9), 0.55)
     S.poser(s, S.impact(), a("preuve", 6.4), 0.3)
     S.poser(s, S.pop(), a("preuve", 6.9), 0.2)
     # partout

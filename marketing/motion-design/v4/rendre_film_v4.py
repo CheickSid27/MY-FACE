@@ -8,7 +8,7 @@ Reprend toutes les scenes de la v2 (v2/rendre_film_v2.py, inchange) et ajoute :
 - le paiement Mobile Money et le telechargement en qualite d'origine ;
 - les photos offertes par l'organisateur ;
 - l'espace de l'organisateur, en direct ;
-- le test reel a Abidjan (remise de diplomes de l'IIT : 119 photos, 12 commandes) ;
+- le test a Abidjan (remise de diplomes de l'IIT : 119 photos ; aucune vente reelle annoncee) ;
 - les evenements vises, et « une solution ivoirienne ».
 Les durees viennent de v4/montage_v4.py (calees sur la voix).
 
@@ -580,7 +580,8 @@ class FilmV4(FilmV2):
         if t >= 0.6:
             texte(img, "Abidjan", W / 2 + 60, 250, 96, WHITE, opacite=clamp((t - 0.6) / 0.25))
         etiquette(img, "Remise de diplômes · IIT", W / 2, 400, 46, ORANGE, t, 2.0)
-        chiffres = [(3.3, 119, "photos mises en ligne", 640), (5.0, 12, "commandes payées par les invités", 1000)]
+        # Pas de chiffre de commandes : celles de l'IIT etaient des essais (corrige le 22/10).
+        chiffres = [(3.3, 119, "photos mises en ligne", 640)]
         for t0, val, lib, y in chiffres:
             if t < t0:
                 continue
@@ -591,7 +592,7 @@ class FilmV4(FilmV2):
             p = ressort((t - 6.4) / 0.35)
             texte(img, "1 à 2 s", W / 2, 1400, 150, WHITE, echelle=1.3 - 0.3 * p, opacite=clamp((t - 6.4) / 0.15))
             texte(img, "pour retrouver ses photos", W / 2, 1530, 46, ORANGE, chemin=F_BOLD, opacite=clamp((t - 6.6) / 0.25))
-        etiquette(img, "Premier test en conditions réelles", W / 2, 1760, 42, WHITE, t, 6.9)
+        etiquette(img, "Testé sur un vrai événement", W / 2, 1760, 42, WHITE, t, 6.9)
         return img
 
     def partout(self, t):
