@@ -7,6 +7,7 @@ import MyfaceLogo from "@/components/brand/Logo";
 import { PrinterIcon } from "@/components/icons";
 import { api } from "@/lib/api-client";
 import type { Event } from "@/types/api";
+import { formatEventCode } from "@/lib/event-code";
 
 // Affiche A4 a imprimer et poser sur place (entree, tables, borne) : le QR
 // du lien invite, en grand, avec le mode d'emploi en trois etapes.
@@ -87,7 +88,14 @@ function PosterContent() {
           ))}
         </ol>
 
-        <p className="break-all text-xs text-ink-500">{event.guest_url}</p>
+        {event.short_code ? (
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-sm text-ink-500">Pas de QR code ? Allez sur {new URL(event.guest_url).host} et tapez le code</p>
+            <p className="font-mono text-4xl font-bold tracking-[0.2em] text-ink-900">{formatEventCode(event.short_code)}</p>
+          </div>
+        ) : (
+          <p className="break-all text-xs text-ink-500">{event.guest_url}</p>
+        )}
 
         <div className="flex items-center gap-2 border-t border-ink-900/10 pt-5">
           <MyfaceLogo size={24} />

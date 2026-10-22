@@ -19,6 +19,7 @@ import {
   ReceiptIcon,
   SettingsIcon,
   ShieldIcon,
+  UserIcon,
   UsersIcon,
 } from "@/components/pro/icons";
 import { CheckIcon } from "@/components/icons";
@@ -73,8 +74,7 @@ function ProfileForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="glass mb-6 rounded-2xl p-5">
-      <h2 className="mb-1 text-sm font-semibold text-ink-900">Mon profil</h2>
+    <form onSubmit={handleSubmit} className="px-4 pb-5 pt-1">
       <p className="mb-4 text-xs text-ink-500">
         Le nom du studio s&apos;affiche aux invités sur la page de vos événements, et dans le filigrane des packs
         Événement et Pro.
@@ -165,8 +165,7 @@ function AvatarEditor() {
   );
 }
 
-function AccountContent() {
-  const user = useAuthStore((s) => s.user);
+function PasswordForm() {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -201,6 +200,111 @@ function AccountContent() {
     }
   }
 
+  return (
+    <form onSubmit={handleSubmit} className="px-4 pb-5 pt-1">
+      <label className="mb-1 block text-sm font-medium text-ink-700">Mot de passe actuel</label>
+      <input
+        type="password"
+        required
+        autoComplete="current-password"
+        value={current}
+        onChange={(e) => setCurrent(e.target.value)}
+        className={`${inputClass} mb-3`}
+      />
+
+      <label className="mb-1 block text-sm font-medium text-ink-700">Nouveau mot de passe</label>
+      <input
+        type="password"
+        required
+        minLength={PASSWORD_MIN_LENGTH}
+        maxLength={128}
+        autoComplete="new-password"
+        value={next}
+        onChange={(e) => setNext(e.target.value)}
+        className={`${inputClass} mb-1`}
+      />
+      <p className="mb-3 text-xs text-ink-500">{PASSWORD_HINT}</p>
+
+      <label className="mb-1 block text-sm font-medium text-ink-700">Confirmer le nouveau mot de passe</label>
+      <input
+        type="password"
+        required
+        minLength={PASSWORD_MIN_LENGTH}
+        maxLength={128}
+        autoComplete="new-password"
+        value={confirmation}
+        onChange={(e) => setConfirmation(e.target.value)}
+        className={`${inputClass} mb-4`}
+      />
+
+      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      {done && (
+        <p className="mb-3 flex items-center gap-1.5 text-sm text-emerald-700">
+          <CheckIcon /> Mot de passe modifié. Vos autres appareils ont été déconnectés.
+        </p>
+      )}
+
+      <button type="submit" disabled={saving} className="btn-primary w-full !py-3 text-sm">
+        {saving ? "Enregistrement..." : "Changer le mot de passe"}
+      </button>
+    </form>
+  );
+}
+
+type SettingsPanel = "profil" | "securite";
+
+/** Paramètres du compte : profil et mot de passe regroupés, chaque partie
+ * s'ouvre d'un toucher (et directement par /admin/account#profil ou #securite). */
+function SettingsSection() {
+  const user = useAuthStore((s) => s.user);
+  const [open, setOpen] = useState<SettingsPanel | null>(null);
+
+  useEffect(() => {
+    const hash = window.location.hash.replace("#", "");
+    if (hash === "profil" || hash === "securite") setOpen(hash);
+  }, []);
+
+  const toggle = (panel: SettingsPanel) => setOpen((current) => (current === panel ? null : panel));
+  const row =
+    "flex min-h-[60px] w-full items-center gap-3 px-4 py-3 text-left text-[15px] transition hover:bg-[#FBF8F3]";
+  const ic = "flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-[#F1EBE1] text-ink-900";
+  const chevron = (panel: SettingsPanel) =>
+    `shrink-0 text-ink-500 transition-transform ${open === panel ? "rotate-90" : ""}`;
+  const profileLine = [user?.display_name, user?.studio_name, user?.phone].filter(Boolean).join(" · ");
+
+  return (
+    <section>
+      <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wider text-ink-500">Paramètres</h2>
+      <div className="divide-y divide-[#EFE8DC] overflow-hidden rounded-3xl border border-[#E6DED0] bg-white">
+        <div id="profil">
+          <button type="button" onClick={() => toggle("profil")} aria-expanded={open === "profil"} className={row}>
+            <span className={ic}><UserIcon size={18} /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block">Profil</span>
+              <span className="block truncate text-xs text-ink-500">{profileLine || "Nom, studio, téléphone, ville"}</span>
+            </span>
+            <ChevronRightIcon size={18} className={chevron("profil")} />
+          </button>
+          {open === "profil" && <ProfileForm />}
+        </div>
+        <div id="securite">
+          <button type="button" onClick={() => toggle("securite")} aria-expanded={open === "securite"} className={row}>
+            <span className={ic}><LockIcon size={18} /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block">Mot de passe et sécurité</span>
+              <span className="block truncate text-xs text-ink-500">Changer le mot de passe de {user?.email}</span>
+            </span>
+            <ChevronRightIcon size={18} className={chevron("securite")} />
+          </button>
+          {open === "securite" && <PasswordForm />}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AccountContent() {
+  const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const isAdmin = user?.role === "admin";
   const name = user?.studio_name || user?.display_name || user?.email || "";
@@ -224,8 +328,12 @@ function AccountContent() {
             </div>
           </section>
 
-          {!isAdmin && <PayoutCard />}
+          <SettingsSection />
 
+          {!isAdmin && <PayoutCard />}
+        </div>
+
+        <div className="flex flex-col gap-4">
           <section>
             <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wider text-ink-500">Mon activité</h2>
             <div className="divide-y divide-[#EFE8DC] overflow-hidden rounded-3xl border border-[#E6DED0] bg-white">
@@ -249,11 +357,6 @@ function AccountContent() {
                 <span className="flex-1">Notifications</span>
                 <ChevronRightIcon size={18} className="text-ink-500" />
               </Link>
-              <a href="#securite" className={row}>
-                <span className={ic}><LockIcon size={18} /></span>
-                <span className="flex-1">Mot de passe et sécurité</span>
-                <ChevronRightIcon size={18} className="text-ink-500" />
-              </a>
             </div>
           </section>
 
@@ -294,62 +397,6 @@ function AccountContent() {
               <LogoutIcon size={18} /> Se déconnecter
             </button>
           </div>
-        </div>
-
-        <div className="flex flex-col">
-          <div id="profil">
-            <ProfileForm />
-          </div>
-
-          <form id="securite" onSubmit={handleSubmit} className="glass rounded-2xl p-5">
-            <h2 className="mb-4 text-sm font-semibold text-ink-900">Changer mon mot de passe</h2>
-
-            <label className="mb-1 block text-sm font-medium text-ink-700">Mot de passe actuel</label>
-            <input
-              type="password"
-              required
-              autoComplete="current-password"
-              value={current}
-              onChange={(e) => setCurrent(e.target.value)}
-              className={`${inputClass} mb-3`}
-            />
-
-            <label className="mb-1 block text-sm font-medium text-ink-700">Nouveau mot de passe</label>
-            <input
-              type="password"
-              required
-              minLength={PASSWORD_MIN_LENGTH}
-              maxLength={128}
-              autoComplete="new-password"
-              value={next}
-              onChange={(e) => setNext(e.target.value)}
-              className={`${inputClass} mb-1`}
-            />
-            <p className="mb-3 text-xs text-ink-500">{PASSWORD_HINT}</p>
-
-            <label className="mb-1 block text-sm font-medium text-ink-700">Confirmer le nouveau mot de passe</label>
-            <input
-              type="password"
-              required
-              minLength={PASSWORD_MIN_LENGTH}
-              maxLength={128}
-              autoComplete="new-password"
-              value={confirmation}
-              onChange={(e) => setConfirmation(e.target.value)}
-              className={`${inputClass} mb-4`}
-            />
-
-            {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
-            {done && (
-              <p className="mb-3 flex items-center gap-1.5 text-sm text-emerald-700">
-                <CheckIcon /> Mot de passe modifié. Vos autres appareils ont été déconnectés.
-              </p>
-            )}
-
-            <button type="submit" disabled={saving} className="btn-primary w-full !py-3 text-sm">
-              {saving ? "Enregistrement..." : "Changer le mot de passe"}
-            </button>
-          </form>
         </div>
       </div>
     </>

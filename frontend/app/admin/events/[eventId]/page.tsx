@@ -19,6 +19,7 @@ import EventStatsPanel from "@/components/pro/event/EventStatsPanel";
 import { useAuthStore } from "@/store/auth-store";
 import { AlertIcon, CheckIcon, CrossIcon, PrinterIcon } from "@/components/icons";
 import { api, ApiError } from "@/lib/api-client";
+import { formatEventCode } from "@/lib/event-code";
 import type { Event, EventIndexingSummary, EventPack, Photo, WatchedFolderRead } from "@/types/api";
 
 const WATCHED_FOLDER_POLL_MS = 5000;
@@ -545,6 +546,15 @@ function EventHero({ event, pack }: { event: Event; pack: EventPack | null }) {
         <p className="hidden text-[13px] text-[#A9BABD] sm:block">
           Les invités scannent ce code ou ouvrent le lien pour retrouver leurs photos.
         </p>
+        {event.short_code && (
+          <p className="flex flex-wrap items-baseline gap-x-2 text-[13px] text-[#A9BABD]">
+            Code de l&apos;événement
+            <span className="font-mono text-xl font-bold tracking-[0.15em] text-white">
+              {formatEventCode(event.short_code)}
+            </span>
+            <span className="text-[12px]">à taper sur {new URL(event.guest_url).host}</span>
+          </p>
+        )}
         {isLocalUrl && (
           <p className="rounded-xl bg-amber-50 p-2.5 text-xs text-amber-900">
             L&apos;adresse publique de l&apos;application n&apos;est pas configurée (APP_BASE_URL) : ce lien ne marche

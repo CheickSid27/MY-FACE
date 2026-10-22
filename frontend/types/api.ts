@@ -164,6 +164,8 @@ export interface Event {
   date: string;
   location: string;
   kiosk_token: string;
+  /** Code court de l'adresse invites (/e/CODE), 8 caracteres. */
+  short_code: string | null;
   pricing: PricingConfig;
   frame_caption: string | null;
   cash_enabled: boolean;
@@ -184,6 +186,7 @@ export interface Event {
 }
 
 export interface EventPublicRead {
+  short_code?: string | null;
   id: string;
   name: string;
   date: string;

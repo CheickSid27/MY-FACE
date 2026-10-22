@@ -24,6 +24,7 @@ from app.schemas.event import (
     EventCreate,
     EventIndexingSummary,
     EventListItem,
+    EventCodeLookup,
     EventPublicRead,
     EventRead,
     EventUpdate,
@@ -35,6 +36,7 @@ from app.schemas.face import ClusterListResponse
 from app.schemas.payment_method import EventPaymentMethodRead
 from app.schemas.watched_folder import WatchedFileRead, WatchedFolderRead
 from app.services.activity import log_activity
+from app.services.short_codes import new_short_code, normalize_code
 from app.services import paystack
 from app.services.access import get_manageable_event, is_kiosk_request
 from app.services.face_clusters import build_cluster_response, face_cluster_cache
@@ -107,6 +109,7 @@ async def create_event(
         frame_caption=payload.frame_caption,
         organizer_id=current_user.id,
         kiosk_token=_generate_kiosk_token(),
+        short_code=await new_short_code(db),
         # Service photographe : un photographe commence au pack Decouverte
         # (10 photos gratuites) ; les evenements MYFACE ne sont pas limites.
         pack=UNLIMITED_PACK if current_user.role == UserRole.ADMIN else DEFAULT_PACK,
@@ -169,6 +172,23 @@ async def list_events(
     ]
 
 
+@router.get("/code/{code}", response_model=EventCodeLookup)
+async def find_event_by_code(code: str, request: Request, db: AsyncSession = Depends(get_db)) -> EventCodeLookup:
+    """Adresse courte /e/CODE et code tape par un invite (« k7m2-qx9p »
+    accepte). Public : limite par IP dans nginx, et 30 codes faux par
+    10 minutes et par adresse (contre les essais au hasard)."""
+    ip = client_ip(request)
+    limiter.check("event-code", ip, 30, 600, record=False)
+    normalized = normalize_code(code)
+    event_id = None
+    if normalized:
+        event_id = (await db.execute(select(Event.id).where(Event.short_code == normalized))).scalar_one_or_none()
+    if event_id is None:
+        limiter.check("event-code", ip, 30, 600)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aucun événement avec ce code")
+    return EventCodeLookup(id=event_id)
+
+
 @router.get("/{event_id}", response_model=EventRead)
 async def get_event(
     event_id: uuid.UUID,
@@ -203,6 +223,7 @@ async def get_event_public(
         name=event.name,
         date=event.date,
         location=event.location,
+        short_code=event.short_code,
         pricing=event.pricing,
         frame_caption=event.frame_caption,
         cash_enabled=event.cash_enabled,

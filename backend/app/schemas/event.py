@@ -127,6 +127,7 @@ class EventRead(BaseModel):
     date: datetime
     location: str
     kiosk_token: str
+    short_code: str | None = None
     pricing: dict
     frame_caption: str | None
     cash_enabled: bool
@@ -147,6 +148,9 @@ class EventRead(BaseModel):
     @computed_field
     @property
     def guest_url(self) -> str:
+        # Adresse courte (/e/CODE) ; les anciens liens /event/<id> marchent toujours.
+        if self.short_code:
+            return f"{get_settings().app_base_url}/e/{self.short_code}"
         return f"{get_settings().app_base_url}/event/{self.id}"
 
     @computed_field
@@ -177,6 +181,7 @@ class EventPublicRead(BaseModel):
     name: str
     date: datetime
     location: str
+    short_code: str | None = None
     pricing: dict
     frame_caption: str | None
     cash_enabled: bool
@@ -196,6 +201,12 @@ class EventPublicRead(BaseModel):
     # ligne (None = pas de suppression prevue), et photos deja supprimees.
     photos_available_until: datetime | None = None
     photos_purged: bool = False
+
+
+class EventCodeLookup(BaseModel):
+    """Code court -> identifiant de l'evenement (page /e/CODE)."""
+
+    id: uuid.UUID
 
 
 class GalleryUnlockRequest(BaseModel):

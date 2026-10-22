@@ -1,5 +1,6 @@
 import Link from "next/link";
 import MyfaceLogo from "@/components/brand/Logo";
+import EventCodeForm from "@/components/event/EventCodeForm";
 
 export default function RootPage() {
   return (
@@ -10,12 +11,12 @@ export default function RootPage() {
       </h1>
       <p className="-mt-3 text-sm text-gray-400">Scanne. Retrouve. Repars avec.</p>
       <p className="max-w-md text-gray-300">
-        Cette application se consulte via le lien spécifique à un événement
-        (borne ou QR code), ou via l&apos;espace organisateur.
+        Vous êtes invité ? Scannez le QR code de l&apos;événement, ou tapez son code ci-dessous.
       </p>
+      <EventCodeForm />
       <Link
         href="/admin/login"
-        className="rounded-xl bg-brand-accent px-6 py-3 font-semibold text-brand hover:brightness-110"
+        className="mt-4 rounded-xl border border-white/25 px-6 py-3 font-semibold text-white hover:bg-white/10"
       >
         Espace organisateur
       </Link>

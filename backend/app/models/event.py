@@ -21,6 +21,8 @@ class Event(Base):
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     location: Mapped[str] = mapped_column(String(255), nullable=False)
     kiosk_token: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    # Code court de l'adresse invites (/e/K7M2QX9P), voir services/short_codes.py
+    short_code: Mapped[str | None] = mapped_column(String(10), unique=True, index=True, nullable=True)
     pricing: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     # Texte affiche dans le cadre decoratif (borne d'accueil + visionneuse
     # plein ecran), style photobooth : ex "LE FABULEUX MARIAGE D'ANTHONY &

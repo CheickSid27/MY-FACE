@@ -142,7 +142,7 @@ async def test_photographe_sees_only_own_events(auth_client: AsyncClient, create
 
 async def test_event_read_exposes_share_links(auth_client: AsyncClient):
     data = (await auth_client.post("/events", json=_event_payload())).json()
-    assert data["guest_url"].endswith(f"/event/{data['id']}")
+    assert data["guest_url"].endswith(f"/e/{data['short_code']}")
     assert data["kiosk_url"].endswith(f"/event/{data['id']}?kiosk={data['kiosk_token']}")
 
 
@@ -255,3 +255,24 @@ async def test_other_user_cannot_access_event(auth_client: AsyncClient, client: 
     client.headers["Authorization"] = f"Bearer {create_access_token(str(other.id))}"
     resp = await client.get(f"/events/{event_id}")
     assert resp.status_code == 403
+
+
+async def test_short_code_link(auth_client: AsyncClient, client: AsyncClient):
+    """Code court : 8 caracteres lisibles, adresse /e/CODE, saisie souple."""
+    data = (await auth_client.post("/events", json=_event_payload())).json()
+    code = data["short_code"]
+    assert len(code) == 8
+    assert not set(code) & set("01OIL")
+    assert data["guest_url"].endswith(f"/e/{code}")
+
+    typed = f"{code[:4].lower()}-{code[4:].lower()}"
+    resp = await client.get(f"/events/code/{typed}")
+    assert resp.status_code == 200
+    assert resp.json()["id"] == data["id"]
+
+    public = (await client.get(f"/events/{data['id']}/public")).json()
+    assert public["short_code"] == code
+    assert "kiosk_token" not in public
+
+    assert (await client.get("/events/code/ZZZZ2222")).status_code == 404
+    assert (await client.get("/events/code/abc")).status_code == 404

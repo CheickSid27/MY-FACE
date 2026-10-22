@@ -168,6 +168,11 @@ export const api = {
     clearTokens();
   },
 
+  /** Code court d'un evenement (« K7M2QX9P ») -> son identifiant. */
+  findEventByCode(code: string): Promise<{ id: string }> {
+    return request<{ id: string }>(`/events/code/${encodeURIComponent(code)}`);
+  },
+
   me(): Promise<User> {
     return request<User>("/auth/me");
   },
