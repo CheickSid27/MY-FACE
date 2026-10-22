@@ -22,6 +22,8 @@ class UserRead(BaseModel):
     city: str | None = None
     is_active: bool = True
     email_verified: bool = False
+    # Photo de profil : servie par GET /auth/avatars/{id}?v={avatar_version}
+    avatar_version: str | None = None
 
     @computed_field
     @property

@@ -178,6 +178,17 @@ export const api = {
     return data;
   },
 
+  /** Photo de profil : recadree en carre par le serveur. */
+  uploadAvatar(file: File): Promise<User> {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request<User>("/auth/me/avatar", { method: "POST", body: formData });
+  },
+
+  deleteAvatar(): Promise<User> {
+    return request<User>("/auth/me/avatar", { method: "DELETE" });
+  },
+
   updateMe(payload: ProfileUpdate): Promise<User> {
     return request<User>("/auth/me", { method: "PATCH", body: JSON.stringify(payload) });
   },

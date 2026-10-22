@@ -185,6 +185,9 @@ class EventPublicRead(BaseModel):
     online_payment: bool = False
     # Service photographe : nom du studio affiche aux invites
     photographer_name: str | None = None
+    # Photo de profil du photographe (GET /auth/avatars/{id}?v=...)
+    photographer_id: uuid.UUID | None = None
+    photographer_avatar_version: str | None = None
     # Galerie protegee par mot de passe, et acces deja accorde a ce visiteur
     # (jeton `access` valide, borne ou organisateur connecte).
     password_required: bool = False

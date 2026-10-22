@@ -44,6 +44,16 @@ class User(Base):
     # refusees (un mot de passe change ou reinitialise deconnecte partout).
     password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    # Photo de profil (carre 512 px, voir services/avatars.py), None = initiales
+    avatar_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
+
+    @property
+    def avatar_version(self) -> str | None:
+        """Partie variable de l'adresse de la photo de profil : change a chaque
+        nouvelle photo (le navigateur ne garde jamais l'ancienne)."""
+        if not self.avatar_key:
+            return None
+        return self.avatar_key.rsplit("avatar-", 1)[-1].removesuffix(".jpg")
 
     @property
     def public_name(self) -> str | None:

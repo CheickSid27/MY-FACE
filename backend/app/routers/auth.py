@@ -1,7 +1,9 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+import asyncio
+
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, Response, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +25,9 @@ from app.core.security import (
 )
 from app.deps import ACCOUNT_SUSPENDED_DETAIL, SESSION_REVOKED_DETAIL, get_current_user
 from app.models.user import User, UserRole
+from app.services.avatars import AVATAR_CONTENT_TYPES, AVATAR_MAX_BYTES, avatar_key, make_avatar
+from app.services.storage import StorageService, get_storage_service
+from app.services.thumbnails import InvalidImageError
 from app.schemas.auth import (
     AccessTokenResponse,
     ForgotPasswordRequest,
@@ -244,6 +249,65 @@ async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depen
 @router.get("/me", response_model=UserRead)
 async def me(current_user: User = Depends(get_current_user)) -> User:
     return current_user
+
+
+@router.post("/me/avatar", response_model=UserRead)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    storage: StorageService = Depends(get_storage_service),
+) -> User:
+    """Photo de profil : recadree en carre 512 px. Remplace la precedente."""
+    if file.content_type not in AVATAR_CONTENT_TYPES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Photo en JPEG, PNG ou WebP")
+    data = await file.read(AVATAR_MAX_BYTES + 1)
+    if len(data) > AVATAR_MAX_BYTES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Photo trop lourde (8 Mo maximum)")
+    try:
+        avatar = await asyncio.to_thread(make_avatar, data)
+    except InvalidImageError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Image illisible") from exc
+
+    old_key = current_user.avatar_key
+    new_key = avatar_key(current_user.id)
+    await storage.upload(new_key, avatar, "image/jpeg")
+    current_user.avatar_key = new_key
+    await db.commit()
+    await db.refresh(current_user)
+    if old_key:
+        await storage.delete(old_key)
+    return current_user
+
+
+@router.delete("/me/avatar", response_model=UserRead)
+async def delete_avatar(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    storage: StorageService = Depends(get_storage_service),
+) -> User:
+    old_key = current_user.avatar_key
+    current_user.avatar_key = None
+    await db.commit()
+    await db.refresh(current_user)
+    if old_key:
+        await storage.delete(old_key)
+    return current_user
+
+
+@router.get("/avatars/{user_id}", include_in_schema=False)
+async def get_avatar(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    storage: StorageService = Depends(get_storage_service),
+) -> Response:
+    """Photo de profil (publique : affichee aux invites a cote du nom du
+    photographe). Adresse versionnee : gardee en cache une semaine."""
+    user = await db.get(User, user_id)
+    if user is None or not user.avatar_key:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pas de photo de profil")
+    data = await storage.download(user.avatar_key)
+    return Response(content=data, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=604800, immutable"})
 
 
 @router.patch("/me", response_model=UserRead)

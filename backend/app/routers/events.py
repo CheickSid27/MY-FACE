@@ -206,6 +206,8 @@ async def get_event_public(
         is_kiosk=is_kiosk_request(event, kiosk_token),
         online_payment=paystack.online_payment_available(owner),
         photographer_name=photographer_name,
+        photographer_id=owner.id if photographer_name and owner is not None else None,
+        photographer_avatar_version=owner.avatar_version if photographer_name and owner is not None else None,
         password_required=event.has_gallery_password,
         gallery_access=has_gallery_access(event, kiosk_token=kiosk_token, access_token=access, user=current_user),
         photos_available_until=photos_deadline(event),

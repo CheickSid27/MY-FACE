@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import MyfaceLogo from "@/components/brand/Logo";
+import UserAvatar from "@/components/pro/UserAvatar";
 import { useWorkspace } from "@/components/pro/WorkspaceProvider";
 import {
   BellIcon,
@@ -183,9 +184,7 @@ export default function ProShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
         <div className="mt-auto flex items-center gap-3 rounded-xl border border-[#E6DED0] bg-white p-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand font-pro text-xs font-bold text-brand-accent">
-            {name.slice(0, 2).toUpperCase()}
-          </span>
+          {user && <UserAvatar userId={user.id} version={user.avatar_version} name={name} size={36} />}
           <span className="min-w-0 flex-1 truncate text-sm font-semibold">{name}</span>
           <button type="button" onClick={logout} aria-label="Se déconnecter" className="text-ink-500 hover:text-ink-900">
             <LogoutIcon size={18} />

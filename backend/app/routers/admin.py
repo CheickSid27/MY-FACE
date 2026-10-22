@@ -378,6 +378,7 @@ async def delete_user(
     user_id: uuid.UUID,
     current_user: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
+    storage: StorageService = Depends(get_storage_service),
 ) -> None:
     if user_id == current_user.id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Impossible de supprimer votre propre compte")
@@ -393,8 +394,11 @@ async def delete_user(
             detail="Impossible de supprimer un utilisateur qui organise des événements",
         )
 
+    avatar = user.avatar_key
     await db.delete(user)
     await db.commit()
+    if avatar:
+        await storage.delete(avatar)
 
 
 def _report_read(report) -> RetentionReportRead:

@@ -1,5 +1,6 @@
 "use client";
 
+import UserAvatar from "@/components/pro/UserAvatar";
 import { FormEvent, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import MyfaceLogo from "@/components/brand/Logo";
@@ -139,7 +140,18 @@ export default function EventHomePage() {
           &middot; {event.location}
         </p>
         {event.photographer_name && (
-          <p className="mt-2 text-sm font-medium text-brand-accent">Photos : {event.photographer_name}</p>
+          <p className="mt-3 flex items-center justify-center gap-2 text-sm font-medium text-brand-accent">
+            {event.photographer_id && event.photographer_avatar_version && (
+              <UserAvatar
+                userId={event.photographer_id}
+                version={event.photographer_avatar_version}
+                name={event.photographer_name}
+                size={32}
+                className="!rounded-full"
+              />
+            )}
+            Photos : {event.photographer_name}
+          </p>
         )}
       </div>
 

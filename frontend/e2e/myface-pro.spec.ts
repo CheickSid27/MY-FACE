@@ -101,6 +101,13 @@ test("compte : installation, aide, deconnexion", async ({ page }) => {
   await login(page);
   await goTo(page, "Compte");
   await expect(page.getByRole("link", { name: /Aide sur WhatsApp/ })).toHaveAttribute("href", /wa\.me/);
+
+  // Photo de profil : envoi puis retrait
+  await page.locator('input[type="file"][accept^="image/jpeg"]').setInputFiles(PHOTO);
+  await expect(page.getByRole("button", { name: "Retirer", exact: true })).toBeVisible();
+  await expect(page.getByAltText(/Photo de profil de/).first()).toBeVisible();
+  await page.getByRole("button", { name: "Retirer", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Retirer", exact: true })).toHaveCount(0);
   await page.getByRole("link", { name: /Mot de passe et sécurité/ }).click();
   await expect(page.getByRole("heading", { name: "Changer mon mot de passe" })).toBeVisible();
   // Bouton de la page Compte (le menu lateral de l'ordinateur a le meme)

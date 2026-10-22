@@ -1,13 +1,15 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import RequireAuth from "@/components/admin/RequireAuth";
 import InstallAppButton from "@/components/pro/InstallAppButton";
+import UserAvatar from "@/components/pro/UserAvatar";
 import PageHeader from "@/components/pro/PageHeader";
 import {
   BellIcon,
   CalendarIcon,
+  CameraIcon,
   ChatIcon,
   ChevronRightIcon,
   LockIcon,
@@ -96,6 +98,71 @@ function ProfileForm() {
   );
 }
 
+/** Photo de profil : toucher la photo pour la changer, « Retirer » pour
+ * revenir aux initiales. Le serveur la recadre en carre. */
+function AvatarEditor() {
+  const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!user) return null;
+  const name = user.studio_name || user.display_name || user.email;
+
+  async function onFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      setError("Photo trop lourde (8 Mo maximum).");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      setUser(await api.uploadAvatar(file));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Envoi impossible, réessayez.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    setBusy(true);
+    try {
+      setUser(await api.deleteAvatar());
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex shrink-0 flex-col items-center gap-1">
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={busy}
+        aria-label="Changer la photo de profil"
+        className="relative rounded-[18px] disabled:opacity-60"
+      >
+        <UserAvatar userId={user.id} version={user.avatar_version} name={name} size={64} />
+        <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-brand-accent text-brand">
+          <CameraIcon size={13} />
+        </span>
+      </button>
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={onFile} />
+      {user.avatar_version && (
+        <button type="button" onClick={remove} disabled={busy} className="text-[11px] font-semibold text-ink-500 hover:underline">
+          Retirer
+        </button>
+      )}
+      {busy && <span className="text-[11px] text-ink-500">Envoi...</span>}
+      {error && <span className="max-w-[90px] text-center text-[11px] text-red-600">{error}</span>}
+    </div>
+  );
+}
+
 function AccountContent() {
   const user = useAuthStore((s) => s.user);
   const [current, setCurrent] = useState("");
@@ -145,9 +212,7 @@ function AccountContent() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
         <div className="flex flex-col gap-4">
           <section className="flex items-center gap-4 rounded-3xl border border-[#E6DED0] bg-white p-4">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-brand font-pro text-lg font-bold text-brand-accent">
-              {name.slice(0, 2).toUpperCase()}
-            </span>
+            {user && <AvatarEditor />}
             <div className="min-w-0 flex-1">
               <b className="block truncate text-base">{name}</b>
               <span className="block truncate text-[13px] text-ink-500">{user?.email}</span>

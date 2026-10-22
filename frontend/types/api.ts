@@ -15,6 +15,8 @@ export interface User {
   email_verified?: boolean;
   // Photographe bloque tant qu'il n'a pas confirme (envoi d'e-mails en place)
   must_verify_email?: boolean;
+  // Photo de profil (components/pro/UserAvatar.tsx), null = initiales
+  avatar_version?: string | null;
 }
 
 export interface UserAdmin extends User {
@@ -175,6 +177,8 @@ export interface EventPublicRead {
   frame_caption: string | null;
   cash_enabled: boolean;
   /** Paiement en ligne par Paystack propose (evenements de MYFACE). */
+  photographer_id?: string | null;
+  photographer_avatar_version?: string | null;
   online_payment?: boolean;
   is_kiosk: boolean;
   photographer_name: string | null;
