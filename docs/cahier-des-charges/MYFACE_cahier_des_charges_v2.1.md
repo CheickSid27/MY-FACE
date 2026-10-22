@@ -1,4 +1,7 @@
 # MYFACE (AbdShoot), Roadmap Technique & Cahier des Charges
+
+> **Ancienne version (feuille de route de départ).** Ce document est gardé pour l'historique. La référence à jour est le cahier des charges Word : `docs/word/MYFACE - Cahier des charges.docx` (version 3.1 du 22 octobre 2026).
+
 ### Document de référence pour développement par IA (rôle : Lead Dev Senior + Project Manager)
 Version 2.1, Reprise du projet, pivot Web App
 

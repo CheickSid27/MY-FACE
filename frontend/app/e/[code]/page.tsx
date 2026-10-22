@@ -7,8 +7,11 @@ import EventCodeForm from "@/components/event/EventCodeForm";
 import { api, ApiError } from "@/lib/api-client";
 import { formatEventCode, normalizeEventCode } from "@/lib/event-code";
 
-/** Adresse courte d'un evenement (app.myfaceci.online/e/K7M2QX9P) : renvoie
- * vers sa page invites. Code inconnu : on propose de le retaper. */
+/** Adresse courte d'un evenement (app.myfaceci.online/e/K7M2QX9P), celle
+ * du QR code et du lien invites : ouvre directement la galerie (qui propose
+ * « Scanner mon visage » et « Trouver mon visage »). Galerie protegee par mot
+ * de passe : la galerie renvoie d'elle-meme vers la saisie du mot de passe.
+ * Code inconnu : on propose de le retaper. */
 export default function EventCodePage() {
   const { code } = useParams<{ code: string }>();
   const router = useRouter();
@@ -22,7 +25,7 @@ export default function EventCodePage() {
     }
     api
       .findEventByCode(normalized)
-      .then(({ id }) => router.replace(`/event/${id}${window.location.search}`))
+      .then(({ id }) => router.replace(`/event/${id}/gallery${window.location.search}`))
       .catch((err) =>
         setError(
           err instanceof ApiError && err.status === 429
