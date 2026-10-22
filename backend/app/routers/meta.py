@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.schemas.meta import PhoneCountryRead
+from app.services import paystack
 from app.services.phone import countries_as_dicts
 from app.services.sms import sms_delivery_enabled
 
@@ -20,4 +21,4 @@ async def list_features() -> dict[str, bool]:
     """Ce que l'application peut vraiment faire sur ce serveur, pour que les
     pages n'annoncent rien d'autre (ex : pas de « vous recevrez un SMS » si
     aucun SMS ne peut partir)."""
-    return {"sms": sms_delivery_enabled()}
+    return {"sms": sms_delivery_enabled(), "paystack": paystack.is_configured()}

@@ -113,6 +113,13 @@ class Settings(BaseSettings):
     geniuspay_webhook_secret: str = ""
     geniuspay_base_url: str = "https://geniuspay.ci/api/v1/merchant"
 
+    # --- Paystack (services/paystack.py) : paiement des packs photographes
+    # (argent de MYFACE). Cle secrete vide : le bouton « Payer maintenant »
+    # n'est pas propose, il reste la declaration manuelle. ---
+    paystack_public_key: str = ""
+    paystack_secret_key: str = ""
+    paystack_base_url: str = "https://api.paystack.co"
+
     # SMS (Africa's Talking), non configure par defaut, voir services/sms.py
     africastalking_username: str = ""
     africastalking_api_key: str = ""

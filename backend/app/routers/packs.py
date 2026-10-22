@@ -2,14 +2,17 @@
 evenement, achat (declare par le photographe, valide par un admin) et
 reglages admin (numeros Mobile Money de MYFACE). Voir services/packs.py."""
 
+import json
 import logging
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.deps import get_current_user, require_admin, require_verified_user
 from app.models.app_setting import AppSetting
@@ -27,7 +30,10 @@ from app.schemas.pack import (
     PackRead,
     PackRejectRequest,
     PackUpgradeOption,
+    PaystackCheckout,
+    PaystackPurchaseCreate,
 )
+from app.services import paystack
 from app.services.access import can_manage_event, get_manageable_event
 from app.services.packs import (
     PACK_ORDER,
@@ -165,41 +171,7 @@ async def create_pack_purchase(
     l'achat reste « en attente » jusqu'a la verification par un admin, qui
     recoit une notification. Passer d'Evenement a Pro ne coute que la
     difference."""
-    event = await get_manageable_event(event_id, current_user, db)
-    owner = await get_owner(db, event)
-    if is_unlimited_owner(owner):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Les événements MYFACE n'ont pas de pack à acheter",
-        )
-
-    target = PACKS[payload.pack]
-    if not target.purchasable:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ce pack ne s'achète pas en ligne : contactez MYFACE sur WhatsApp",
-        )
-    if pack_rank(target.key) <= pack_rank(event.pack):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"L'événement a déjà le pack {get_pack(event.pack).name} ou supérieur",
-        )
-
-    existing = await db.execute(
-        select(PackPurchase.id).where(
-            PackPurchase.event_id == event_id, PackPurchase.status == PackPurchaseStatus.PENDING
-        )
-    )
-    if existing.first() is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Un paiement est déjà en cours de vérification pour cet événement",
-        )
-
-    paid = await amount_paid_for_event(db, event_id)
-    due = amount_due(target.key, paid)
-    if due <= 0:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Rien à payer pour ce pack")
+    event, owner, target, due = await _check_new_purchase(event_id, payload.pack, current_user, db)
 
     purchase = PackPurchase(
         event_id=event_id,
@@ -225,6 +197,178 @@ async def create_pack_purchase(
         url="/admin/packs",
     )
     return purchase
+
+
+async def _check_new_purchase(event_id: uuid.UUID, pack_key: str, current_user: User, db: AsyncSession):
+    """Controles communs a la declaration manuelle et au paiement Paystack.
+    Un paiement Paystack jamais termine (page fermee) ne bloque pas : il est
+    annule au profit du nouvel essai. Renvoie (evenement, proprietaire,
+    pack vise, montant du)."""
+    event = await get_manageable_event(event_id, current_user, db)
+    owner = await get_owner(db, event)
+    if is_unlimited_owner(owner):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Les événements MYFACE n'ont pas de pack à acheter",
+        )
+
+    target = PACKS[pack_key]
+    if not target.purchasable:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ce pack ne s'achète pas en ligne : contactez MYFACE sur WhatsApp",
+        )
+    if pack_rank(target.key) <= pack_rank(event.pack):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"L'événement a déjà le pack {get_pack(event.pack).name} ou supérieur",
+        )
+
+    pending_result = await db.execute(
+        select(PackPurchase).where(
+            PackPurchase.event_id == event_id, PackPurchase.status == PackPurchaseStatus.PENDING
+        )
+    )
+    for pending in pending_result.scalars().all():
+        if pending.payment_method != PAYSTACK_METHOD:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Un paiement est déjà en cours de vérification pour cet événement",
+            )
+        pending.status = PackPurchaseStatus.CANCELLED
+        pending.decided_at = datetime.now(timezone.utc)
+
+    paid = await amount_paid_for_event(db, event_id)
+    due = amount_due(target.key, paid)
+    if due <= 0:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Rien à payer pour ce pack")
+    return event, owner, target, due
+
+
+# --------------------------------------------------------------------------
+# Paiement en ligne par Paystack (Wave, Orange Money, MTN, carte)
+# --------------------------------------------------------------------------
+PAYSTACK_METHOD = "paystack"
+
+
+@router.post(
+    "/events/{event_id}/pack-purchases/paystack",
+    response_model=PaystackCheckout,
+    status_code=status.HTTP_201_CREATED,
+)
+async def start_paystack_purchase(
+    event_id: uuid.UUID,
+    payload: PaystackPurchaseCreate,
+    current_user: User = Depends(require_verified_user),
+    db: AsyncSession = Depends(get_db),
+) -> PaystackCheckout:
+    """Ouvre un paiement Paystack pour un pack : renvoie le lien de la page
+    de paiement. Le pack s'active seul quand Paystack confirme le paiement
+    (webhook ou retour sur l'application), sans validation par un admin."""
+    if not paystack.is_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Le paiement en ligne n'est pas disponible : utilisez la déclaration de paiement",
+        )
+    event, owner, target, due = await _check_new_purchase(event_id, payload.pack, current_user, db)
+
+    purchase = PackPurchase(
+        event_id=event_id,
+        user_id=event.organizer_id,
+        pack=target.key,
+        amount=due,
+        currency="XOF",
+        status=PackPurchaseStatus.PENDING,
+        payment_method=PAYSTACK_METHOD,
+        transaction_ref=f"myface-{uuid.uuid4().hex}",
+    )
+    db.add(purchase)
+    await db.flush()
+
+    settings = get_settings()
+    callback_url = f"{settings.app_base_url}/admin/events/{event_id}?paystack={purchase.id}"
+    try:
+        url = await paystack.initialize_transaction(
+            email=(owner.email if owner else current_user.email),
+            amount=due,
+            reference=purchase.transaction_ref,
+            callback_url=callback_url,
+            metadata={"pack_purchase_id": str(purchase.id), "event_id": str(event_id), "pack": target.key},
+        )
+    except (paystack.PaystackError, httpx.HTTPError) as exc:
+        await db.rollback()
+        logger.warning("Paystack initialize a echoue : %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Paystack ne répond pas pour le moment, réessayez dans un instant",
+        ) from exc
+    await db.commit()
+    return PaystackCheckout(purchase_id=purchase.id, authorization_url=url)
+
+
+async def _settle_paystack_purchase(purchase: PackPurchase, db: AsyncSession) -> None:
+    """Redemande l'etat a Paystack et active le pack si le paiement est
+    reussi, au bon montant et en francs CFA. Sans effet si deja traite."""
+    if purchase.status != PackPurchaseStatus.PENDING or purchase.payment_method != PAYSTACK_METHOD:
+        return
+    tx = await paystack.verify_transaction(purchase.transaction_ref)
+    if tx.status == "success" and tx.currency == "XOF" and tx.amount >= purchase.amount:
+        await _activate_purchase(purchase, db, decided_by=None)
+    elif tx.status in ("failed", "reversed"):
+        purchase.status = PackPurchaseStatus.REJECTED
+        purchase.decided_at = datetime.now(timezone.utc)
+        purchase.admin_note = "Paiement Paystack refusé"
+        await db.commit()
+        await db.refresh(purchase)
+
+
+@router.post("/pack-purchases/{purchase_id}/paystack/verify", response_model=PackPurchaseRead)
+async def verify_paystack_purchase(
+    purchase_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> PackPurchase:
+    """Appele au retour de la page Paystack : renvoie l'etat a jour."""
+    purchase = await db.get(PackPurchase, purchase_id)
+    if purchase is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Achat introuvable")
+    event = await db.get(Event, purchase.event_id)
+    if event is None or not can_manage_event(event, current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès refusé")
+    try:
+        await _settle_paystack_purchase(purchase, db)
+    except (paystack.PaystackError, httpx.HTTPError) as exc:
+        logger.warning("Paystack verify a echoue pour %s : %s", purchase.id, exc)
+    return purchase
+
+
+@router.post("/payments/paystack/webhook", include_in_schema=False)
+async def paystack_webhook(request: Request, db: AsyncSession = Depends(get_db)) -> dict:
+    """Notification de Paystack, signee avec la cle secrete. On ne croit pas
+    le contenu sur parole : l'etat est redemande a Paystack avant d'activer."""
+    raw = await request.body()
+    if not paystack.signature_is_valid(raw, request.headers.get("x-paystack-signature")):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Signature invalide")
+    try:
+        body = json.loads(raw)
+    except ValueError:
+        return {"ok": True}
+    if body.get("event") != "charge.success":
+        return {"ok": True}
+    reference = (body.get("data") or {}).get("reference")
+    if not reference:
+        return {"ok": True}
+    result = await db.execute(select(PackPurchase).where(PackPurchase.transaction_ref == reference))
+    purchase = result.scalar_one_or_none()
+    if purchase is None:
+        return {"ok": True}
+    try:
+        await _settle_paystack_purchase(purchase, db)
+    except (paystack.PaystackError, httpx.HTTPError) as exc:
+        # Paystack renvoie le webhook en cas d'erreur : on le laisse reessayer.
+        logger.warning("Paystack verify (webhook) a echoue pour %s : %s", reference, exc)
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Verification impossible") from exc
+    return {"ok": True}
 
 
 @router.post("/pack-purchases/{purchase_id}/cancel", response_model=PackPurchaseRead)
@@ -302,10 +446,17 @@ async def approve_pack_purchase(
 ) -> PackPurchase:
     """Paiement recu : le pack est active tout de suite sur l'evenement."""
     purchase = await _get_purchase_for_decision(purchase_id, db)
+    await _activate_purchase(purchase, db, decided_by=current_user.id)
+    return purchase
+
+
+async def _activate_purchase(purchase: PackPurchase, db: AsyncSession, decided_by: uuid.UUID | None) -> None:
+    """Passe l'achat a « paye », active le pack sur l'evenement et previent
+    le photographe. Commun a la validation admin et au paiement Paystack."""
     event = await db.get(Event, purchase.event_id)
     purchase.status = PackPurchaseStatus.PAID
     purchase.decided_at = datetime.now(timezone.utc)
-    purchase.decided_by = current_user.id
+    purchase.decided_by = decided_by
     if event is not None and pack_rank(purchase.pack) > pack_rank(event.pack):
         event.pack = purchase.pack
     await db.commit()
@@ -319,7 +470,6 @@ async def approve_pack_purchase(
             body=f"{event.name} : vous pouvez ajouter vos photos.",
             url=f"/admin/events/{event.id}",
         )
-    return purchase
 
 
 @router.post("/admin/pack-purchases/{purchase_id}/reject", response_model=PackPurchaseRead)

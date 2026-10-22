@@ -396,6 +396,6 @@ async def test_sms_promise_only_when_sms_really_leave(make_client, monkeypatch):
     anon = await make_client()
     monkeypatch.setattr(settings, "africastalking_username", "sandbox")
     monkeypatch.setattr(settings, "africastalking_api_key", "cle-de-test")
-    assert (await anon.get("/meta/features")).json() == {"sms": False}
+    assert (await anon.get("/meta/features")).json()["sms"] is False
     monkeypatch.setattr(settings, "africastalking_username", "myface")
-    assert (await anon.get("/meta/features")).json() == {"sms": True}
+    assert (await anon.get("/meta/features")).json()["sms"] is True

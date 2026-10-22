@@ -79,6 +79,17 @@ def fake_sms(monkeypatch) -> FakeSmsService:
 
 
 @pytest_asyncio.fixture(autouse=True)
+def no_external_services(monkeypatch):
+    """Les tests tournent avec le .env de production (docker compose run) :
+    aucun e-mail ne doit partir par SMTP et aucun appel ne doit atteindre
+    Paystack. Les tests qui en ont besoin remplacent ces services."""
+    settings = get_settings()
+    monkeypatch.setattr(settings, "smtp_host", "")
+    monkeypatch.setattr(settings, "paystack_secret_key", "")
+    monkeypatch.setattr(settings, "retention_enabled", False)
+
+
+@pytest_asyncio.fixture(autouse=True)
 def reset_rate_limits():
     """Limites de debit en memoire (inscription, mot de passe de galerie) :
     remises a zero entre les tests, qui viennent tous de la meme adresse."""

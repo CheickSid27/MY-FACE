@@ -29,6 +29,8 @@ export default function PackCard({ eventId, eventName, isAdmin, refreshKey, onLo
   const [error, setError] = useState<string | null>(null);
   const [buying, setBuying] = useState<PackUpgradeOption | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+  const [checking, setChecking] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -44,6 +46,44 @@ export default function PackCard({ eventId, eventName, isAdmin, refreshKey, onLo
   useEffect(() => {
     load();
   }, [load, refreshKey]);
+
+  const checkOnline = useCallback(
+    async (purchaseId: string) => {
+      setChecking(true);
+      try {
+        const purchase = await api.verifyPaystackPurchase(purchaseId);
+        if (purchase.status === "paid") {
+          setNotice({ ok: true, text: `Paiement reçu : le pack ${PACK_NAMES[purchase.pack]} est activé.` });
+        } else if (purchase.status === "rejected") {
+          setNotice({ ok: false, text: "Le paiement a été refusé. Vous pouvez réessayer." });
+        } else {
+          setNotice({
+            ok: false,
+            text: "Paiement pas encore confirmé. S'il a bien été fait, réessayez « Vérifier » dans un instant.",
+          });
+        }
+        await load();
+      } catch (err) {
+        setNotice({ ok: false, text: err instanceof ApiError ? err.message : "Vérification impossible." });
+      } finally {
+        setChecking(false);
+      }
+    },
+    [load]
+  );
+
+  // Retour de la page Paystack : /admin/events/<id>?paystack=<achat>
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const purchaseId = params.get("paystack");
+    if (!purchaseId) return;
+    params.delete("paystack");
+    params.delete("trxref");
+    params.delete("reference");
+    const rest = params.toString();
+    window.history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : ""));
+    checkOnline(purchaseId);
+  }, [checkOnline]);
 
   async function cancelPending() {
     if (!pack?.pending_purchase) return;
@@ -108,7 +148,37 @@ export default function PackCard({ eventId, eventName, isAdmin, refreshKey, onLo
             </p>
           )}
 
-          {pack.pending_purchase && (
+          {notice && (
+            <p
+              className={`mb-3 rounded-xl p-3 text-xs ${notice.ok ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}
+            >
+              {notice.text}
+            </p>
+          )}
+
+          {pack.pending_purchase?.payment_method === "paystack" && (
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">
+              <p>
+                Paiement en ligne du pack <strong>{PACK_NAMES[pack.pending_purchase.pack]}</strong> (
+                {formatFcfa(pack.pending_purchase.amount)}) commencé mais pas encore confirmé.
+              </p>
+              <span className="flex gap-3">
+                <button
+                  type="button"
+                  disabled={checking}
+                  onClick={() => pack.pending_purchase && checkOnline(pack.pending_purchase.id)}
+                  className="font-semibold text-amber-900 underline disabled:opacity-50"
+                >
+                  {checking ? "Vérification..." : "Vérifier"}
+                </button>
+                <button type="button" onClick={cancelPending} className="font-semibold text-amber-900 underline">
+                  Abandonner
+                </button>
+              </span>
+            </div>
+          )}
+
+          {pack.pending_purchase && pack.pending_purchase.payment_method !== "paystack" && (
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">
               <p>
                 Paiement du pack <strong>{PACK_NAMES[pack.pending_purchase.pack]}</strong> (
@@ -123,8 +193,11 @@ export default function PackCard({ eventId, eventName, isAdmin, refreshKey, onLo
 
           {rejected && !pack.pending_purchase && (
             <div className="mb-3 rounded-xl bg-red-50 p-3 text-xs text-red-800">
-              Le paiement du pack {PACK_NAMES[rejected.pack]} (réf. {rejected.transaction_ref}) n&apos;a pas été
-              trouvé{rejected.admin_note ? ` : ${rejected.admin_note}` : ""}. Vérifiez la référence puis réessayez.
+              {rejected.payment_method === "paystack"
+                ? `Le paiement en ligne du pack ${PACK_NAMES[rejected.pack]} a été refusé. Vous pouvez réessayer.`
+                : `Le paiement du pack ${PACK_NAMES[rejected.pack]} (réf. ${rejected.transaction_ref}) n'a pas été trouvé${
+                    rejected.admin_note ? ` : ${rejected.admin_note}` : ""
+                  }. Vérifiez la référence puis réessayez.`}
             </div>
           )}
 

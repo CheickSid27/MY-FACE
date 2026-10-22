@@ -389,8 +389,8 @@ export const api = {
   },
 
   /** Ce que le serveur peut vraiment faire (SMS reels ou non). */
-  getFeatures(): Promise<{ sms: boolean }> {
-    return request<{ sms: boolean }>("/meta/features");
+  getFeatures(): Promise<{ sms: boolean; paystack?: boolean }> {
+    return request<{ sms: boolean; paystack?: boolean }>("/meta/features");
   },
 
   getPhoneCountries(): Promise<PhoneCountry[]> {
@@ -531,6 +531,18 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     });
+  },
+
+  /** Paiement en ligne Paystack : renvoie la page de paiement a ouvrir. */
+  startPaystackPurchase(eventId: string, pack: PackKey): Promise<{ purchase_id: string; authorization_url: string }> {
+    return request<{ purchase_id: string; authorization_url: string }>(`/events/${eventId}/pack-purchases/paystack`, {
+      method: "POST",
+      body: JSON.stringify({ pack }),
+    });
+  },
+
+  verifyPaystackPurchase(purchaseId: string): Promise<PackPurchase> {
+    return request<PackPurchase>(`/pack-purchases/${purchaseId}/paystack/verify`, { method: "POST" });
   },
 
   cancelPackPurchase(purchaseId: string): Promise<PackPurchase> {

@@ -46,6 +46,7 @@ export function formatFcfa(amount: number | null | undefined): string {
 
 export function paymentMethodLabel(key: string): string {
   if (key === "admin") return "Attribué par MYFACE";
+  if (key === "paystack") return "Paiement en ligne";
   return PACK_PAYMENT_METHODS.find((m) => m.key === key)?.label ?? key;
 }
 

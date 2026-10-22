@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import PhoneInput from "@/components/payments/PhoneInput";
 import { api, ApiError } from "@/lib/api-client";
+import { usePaystackEnabled } from "@/lib/features";
 import {
   MYFACE_WHATSAPP_FALLBACK,
   PACK_PAYMENT_METHODS,
@@ -20,9 +21,10 @@ interface PackPurchaseDialogProps {
   onDone: () => void;
 }
 
-/** Achat d'un pack : le photographe envoie le montant au numero Mobile Money
- * de MYFACE, puis declare la transaction. Le pack est active des que MYFACE
- * a verifie la reception (validation dans /admin/packs). */
+/** Achat d'un pack. Paystack configure : paiement en ligne (Wave, Orange
+ * Money, MTN, carte), le pack s'active seul au retour. Sinon, ou en secours :
+ * le photographe envoie le montant au numero Mobile Money de MYFACE puis
+ * declare la transaction, validee a la main dans /admin/packs. */
 export default function PackPurchaseDialog({ eventId, eventName, option, onClose, onDone }: PackPurchaseDialogProps) {
   const [info, setInfo] = useState<PackPaymentInfo | null>(null);
   const [method, setMethod] = useState<PackPaymentMethod | "">("");
@@ -31,6 +33,8 @@ export default function PackPurchaseDialog({ eventId, eventName, option, onClose
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const paystackEnabled = usePaystackEnabled();
+  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
     api
@@ -64,6 +68,18 @@ export default function PackPurchaseDialog({ eventId, eventName, option, onClose
       setTimeout(() => setCopied(null), 1500);
     } catch {
       // presse-papiers indisponible : le numero reste lisible a l'ecran
+    }
+  }
+
+  async function payOnline() {
+    setRedirecting(true);
+    setError(null);
+    try {
+      const { authorization_url } = await api.startPaystackPurchase(eventId, option.key);
+      window.location.href = authorization_url;
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Paiement en ligne indisponible, réessayez.");
+      setRedirecting(false);
     }
   }
 
@@ -122,6 +138,25 @@ export default function PackPurchaseDialog({ eventId, eventName, option, onClose
           </button>
         </div>
 
+        {paystackEnabled && (
+          <div className="mb-4 rounded-xl bg-white/70 p-4">
+            <button
+              type="button"
+              onClick={payOnline}
+              disabled={redirecting}
+              className="btn-accent w-full !py-3 text-sm disabled:opacity-50"
+            >
+              {redirecting ? "Ouverture du paiement..." : `Payer ${formatFcfa(option.amount_due)} maintenant`}
+            </button>
+            <p className="mt-2 text-center text-xs text-ink-500">
+              Wave, Orange Money, MTN ou carte bancaire, sur la page sécurisée de Paystack. Le pack s&apos;active dès
+              le paiement reçu.
+            </p>
+            {error && !sending && <p className="mt-2 text-sm text-red-600">{error}</p>}
+          </div>
+        )}
+
+        <ManualWrapper online={paystackEnabled}>
         <div className="mb-4 rounded-xl bg-white/70 p-4">
           <p className="mb-2 text-sm font-semibold text-ink-900">1. Envoyez {formatFcfa(option.amount_due)} à MYFACE</p>
           {info === null && <p className="text-xs text-ink-500">Chargement des numéros...</p>}
@@ -206,8 +241,23 @@ export default function PackPurchaseDialog({ eventId, eventName, option, onClose
             Le pack est activé dès que MYFACE a vérifié la réception du paiement.
           </p>
         </form>
+        </ManualWrapper>
       </div>
     </div>,
     document.body
+  );
+}
+
+/** Avec le paiement en ligne, la declaration manuelle reste possible mais
+ * repliee, en secours. */
+function ManualWrapper({ online, children }: { online: boolean; children: React.ReactNode }) {
+  if (!online) return <>{children}</>;
+  return (
+    <details className="rounded-xl">
+      <summary className="mb-3 cursor-pointer text-xs font-semibold text-brand">
+        Ou payer par transfert Mobile Money et déclarer le paiement
+      </summary>
+      {children}
+    </details>
   );
 }

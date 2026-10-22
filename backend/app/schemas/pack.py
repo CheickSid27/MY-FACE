@@ -44,6 +44,16 @@ class PackPurchaseCreate(BaseModel):
         return value
 
 
+class PaystackPurchaseCreate(BaseModel):
+    pack: PackKey
+
+
+class PaystackCheckout(BaseModel):
+    purchase_id: uuid.UUID
+    # Page Paystack ou le photographe choisit Wave, Orange Money, MTN ou carte
+    authorization_url: str
+
+
 class PackPurchaseRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
