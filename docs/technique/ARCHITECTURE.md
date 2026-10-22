@@ -1,12 +1,22 @@
 # Architecture
 
+Mise a jour : 22 octobre 2026.
+
 ## Vue d'ensemble
 
 MYFACE est un monorepo avec trois services applicatifs (`backend`, `frontend`, `nginx`) plus
 l'infrastructure (Postgres, stockage objet), orchestres par Docker Compose. Le backend est une API
 REST stateless (FastAPI, async de bout en bout) ; le frontend est un Next.js App Router qui
 consomme cette API. Aucune logique metier ne vit cote nginx : il route uniquement `/api/*` vers le
-backend et le reste vers le frontend.
+backend et le reste vers le frontend (avec des limites de debit par adresse IP sur les routes
+publiques sensibles).
+
+En production, tout tourne sur le PC a carte graphique (Windows 11, Docker Desktop, GTX 1650) :
+`app.myfaceci.online` arrive par un tunnel Cloudflare nomme (`tunnel-domaine`), sans port ouvert.
+Services externes : base Postgres + pgvector geree (Neon, Etats-Unis), stockage objet prive
+(Cloudflare R2), e-mails transactionnels (Resend, SMTP, serveurs en Irlande), paiement en ligne
+(Paystack, mode test au 22/10), notifications Web Push (VAPID, sans service tiers). Le site vitrine
+(`myfaceci.online`, dossier `site-vitrine/`) est servi par un Worker Cloudflare deploye depuis `main`.
 
 ## Modele de donnees
 
@@ -14,14 +24,17 @@ Tables principales (voir `backend/app/models/`) :
 
 | Table | Role |
 |---|---|
-| `users` | Comptes organisateur/photographe (JWT), role `admin` ou `photographe` |
-| `events` | Un evenement = un lien/QR unique (`kiosk_token`), une grille tarifaire (JSON) |
-| `photos` | Une photo uploadee : cles de stockage (original/thumbnail/preview/preview filigranee), statut d'indexation |
+| `users` | Comptes equipe MYFACE (`admin`) et photographes (`photographe`) : adresse confirmee (`email_verified_at`), profil (studio, telephone, ville), photo de profil (`avatar_key`), compte de versement Paystack (`paystack_subaccount_code`, `payout_*`) |
+| `events` | Un evenement : code court (`short_code`, 8 caracteres, adresse `/e/CODE`), jeton borne (`kiosk_token`), grille tarifaire (JSON), pack (`pack`, `photo_limit_override`), filigrane et mot de passe de galerie, conservation (`retention_exempt`, `photos_purged_at`) |
+| `photos` | Une photo uploadee : cles de stockage (original/thumbnail/preview/preview filigranee, `raw_key` pour un RAW), statut d'indexation |
 | `face_embeddings` | Un embedding 512-d (pgvector) par visage detecte, + bounding box, nettete, cle de vignette (`crop_key`) |
 | `cart_sessions` / `cart_items` | Panier invite, identifie par un `session_id` (pas de compte requis), TTL, tirage papier par photo |
 | `orders` / `order_items` | Commande (telephone E.164) + snapshot des photos achetees, prix unitaire et tirage au moment de l'achat |
 | `event_payment_methods` | QR marchand + numero, par evenement et par moyen de paiement |
 | `push_subscriptions` | Abonnements Web Push d'un organisateur (PWA), un par navigateur/appareil installe |
+| `pack_purchases` | Achats de packs (Evenement, Pro) : montant, moyen (Mobile Money declare ou Paystack), reference, statut (`pending`, `paid`, `rejected`, `cancelled`) |
+| `app_settings` | Reglages de MYFACE modifiables depuis l'admin (numeros de paiement des packs...) |
+| `activity_logs` | Journal des actions (volet Statistiques) : action, qui (`actor_id`, `actor_label`), evenement et proprietaire, details JSON |
 
 Suppressions en cascade au niveau base (`ON DELETE CASCADE`, relations ORM en `passive_deletes`
 pour ne pas tout charger en memoire) : supprimer un evenement supprime ses photos, qui suppriment
@@ -44,11 +57,21 @@ etape :
 ### 1. Ingestion (`services/ingestion.py`)
 
 Point d'entree unique partage entre l'upload manuel (`routers/photos.py`) et le dossier surveille
-(`services/folder_watcher.py`) : validation (type MIME, taille max 25 Mo), generation de la
+(`services/folder_watcher.py`) : validation (type MIME ou extension RAW, taille max 70 Mo), generation de la
 miniature de grille (400px, qualite 80), de la preview plein ecran (1600px, qualite 88) et de sa
 copie filigranee (`services/watermark.py`) via Pillow, calculs executes dans un thread, puis
 upload des quatre variantes en parallele, creation de la ligne `Photo`. **L'original n'est jamais
 recompresse ni redimensionne**, garantie de non-degradation demandee explicitement.
+
+**RAW** (`services/raw_images.py`) : CR2, CR3, NEF, ARW, DNG, RAF, ORF, RW2... Le fichier RAW est
+garde tel quel (`raw_key`, dossier `raw/`) ; l'original servi aux clients est un JPEG pleine
+resolution : le JPEG embarque par l'appareil s'il fait au moins 90 % de la taille du capteur, sinon
+un developpement LibRaw (rawpy) en qualite 95. Les envois sont decoupes cote navigateur en lots de
+10 fichiers et 300 Mo au plus (nginx refuse au-dela de 500 Mo par requete).
+
+**Packs** : avant l'ingestion, le nombre de photos de l'evenement est compare a la limite de son
+pack (`services/packs.effective_photo_limit`) ; au-dela, chaque fichier est refuse avec un message
+« Limite du pack … » (voir [Service photographe](#service-photographe-packs)).
 
 **Orientation EXIF** : un telephone enregistre souvent les pixels "couches" + un tag Orientation.
 Les derives sont generes apres `ImageOps.exif_transpose` (`thumbnails.open_oriented`), comme le
@@ -134,15 +157,26 @@ mise a jour optimiste (l'UI reagit instantanement) puis serialise les appels res
 de promesses, pour garantir que la premiere requete cree bien la session panier avant que les
 suivantes ne la reutilisent, meme en cas de clics rapides.
 
-Paiement : aucun operateur Mobile Money n'a d'API reellement branchee (voir
-`services/payments.py`, chaque adaptateur reel leve `NotImplementedError` tant qu'aucune cle n'est
-fournie). Le flux **reellement utilise** est un QR code marchand statique par evenement
-(`event_payment_methods`) : le client scanne, paie hors-app, declare "j'ai paye"
-(`POST /payments/{id}/mark-paid`, statut `AWAITING_CONFIRMATION`), une notification push part vers
-l'organisateur, qui verifie et confirme manuellement (`POST /admin/orders/{id}/confirm`) ; le SMS
-de confirmation part alors vers le client (`services/orders.set_order_status`, point unique de
-changement de statut). A la borne, le paiement en especes cree directement une commande a
-confirmer.
+Paiement : trois chemins, choisis par `payment_method` dans `/payments/init` :
+- **Paystack** (`services/paystack.py`) : paiement en ligne (Wave, Orange Money, MTN, carte) pour
+  les evenements de MYFACE et ceux des photographes qui ont active leurs versements. La commande
+  est creee, Paystack renvoie une page de paiement (`authorization_url`) ; au telephone l'invite y
+  est redirige, a la borne un QR code de cette page s'affiche (`/payments/paystack-qr.png`). La
+  commande n'est validee qu'apres verification de la transaction aupres de Paystack (au retour, au
+  polling du statut, ou par le webhook signe HMAC-SHA512). Partage : sous-compte Paystack du
+  photographe, `transaction_charge: 0`, `bearer: subaccount` : 100 % de la vente au photographe,
+  frais Paystack a sa charge, 0 % pour MYFACE (essai en test : 1 000 F → 977 F photographe, 23 F
+  Paystack). Montants envoyes en centimes (x100).
+- **QR marchand** (paiement direct au photographe) : QR code statique par evenement
+  (`event_payment_methods`) ; le client paie hors de l'application, declare « J'ai paye »
+  (`POST /payments/{id}/mark-paid`, statut `AWAITING_CONFIRMATION`), une notification part vers
+  l'organisateur, qui verifie et confirme (`POST /admin/orders/{id}/confirm`).
+- **Especes**, a la borne seulement : la commande est a confirmer par l'equipe sur place.
+
+Le changement de statut passe toujours par `services/orders.set_order_status` (point unique, qui
+declenche les notifications). Les adaptateurs operateurs directs de `services/payments.py` restent
+non branches (`NotImplementedError`) ; GeniusPay est abandonne au profit de Paystack (code garde,
+monte seulement s'il est configure).
 
 `/payments/init` exige un moyen de paiement reel : l'ancien repli (sans moyen choisi → adaptateur
 "manual") creait des commandes `processing` que ni le client ni l'organisateur ne pouvaient
@@ -222,6 +256,18 @@ des le premier client. Le jeton est retire de la barre d'adresse une fois memori
 
 ## Dossier surveille (ingestion automatique)
 
+Deux dossiers surveilles coexistent :
+
+1. **Chez le photographe** (`frontend/components/upload/LocalFolderSync.tsx`) : il choisit un
+   dossier de son ordinateur (API File System Access, Chrome et Edge sur ordinateur) ; la poignee
+   est gardee dans IndexedDB par evenement, avec la liste des fichiers deja envoyes. Toutes les 5 s
+   (tant que la page de l'evenement est ouverte), les nouvelles photos du dossier et de ses
+   sous-dossiers (3 niveaux, cas des cartes SD) sont envoyees par `POST /photos/upload`, une fois
+   leur copie terminee (taille stable ou fichier de plus de 10 s). Les regles du pack s'appliquent :
+   rien n'est envoye au-dela de la limite, et la proposition de pack superieur s'ouvre. Apres un
+   rechargement, le navigateur redemande l'autorisation (« Reprendre la surveillance »).
+2. **Sur le PC de la borne** (equipe MYFACE seulement), decrit ci-dessous.
+
 `services/folder_watcher.py` : boucle de polling (pas d'evenements filesystem type inotify/watchdog
 un bind-mount Docker Desktop sur Windows ne propage pas toujours fiablement ces evenements). Scan
 periodique de `WATCHED_FOLDER_PATH/<event_id>/`, un sous-dossier par evenement (cree
@@ -236,14 +282,68 @@ en base, ce qui empechait Neon de se mettre en veille et consommait son quota gr
 en erreur n'est retente que s'il est remplace ; un fichier deja present en base (redemarrage) est
 reconnu par son nom sans etre relu.
 
-## Notifications push (PWA admin)
+## Notifications push (MYFACE Pro)
 
-Web Push standard (VAPID), pas de dependance a un service tiers payant type Firebase. Le frontend
-admin est une PWA installable (`manifest.json` + `sw.js`) ; l'abonnement (`PushSubscription`) est
-stocke cote backend (`push_subscriptions`, une ligne par navigateur/appareil). Declenchement unique
-: quand un client passe une commande en `AWAITING_CONFIRMATION` (a valider), toutes les
-souscriptions de l'organisateur proprietaire de l'evenement recoivent une notification. Les
-abonnements expires (reponse 404/410 du service push) sont nettoyes automatiquement.
+Web Push standard (VAPID), pas de dependance a un service tiers payant type Firebase. L'espace
+photographe et equipe (« MYFACE Pro ») est une PWA installable (`manifest.json` + `sw.js`) ;
+l'abonnement (`PushSubscription`) est stocke cote backend (`push_subscriptions`, une ligne par
+navigateur/appareil). Cle privee VAPID en base64url brute (43 caracteres) : un PEM sur plusieurs
+lignes n'est pas lu par la bibliotheque d'envoi (aucune notification n'etait partie avant le 22/10).
+Declenchements : commande a confirmer (`AWAITING_CONFIRMATION`), vente payee en ligne (Paystack),
+et pour l'equipe : pack paye en ligne ou a verifier. Une notification par paiement (`tag`),
+vibration, en-tete `Urgency: high`. Les abonnements expires (404/410) sont nettoyes ; le
+navigateur se reabonne seul quand la cle change.
+
+## Comptes, e-mails et confirmation d'adresse
+
+Inscription libre des photographes (`POST /auth/register`). E-mails par SMTP (Resend en
+production, version texte + HTML aux couleurs MYFACE, `services/email.py`) : confirmation de
+l'adresse et mot de passe oublie. Tant que l'adresse n'est pas confirmee, le photographe est
+bloque sur la page d'attente `/admin/confirmation` (le serveur refuse ses actions : 403) ; le lien
+est valable 5 minutes (`UNVERIFIED_ACCOUNT_TTL_MINUTES`). Sans confirmation dans ce delai, une
+tache de fond (`services/unverified_accounts.py`, toutes les 60 s) annule l'inscription : compte,
+evenements, photos et photo de profil supprimes. Seules les inscriptions posterieures au
+22/10/2026 17 h UTC (`UNVERIFIED_ACCOUNT_PURGE_SINCE`) sont concernees : les comptes plus anciens
+non confirmes restent, bloques. Rien de tout cela ne s'applique tant que l'envoi d'e-mails n'est
+pas configure.
+
+## Service photographe (packs)
+
+Un photographe paie par evenement (`services/packs.py`) : Decouverte (gratuit, 10 photos, un seul
+evenement Decouverte par compte), Evenement (10 000 F, 500 photos, mot de passe de galerie,
+filigrane du studio), Pro (25 000 F, 2 000 photos, assistance le jour J), Sur mesure. Passer au pack
+superieur ne coute que la difference. Paiement d'un pack : en ligne par Paystack (active des la
+verification de la transaction), ou Mobile Money vers le numero de MYFACE puis declaration,
+validee a la main par l'equipe (`/admin/packs`). Les evenements de l'equipe MYFACE ne sont pas
+limites. Pack plein : l'interface ouvre une boite « Votre pack … est plein » avec les packs
+superieurs.
+
+## Statistiques (journal des actions)
+
+`services/activity.log_activity` ecrit une ligne dans `activity_logs` pour chaque action
+importante (inscription, confirmation, annulation, connexion, mot de passe, photo de profil,
+versements, evenement cree/modifie/supprime, photos ajoutees/supprimees, selfie a la borne ou au
+telephone, telechargement, pack declare/paye/valide/refuse, compte cree/suspendu/supprime). Une
+erreur d'ecriture du journal n'empeche jamais l'action. L'ecran Statistiques (`/admin/statistiques`)
+filtre par periode, type et texte, et exporte en CSV. L'equipe voit tout ; un photographe ses
+actions et celles qui touchent ses evenements. Aucune donnee d'invite (le selfie est note
+« Invite » ou « Borne », sans numero).
+
+## Code court des evenements
+
+`events.short_code` (`services/short_codes.py`) : 8 caracteres aleatoires sans 0/O ni 1/I/L
+(31^8, environ 852 milliards de codes), affiches en deux groupes (`6NWY-V37G`). Le lien et le QR
+invites sont `APP_BASE_URL/e/CODE` : la page `/e/[code]` resout le code (`GET /events/code/{code}`)
+et ouvre directement la galerie. Les anciens liens `/event/<uuid>` restent valides. Anti-essais au
+hasard : 30 codes faux par 10 min et par adresse (serveur) et 60 requetes par minute (nginx).
+
+## Conservation des donnees (`services/retention.py`)
+
+Conforme a la declaration ARTCI : selfie jamais enregistre ; photos et empreintes faciales
+supprimees 90 jours apres la date de l'evenement (l'evenement reste, avec la date de suppression) ;
+numero de telephone des commandes efface apres 1 an. Passage quotidien, actif seulement avec
+`RETENTION_ENABLED=true` (sinon simulation journalisee) ; un admin peut exempter un evenement
+(demonstration).
 
 ## Preservation de la qualite photo
 
@@ -279,5 +379,6 @@ Au lancement (`app/main.py`, en arriere-plan, sans retarder l'API) : migrations 
 admin (commande du conteneur), prechargement du modele InsightFace (GPU), demarrage du dossier
 surveille, puis rattrapages : expiration des commandes jamais payees et purge des vieux paniers,
 reprise des indexations interrompues, filigrane des photos qui n'en ont pas, pre-calcul des groupes
-de visages des evenements recents. Les logs applicatifs (`myface.*`) apparaissent dans
+de visages des evenements recents. Taches de fond permanentes : conservation des donnees (une fois
+par jour) et annulation des inscriptions non confirmees (toutes les 60 s). Les logs applicatifs (`myface.*`) apparaissent dans
 `docker logs`.
