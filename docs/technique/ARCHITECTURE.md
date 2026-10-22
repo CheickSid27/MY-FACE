@@ -334,7 +334,7 @@ actions et celles qui touchent ses evenements. Aucune donnee d'invite (le selfie
 `events.short_code` (`services/short_codes.py`) : 8 caracteres aleatoires sans 0/O ni 1/I/L
 (31^8, environ 852 milliards de codes), affiches en deux groupes (`6NWY-V37G`). Le lien et le QR
 invites sont `APP_BASE_URL/e/CODE` : la page `/e/[code]` resout le code (`GET /events/code/{code}`)
-et ouvre directement la galerie. Les anciens liens `/event/<uuid>` restent valides. Anti-essais au
+et ouvre la page d'accueil de l'evenement (« Parcourir la galerie », « Scanner mon visage »). Les anciens liens `/event/<uuid>` restent valides. Anti-essais au
 hasard : 30 codes faux par 10 min et par adresse (serveur) et 60 requetes par minute (nginx).
 
 ## Conservation des donnees (`services/retention.py`)
