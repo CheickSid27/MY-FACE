@@ -31,6 +31,7 @@ ACTIONS: dict[str, str] = {
     "evenement_supprime": "Événement supprimé",
     "photos_ajoutees": "Photos ajoutées",
     "photo_supprimee": "Photo supprimée",
+    "photos_supprimees": "Photos supprimées (plusieurs)",
     "selfie": "Selfie d'un invité",
     "telechargement": "Photos téléchargées par un invité",
     "pack_declare": "Paiement de pack déclaré",

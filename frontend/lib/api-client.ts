@@ -357,6 +357,14 @@ export const api = {
     });
   },
 
+  /** Supprime plusieurs photos d'un evenement ; les photos deja vendues sont gardees. */
+  bulkDeletePhotos(eventId: string, photoIds: string[]): Promise<{ deleted: number; kept_sold: string[] }> {
+    return request<{ deleted: number; kept_sold: string[] }>("/photos/bulk-delete", {
+      method: "POST",
+      body: JSON.stringify({ event_id: eventId, photo_ids: photoIds }),
+    });
+  },
+
   deletePhoto(photoId: string): Promise<void> {
     return request<void>(`/photos/${photoId}`, { method: "DELETE" });
   },

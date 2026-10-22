@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import uuid
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, status
@@ -11,7 +13,13 @@ from app.models.face_embedding import FaceEmbedding
 from app.models.order import Order, OrderItem, OrderStatus
 from app.models.photo import Photo
 from app.models.user import User
-from app.schemas.photo import PhotoListResponse, PhotoUploadError, PhotoUploadResult
+from app.schemas.photo import (
+    PhotoBulkDelete,
+    PhotoBulkDeleteResult,
+    PhotoListResponse,
+    PhotoUploadError,
+    PhotoUploadResult,
+)
 from app.services.access import get_manageable_event, is_kiosk_request
 from app.services.activity import log_activity
 from app.services.face_clusters import face_cluster_cache
@@ -28,6 +36,8 @@ from app.services.packs import (
 )
 from app.services.photo_urls import to_photo_reads
 from app.services.storage import StorageService, get_storage_service
+
+logger = logging.getLogger("myface.photos")
 
 router = APIRouter(tags=["photos"])
 
@@ -104,6 +114,88 @@ async def upload_photos(
             await db.refresh(photo)
 
     return PhotoUploadResult(uploaded=await to_photo_reads(uploaded, storage, clean_preview=True), errors=errors)
+
+
+async def _file_keys(db: AsyncSession, photos: list[Photo]) -> list[str]:
+    """Tous les fichiers d'un lot de photos : original, RAW, miniature, apercus
+    et vignettes des visages (a lire AVANT la suppression en cascade des
+    embeddings, qui ferait perdre leurs cles)."""
+    if not photos:
+        return []
+    event_by_photo = {photo.id: photo.event_id for photo in photos}
+    embeddings = await db.execute(
+        select(FaceEmbedding.id, FaceEmbedding.photo_id, FaceEmbedding.crop_key).where(
+            FaceEmbedding.photo_id.in_(list(event_by_photo))
+        )
+    )
+    keys: list[str] = [
+        crop_key or face_crop_key(event_by_photo[photo_id], embedding_id)
+        for embedding_id, photo_id, crop_key in embeddings.all()
+    ]
+    for photo in photos:
+        keys += [
+            k
+            for k in (photo.raw_key, photo.original_key, photo.thumbnail_key, photo.preview_key, photo.preview_watermarked_key)
+            if k
+        ]
+    return keys
+
+
+async def _delete_files(storage: StorageService, keys: list[str]) -> None:
+    """Suppression des fichiers, 16 a la fois (un lot de centaines de photos
+    ferait sinon des milliers d'appels R2 l'un apres l'autre)."""
+    limit = asyncio.Semaphore(16)
+
+    async def one(key: str) -> None:
+        async with limit:
+            try:
+                await storage.delete(key)
+            except Exception:  # noqa: BLE001
+                logger.exception("Fichier non supprime : %s", key)
+
+    await asyncio.gather(*(one(key) for key in keys))
+
+
+@router.post("/photos/bulk-delete", response_model=PhotoBulkDeleteResult)
+async def bulk_delete_photos(
+    payload: PhotoBulkDelete,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    storage: StorageService = Depends(get_storage_service),
+) -> PhotoBulkDeleteResult:
+    """Supprime plusieurs photos d'un evenement d'un coup : selection du
+    photographe, ou toutes les photos d'une personne qui en demande le retrait.
+    Les photos deja vendues sont gardees (et listees), comme pour une seule."""
+    event = await get_manageable_event(payload.event_id, current_user, db)
+    ids = list(dict.fromkeys(payload.photo_ids))
+    photos = (
+        await db.execute(select(Photo).where(Photo.id.in_(ids), Photo.event_id == event.id))
+    ).scalars().all()
+    sold_ids = set(
+        (
+            await db.execute(
+                select(OrderItem.photo_id)
+                .join(Order, Order.id == OrderItem.order_id)
+                .where(OrderItem.photo_id.in_([p.id for p in photos]), Order.status == OrderStatus.SUCCESS)
+            )
+        ).scalars().all()
+    )
+    kept_sold = sorted(p.original_filename for p in photos if p.id in sold_ids)
+    deletable = [p for p in photos if p.id not in sold_ids]
+    keys = await _file_keys(db, deletable)
+    for photo in deletable:
+        await db.delete(photo)
+    await db.commit()
+    if deletable:
+        await log_activity(
+            db, "photos_supprimees", actor=current_user, event=event,
+            details={"nombre": len(deletable), **({"gardees_vendues": len(kept_sold)} if kept_sold else {})},
+        )
+        face_cluster_cache.invalidate(event.id, drop=True)
+        # Base a jour tout de suite ; les fichiers partent apres la reponse.
+        background_tasks.add_task(_delete_files, storage, keys)
+    return PhotoBulkDeleteResult(deleted=len(deletable), kept_sold=kept_sold)
 
 
 @router.delete("/photos/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)

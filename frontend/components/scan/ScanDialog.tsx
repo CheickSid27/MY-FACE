@@ -434,39 +434,45 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
                 </button>
               </div>
             ) : (
-              <div className="grid flex-1 grid-cols-3 gap-2 overflow-y-auto p-4 sm:grid-cols-4">
-                {matches.map(({ photo }, i) => {
-                  const isSelected = selectedIds.has(photo.id);
-                  return (
-                    <div key={photo.id} className="group relative aspect-square overflow-hidden rounded-xl bg-surface-alt">
-                      <button
-                        type="button"
-                        onClick={() => setLightboxIndex(i)}
-                        className="block h-full w-full"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={photo.thumbnail_url}
-                          alt={photo.original_filename}
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!isSelected) flyToCart(e.currentTarget.closest(".group"));
-                          handlePhotoClick(photo);
-                        }}
-                        className={`glass-pill absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center text-xs font-bold shadow transition-all duration-200 active:scale-90 ${
-                          isSelected ? "!bg-brand-accent !text-brand" : "text-white"
-                        }`}
-                      >
-                        {isSelected ? <CheckIcon /> : null}
-                      </button>
-                    </div>
-                  );
-                })}
+              // Zone qui defile SEPAREE de la grille : une grille qui defile
+              // elle-meme dans une hauteur fixe ecrase ses lignes quand il y a
+              // beaucoup de resultats (photos superposees, constate le 22/10
+              // avec 64 photos). Garde-fou : scripts/check-layout.mjs.
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {matches.map(({ photo }, i) => {
+                    const isSelected = selectedIds.has(photo.id);
+                    return (
+                      <div key={photo.id} className="group relative aspect-square overflow-hidden rounded-xl bg-surface-alt">
+                        <button
+                          type="button"
+                          onClick={() => setLightboxIndex(i)}
+                          className="block h-full w-full"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={photo.thumbnail_url}
+                            alt={photo.original_filename}
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!isSelected) flyToCart(e.currentTarget.closest(".group"));
+                            handlePhotoClick(photo);
+                          }}
+                          className={`glass-pill absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center text-xs font-bold shadow transition-all duration-200 active:scale-90 ${
+                            isSelected ? "!bg-brand-accent !text-brand" : "text-white"
+                          }`}
+                        >
+                          {isSelected ? <CheckIcon /> : null}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 

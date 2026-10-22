@@ -20,6 +20,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { AlertIcon, CheckIcon, CrossIcon, PrinterIcon } from "@/components/icons";
 import { api, ApiError } from "@/lib/api-client";
 import { formatEventCode } from "@/lib/event-code";
+import { bulkDeleteMessage } from "@/lib/bulk-delete";
 import type { Event, EventIndexingSummary, EventPack, Photo, WatchedFolderRead } from "@/types/api";
 
 const WATCHED_FOLDER_POLL_MS = 5000;
@@ -849,6 +850,69 @@ function AdminEventDetailContent() {
 
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
 
+  // Mode « Sélectionner » : suppression de plusieurs photos d'un coup, y
+  // compris toutes celles d'une personne retrouvee a partir de sa photo.
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkNotice, setBulkNotice] = useState<string | null>(null);
+  const personInputRef = useRef<HTMLInputElement | null>(null);
+
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function stopSelecting() {
+    setSelecting(false);
+    setSelected(new Set());
+  }
+
+  async function findPersonPhotos(file: File) {
+    setBulkBusy(true);
+    setBulkNotice(null);
+    try {
+      const { matches, faces_detected_in_selfie } = await api.scanFace(eventId, file, true);
+      if (faces_detected_in_selfie === 0) {
+        setBulkNotice("Aucun visage trouvé sur cette photo. Essayez une photo nette, de face.");
+      } else if (matches.length === 0) {
+        setBulkNotice("Aucune photo de cette personne dans l'événement.");
+      } else {
+        setSelected((prev) => new Set([...Array.from(prev), ...matches.map((m) => m.photo.id)]));
+        setBulkNotice(
+          `${matches.length} photo${matches.length > 1 ? "s" : ""} de cette personne sélectionnée${matches.length > 1 ? "s" : ""}, sur toutes les pages. Vérifiez puis supprimez.`
+        );
+      }
+    } catch (err) {
+      setBulkNotice(errorText(err, "Recherche impossible, réessayez."));
+    } finally {
+      setBulkBusy(false);
+      if (personInputRef.current) personInputRef.current.value = "";
+    }
+  }
+
+  async function deleteSelected() {
+    const n = selected.size;
+    if (n === 0) return;
+    if (!confirm(`Supprimer définitivement ${n} photo${n > 1 ? "s" : ""} ? Les invités ne les verront plus.`)) return;
+    setBulkBusy(true);
+    try {
+      const result = await api.bulkDeletePhotos(eventId, Array.from(selected));
+      setBulkNotice(bulkDeleteMessage(result));
+      stopSelecting();
+      await loadData();
+      refreshWorkspace();
+    } catch (err) {
+      setBulkNotice(errorText(err, "Suppression impossible, réessayez."));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   async function handleDeletePhoto(photo: Photo) {
     if (!confirm(`Supprimer définitivement "${photo.original_filename}" ?`)) return;
     setDeletingPhotoId(photo.id);
@@ -987,19 +1051,83 @@ function AdminEventDetailContent() {
               <h2 className="font-pro text-[15px] font-semibold text-ink-900">
                 {total.toLocaleString("fr-FR")} photo{total > 1 ? "s" : ""}
               </h2>
-              <span className="text-[13px] text-ink-500">Les plus récentes</span>
+              {photos.length > 0 &&
+                (selecting ? (
+                  <button type="button" onClick={stopSelecting} className="text-[13px] font-semibold text-ink-500">
+                    Annuler
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelecting(true);
+                      setBulkNotice(null);
+                    }}
+                    className="text-[13px] font-semibold text-[#B34A08]"
+                  >
+                    Sélectionner
+                  </button>
+                ))}
             </div>
+            {bulkNotice && <p className="mb-3 rounded-2xl bg-[#FDF6EE] p-3 text-sm text-ink-700">{bulkNotice}</p>}
+            {selecting && (
+              <div className="sticky top-16 z-10 mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-[#E6DED0] bg-white p-2.5 shadow-[0_4px_14px_rgba(14,36,41,0.08)]">
+                <span className="px-1 text-sm font-semibold text-ink-900">
+                  {selected.size} sélectionnée{selected.size > 1 ? "s" : ""}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelected((prev) => new Set([...Array.from(prev), ...photos.map((p) => p.id)]))}
+                  className="min-h-[36px] rounded-xl border border-[#E6DED0] px-3 text-[13px] font-semibold"
+                >
+                  Toute la page
+                </button>
+                <button
+                  type="button"
+                  disabled={bulkBusy}
+                  onClick={() => personInputRef.current?.click()}
+                  className="min-h-[36px] rounded-xl border border-[#E6DED0] px-3 text-[13px] font-semibold disabled:opacity-60"
+                >
+                  Retrouver une personne (photo)
+                </button>
+                <input
+                  ref={personInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) findPersonPhotos(file);
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={bulkBusy || selected.size === 0}
+                  onClick={deleteSelected}
+                  className="ml-auto min-h-[36px] rounded-xl bg-red-600 px-3 text-[13px] font-bold text-white disabled:opacity-50"
+                >
+                  {bulkBusy ? "Patientez..." : `Supprimer (${selected.size})`}
+                </button>
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 xl:grid-cols-5">
               {photos.map((photo) => {
                 const badge = STATUS_BADGES[photo.indexing_status];
+                const isSelected = selected.has(photo.id);
                 return (
-                  <div key={photo.id} className="group relative overflow-hidden rounded-xl">
+                  <div
+                    key={photo.id}
+                    className={`group relative overflow-hidden rounded-xl ${selecting ? "cursor-pointer" : ""} ${
+                      isSelected ? "ring-4 ring-red-500 ring-inset" : ""
+                    }`}
+                    onClick={selecting ? () => toggleSelected(photo.id) : undefined}
+                  >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={photo.thumbnail_url}
                       alt={photo.original_filename}
                       loading="lazy"
-                      className="aspect-square w-full object-cover"
+                      className={`aspect-square w-full object-cover ${isSelected ? "opacity-70" : ""}`}
                     />
                     {badge && (
                       <span
@@ -1013,15 +1141,26 @@ function AdminEventDetailContent() {
                         <CheckIcon />
                       </span>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => handleDeletePhoto(photo)}
-                      disabled={deletingPhotoId === photo.id}
-                      aria-label={`Supprimer ${photo.original_filename}`}
-                      className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-xs text-white transition-colors duration-150 hover:bg-red-600 disabled:cursor-wait"
-                    >
-                      <CrossIcon />
-                    </button>
+                    {selecting ? (
+                      <span
+                        aria-hidden
+                        className={`absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-xs ${
+                          isSelected ? "bg-red-600 text-white" : "bg-black/30"
+                        }`}
+                      >
+                        {isSelected ? <CheckIcon /> : null}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePhoto(photo)}
+                        disabled={deletingPhotoId === photo.id}
+                        aria-label={`Supprimer ${photo.original_filename}`}
+                        className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-xs text-white transition-colors duration-150 hover:bg-red-600 disabled:cursor-wait"
+                      >
+                        <CrossIcon />
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -1049,7 +1188,7 @@ function AdminEventDetailContent() {
       {tab === "visages" && (
         <>
           {indexing && <IndexingCard summary={indexing} onReindex={handleReindex} />}
-          <EventFacesPanel eventId={eventId} />
+          <EventFacesPanel eventId={eventId} onPhotosDeleted={handleFolderUploaded} />
         </>
       )}
 

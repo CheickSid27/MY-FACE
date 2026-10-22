@@ -3,18 +3,42 @@
 import { useEffect, useState } from "react";
 import PhotoLightbox from "@/components/gallery/PhotoLightbox";
 import { UsersIcon } from "@/components/icons";
-import { api } from "@/lib/api-client";
+import { api, ApiError } from "@/lib/api-client";
+import { bulkDeleteMessage } from "@/lib/bulk-delete";
 import type { FaceCluster } from "@/types/api";
 
 /** Volet « Visages » d'un evenement : groupes de visages detectes par l'IA
  * (pre-groupage, pas des identites verifiees). */
-export default function EventFacesPanel({ eventId }: { eventId: string }) {
+export default function EventFacesPanel({ eventId, onPhotosDeleted }: { eventId: string; onPhotosDeleted?: () => void }) {
   const [clusters, setClusters] = useState<FaceCluster[]>([]);
   const [unclusteredCount, setUnclusteredCount] = useState(0);
   const [selectedCluster, setSelectedCluster] = useState<FaceCluster | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  // Une personne demande le retrait de ses photos : toutes les photos de son
+  // groupe sont supprimees d'un coup (sauf celles deja vendues).
+  async function deletePersonPhotos(cluster: FaceCluster) {
+    const n = cluster.photos.length;
+    if (!confirm(`Supprimer définitivement les ${n} photo${n > 1 ? "s" : ""} de cette personne ? Les invités ne les verront plus.`)) return;
+    setDeleting(true);
+    try {
+      const result = await api.bulkDeletePhotos(eventId, cluster.photos.map((p) => p.id));
+      setNotice(bulkDeleteMessage(result));
+      setSelectedCluster(null);
+      const fresh = await api.getClusters(eventId);
+      setClusters(fresh.clusters);
+      setUnclusteredCount(fresh.unclustered_count);
+      onPhotosDeleted?.();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "Suppression impossible, réessayez.");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   useEffect(() => {
     api
@@ -37,8 +61,10 @@ export default function EventFacesPanel({ eventId }: { eventId: string }) {
   return (
     <div>
         <p className="mb-4 text-sm text-ink-500">
-          Les visages sont regroupés automatiquement par ressemblance. Touchez un groupe pour voir ses photos.
+          Les visages sont regroupés automatiquement par ressemblance. Touchez un groupe pour voir ses photos, ou les
+          supprimer toutes si la personne le demande.
         </p>
+        {notice && <p className="mb-4 rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
 
         {loading && (
           <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
@@ -114,6 +140,14 @@ export default function EventFacesPanel({ eventId }: { eventId: string }) {
                   &times;
                 </button>
               </div>
+              <button
+                type="button"
+                onClick={() => deletePersonPhotos(selectedCluster)}
+                disabled={deleting}
+                className="mb-4 flex min-h-[44px] w-full items-center justify-center rounded-xl border border-red-200 bg-white text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+              >
+                {deleting ? "Suppression..." : `Supprimer toutes ses photos (${selectedCluster.photos.length})`}
+              </button>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                 {clusterPhotos.map((photo, i) => (
                   <button
