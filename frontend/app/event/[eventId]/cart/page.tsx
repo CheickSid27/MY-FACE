@@ -44,6 +44,8 @@ export default function CartPage() {
   // Photos offertes par l'organisateur : pas de prix, pas de paiement
   const [offert, setOffert] = useState(false);
   const [cashEnabled, setCashEnabled] = useState(false);
+  // Paiement en ligne Paystack (evenements de MYFACE) : confirme seul.
+  const [onlinePayment, setOnlinePayment] = useState(false);
 
   const loadCart = useCallback(async () => {
     const sessionId = getCartSessionId(eventId);
@@ -84,7 +86,9 @@ export default function CartPage() {
         setBundlePrice(event.pricing.print_bundle_price ?? null);
         setOffert(Boolean(event.pricing.offert));
         setCashEnabled(event.cash_enabled);
-        if (methods.length === 1) setSelectedMethod(methods[0].method);
+        setOnlinePayment(Boolean(event.online_payment));
+        if (event.online_payment) setSelectedMethod("paystack");
+        else if (methods.length === 1) setSelectedMethod(methods[0].method);
         setMethodsState("ready");
       })
       .catch(() => setMethodsState("error"));
@@ -122,7 +126,7 @@ export default function CartPage() {
   const hasBundle = bundlePrice != null && bundlePrice > 0;
   const printOffered = !offert && (hasBundle || (printUnitPrice != null && printUnitPrice > 0));
   const digitalCount = cart ? cart.pricing.photo_count - cart.pricing.print_count : 0;
-  const hasMethodChoice = paymentMethods.length > 0 || showCashOption;
+  const hasMethodChoice = paymentMethods.length > 0 || showCashOption || onlinePayment;
   const noPaymentAvailable = methodsState === "ready" && !hasMethodChoice && !offert;
 
   async function handleFree(e: FormEvent) {
@@ -163,6 +167,19 @@ export default function CartPage() {
     try {
       const result = await api.initPayment(cart.session_id, phone, selectedMethod, getKioskToken(eventId));
       setPaymentReady(true);
+      if (selectedMethod === "paystack" && result.redirect_url) {
+        // Garde le lien : la borne l'affiche en QR code, le telephone peut
+        // reprendre le paiement depuis la page d'attente.
+        try {
+          sessionStorage.setItem(`paystack:${result.order_id}`, result.redirect_url);
+        } catch {
+          // stockage indisponible : la borne retombera sur l'attente simple
+        }
+        if (!kiosk) {
+          window.location.href = result.redirect_url;
+          return;
+        }
+      }
       // Laisse la barre de progression atteindre 100% a l'ecran avant de
       // quitter la page, sinon le saut a 100% n'est jamais visible.
       await new Promise((resolve) => setTimeout(resolve, 300));
@@ -338,6 +355,22 @@ export default function CartPage() {
             <div className="mb-4">
               <label className="mb-1.5 block text-sm font-medium text-ink-700">Moyen de paiement</label>
               <div className="grid grid-cols-2 gap-2">
+                {onlinePayment && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMethod("paystack")}
+                    className={`col-span-2 flex flex-col items-start rounded-xl border-2 px-3 py-2.5 text-left text-sm font-semibold transition-all duration-150 ${
+                      selectedMethod === "paystack"
+                        ? "border-brand-accent bg-brand-accent/10 text-brand"
+                        : "border-ink-900/10 bg-white/60 text-ink-700 hover:border-ink-900/20"
+                    }`}
+                  >
+                    {kiosk ? "Payer avec mon téléphone" : "Payer en ligne"}
+                    <span className="text-xs font-normal text-ink-500">
+                      Wave, Orange Money, MTN ou carte · photos débloquées tout de suite
+                    </span>
+                  </button>
+                )}
                 {paymentMethods.map((pm) => {
                   const isSelected = selectedMethod === pm.method;
                   return (

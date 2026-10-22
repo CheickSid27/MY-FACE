@@ -181,6 +181,8 @@ class EventPublicRead(BaseModel):
     frame_caption: str | None
     cash_enabled: bool
     is_kiosk: bool = False
+    # Paiement en ligne par Paystack propose (evenements de MYFACE)
+    online_payment: bool = False
     # Service photographe : nom du studio affiche aux invites
     photographer_name: str | None = None
     # Galerie protegee par mot de passe, et acces deja accorde a ce visiteur

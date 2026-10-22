@@ -1,8 +1,10 @@
+import logging
 import secrets
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -19,15 +21,19 @@ from app.schemas.payment import (
     PaymentInitResponse,
     PaymentStatusResponse,
 )
+from app.services import paystack
 from app.services.access import is_kiosk_request
 from app.services.orders import expire_order_if_stale, set_order_status
+from app.services.packs import get_owner
 from app.services.payments import PaymentProvider, get_payment_provider
 from app.services.pricing import calculate_total, item_prices
+from app.services.qr import generate_qr_png
 from app.services.push_notifications import send_push_to_user
 from app.services.sms import get_sms_service
 from app.services.storage import StorageService, get_storage_service
 
 router = APIRouter(prefix="/payments", tags=["payments"])
+logger = logging.getLogger("myface.payments")
 
 settings = get_settings()
 
@@ -211,6 +217,9 @@ async def init_payment(
             ),
         )
 
+    if payload.payment_method == PaymentMethod.PAYSTACK:
+        return await _init_paystack_order(cart, event, payload, db)
+
     # Flux QR + confirmation manuelle organisateur (aucune API operateur
     # reelle branchee, voir services/payments.py) : le moyen choisi doit
     # avoir ete configure par l'organisateur pour cet evenement.
@@ -244,6 +253,50 @@ async def init_payment(
         ),
         qr_image_url=await storage.get_presigned_url(event_payment_method.qr_image_key, expires_in=3600),
         merchant_phone=event_payment_method.phone_number,
+    )
+
+
+async def _init_paystack_order(
+    cart: CartSession, event: Event, payload: PaymentInitRequest, db: AsyncSession
+) -> PaymentInitResponse:
+    """Paiement en ligne (evenements de MYFACE seulement) : renvoie le lien de
+    la page Paystack. Sur telephone, l'invite y est redirige ; a la borne, ce
+    lien est affiche en QR code et scanne avec le telephone. La commande
+    devient payee seule (webhook ou interrogation du statut)."""
+    owner = await get_owner(db, event)
+    if not paystack.online_payment_available(owner):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Le paiement en ligne n'est pas proposé pour cet événement",
+        )
+    order = _create_order_from_cart(cart, event, payload, OrderStatus.PENDING, f"myface-ord-{secrets.token_hex(12)}")
+    db.add(order)
+    await db.flush()
+    try:
+        url = await paystack.initialize_transaction(
+            email="contact@myfaceci.online",
+            amount=int(order.total_amount),
+            reference=order.payment_reference,
+            callback_url=f"{settings.app_base_url}/event/{event.id}/pay/{order.id}",
+            metadata={"order_id": str(order.id), "event_id": str(event.id), "phone": order.contact_phone},
+        )
+    except (paystack.PaystackError, httpx.HTTPError) as exc:
+        await db.rollback()
+        logger.warning("Paystack initialize (commande) a echoue : %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Le paiement en ligne ne répond pas, réessayez ou choisissez un autre moyen",
+        ) from exc
+    await db.commit()
+    await db.refresh(order)
+    return PaymentInitResponse(
+        order_id=order.id,
+        status=order.status,
+        payment_method=order.payment_method,
+        total_amount=order.total_amount,
+        currency=order.currency,
+        redirect_url=url,
+        instructions="Payez sur la page Paystack : Wave, Orange Money, MTN ou carte.",
     )
 
 
@@ -316,6 +369,16 @@ async def mark_paid(
     return await _build_status_response(order, db, storage)
 
 
+@router.get("/paystack-qr.png")
+async def paystack_qr(url: str = Query(max_length=200)) -> Response:
+    """QR code de la page de paiement Paystack, affiche par la borne pour que
+    l'invite paie avec son telephone. Limite aux pages de Paystack : ce
+    service ne fabrique pas de QR vers n'importe quelle adresse."""
+    if not url.startswith("https://checkout.paystack.com/"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Adresse de paiement invalide")
+    return Response(content=generate_qr_png(url), media_type="image/png")
+
+
 @router.get("/status/{order_id}", response_model=PaymentStatusResponse)
 async def get_payment_status(
     order_id: uuid.UUID,
@@ -325,6 +388,13 @@ async def get_payment_status(
     order = await db.get(Order, order_id)
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Commande introuvable")
+    if order.payment_method == PaymentMethod.PAYSTACK and order.status == OrderStatus.PENDING:
+        # Interroge par la page de retour et par la borne : on demande l'etat
+        # a Paystack, sans attendre le webhook.
+        try:
+            await paystack.settle_order(order, db)
+        except (paystack.PaystackError, httpx.HTTPError) as exc:
+            logger.warning("Paystack verify (commande %s) a echoue : %s", order.id, exc)
     await expire_order_if_stale(order, db)
     return await _build_status_response(order, db, storage)
 

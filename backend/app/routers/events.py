@@ -34,6 +34,7 @@ from app.schemas.event import (
 from app.schemas.face import ClusterListResponse
 from app.schemas.payment_method import EventPaymentMethodRead
 from app.schemas.watched_folder import WatchedFileRead, WatchedFolderRead
+from app.services import paystack
 from app.services.access import get_manageable_event, is_kiosk_request
 from app.services.face_clusters import build_cluster_response, face_cluster_cache
 from app.services.face_indexing import index_photos_faces, is_scheduled
@@ -203,6 +204,7 @@ async def get_event_public(
         frame_caption=event.frame_caption,
         cash_enabled=event.cash_enabled,
         is_kiosk=is_kiosk_request(event, kiosk_token),
+        online_payment=paystack.online_payment_available(owner),
         photographer_name=photographer_name,
         password_required=event.has_gallery_password,
         gallery_access=has_gallery_access(event, kiosk_token=kiosk_token, access_token=access, user=current_user),

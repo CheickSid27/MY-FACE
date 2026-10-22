@@ -8,6 +8,9 @@ import { api, ApiError } from "@/lib/api-client";
 import type { OrderStatus, PaymentStatusResponse } from "@/types/api";
 import { formatPhone } from "@/lib/phone";
 import { useSmsEnabled } from "@/lib/features";
+import { isKioskMode } from "@/lib/kiosk";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const POLL_INTERVAL_MS = 3000;
 // Statuts definitifs : plus rien a attendre, le polling s'arrete.
@@ -25,6 +28,18 @@ export default function PaymentStatusPage() {
   const [notFound, setNotFound] = useState(false);
   const [markingPaid, setMarkingPaid] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Paiement en ligne : lien de la page Paystack (garde par le panier).
+  const [paystackUrl, setPaystackUrl] = useState<string | null>(null);
+  const [kiosk, setKiosk] = useState(false);
+
+  useEffect(() => {
+    setKiosk(isKioskMode(eventId));
+    try {
+      setPaystackUrl(sessionStorage.getItem(`paystack:${orderId}`));
+    } catch {
+      setPaystackUrl(null);
+    }
+  }, [eventId, orderId]);
 
   const stopPolling = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -136,6 +151,61 @@ export default function PaymentStatusPage() {
           valider. Sinon, vous pouvez repasser commande depuis votre panier.
         </p>
         <button type="button" onClick={() => router.push(`/event/${eventId}/cart`)} className="btn-accent">
+          Retour au panier
+        </button>
+      </main>
+    );
+  }
+
+  // Paiement en ligne Paystack : la confirmation arrive seule (le statut
+  // interroge Paystack a chaque verification).
+  if (data.status === "pending" && data.payment_method === "paystack") {
+    const amount = `${data.total_amount.toLocaleString("fr-FR")} ${data.currency}`;
+    if (kiosk && paystackUrl) {
+      return (
+        <main className="flex min-h-screen flex-col items-center gap-5 bg-gradient-to-br from-brand to-brand-light px-6 py-10 text-center text-white animate-fade-in">
+          <h1 className="text-xl font-bold">Scannez pour payer {amount}</h1>
+          <p className="max-w-sm text-sm text-ink-300">
+            Ouvrez l&apos;appareil photo de votre téléphone et scannez ce code : vous payez avec Wave, Orange
+            Money, MTN ou une carte. La borne continue dès que le paiement est reçu.
+          </p>
+          <div className="glass-strong rounded-2xl p-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`${API_URL}/payments/paystack-qr.png?url=${encodeURIComponent(paystackUrl)}`}
+              alt="QR code de paiement en ligne"
+              className="h-64 w-64 rounded-xl bg-white"
+            />
+          </div>
+          <div className="flex items-center gap-2 text-sm text-ink-300">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-accent border-t-transparent" />
+            En attente du paiement...
+          </div>
+          {error && <p className="max-w-sm text-sm text-red-200">{error}</p>}
+          <button type="button" onClick={() => router.push(`/event/${eventId}/cart`)} className="text-sm underline">
+            Choisir un autre moyen de paiement
+          </button>
+        </main>
+      );
+    }
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-5 bg-gradient-to-br from-brand to-brand-light px-6 text-center text-white animate-fade-in">
+        <div className="glass-pill relative flex h-16 w-16 items-center justify-center">
+          <span className="absolute inset-0 rounded-full border-2 border-brand-accent animate-pulse-ring" />
+          <CardIcon className="text-2xl" />
+        </div>
+        <h1 className="text-xl font-bold">Vérification de votre paiement de {amount}...</h1>
+        <p className="max-w-sm text-sm text-ink-300">
+          Dès que le paiement est reçu, vos photos s&apos;affichent ici. Si vous n&apos;avez pas terminé le
+          paiement, reprenez-le ci-dessous.
+        </p>
+        {error && <p className="max-w-sm text-sm text-red-200">{error}</p>}
+        {paystackUrl && (
+          <a href={paystackUrl} className="btn-accent w-full max-w-xs">
+            Reprendre le paiement
+          </a>
+        )}
+        <button type="button" onClick={() => router.push(`/event/${eventId}/cart`)} className="text-sm underline">
           Retour au panier
         </button>
       </main>

@@ -174,6 +174,8 @@ export interface EventPublicRead {
   pricing: PricingConfig;
   frame_caption: string | null;
   cash_enabled: boolean;
+  /** Paiement en ligne par Paystack propose (evenements de MYFACE). */
+  online_payment?: boolean;
   is_kiosk: boolean;
   photographer_name: string | null;
   password_required: boolean;
@@ -302,7 +304,8 @@ export type PaymentMethod =
   | "manual"
   | "cash"
   | "geniuspay"
-  | "offert";
+  | "offert"
+  | "paystack";
 
 export interface PaymentInitResponse {
   order_id: string;

@@ -17,6 +17,7 @@ from app.core.database import get_db
 from app.deps import get_current_user, require_admin, require_verified_user
 from app.models.app_setting import AppSetting
 from app.models.event import Event
+from app.models.order import Order
 from app.models.pack_purchase import PackPurchase, PackPurchaseStatus
 from app.models.user import User, UserRole
 from app.schemas.pack import (
@@ -344,8 +345,9 @@ async def verify_paystack_purchase(
 
 @router.post("/payments/paystack/webhook", include_in_schema=False)
 async def paystack_webhook(request: Request, db: AsyncSession = Depends(get_db)) -> dict:
-    """Notification de Paystack, signee avec la cle secrete. On ne croit pas
-    le contenu sur parole : l'etat est redemande a Paystack avant d'activer."""
+    """Notification de Paystack, signee avec la cle secrete, pour un pack ou
+    une commande de photos. On ne croit pas le contenu sur parole : l'etat
+    est redemande a Paystack avant d'activer quoi que ce soit."""
     raw = await request.body()
     if not paystack.signature_is_valid(raw, request.headers.get("x-paystack-signature")):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Signature invalide")
@@ -360,10 +362,15 @@ async def paystack_webhook(request: Request, db: AsyncSession = Depends(get_db))
         return {"ok": True}
     result = await db.execute(select(PackPurchase).where(PackPurchase.transaction_ref == reference))
     purchase = result.scalar_one_or_none()
-    if purchase is None:
-        return {"ok": True}
     try:
-        await _settle_paystack_purchase(purchase, db)
+        if purchase is not None:
+            await _settle_paystack_purchase(purchase, db)
+        else:
+            # Commande de photos d'un invite (evenements de MYFACE)
+            order_result = await db.execute(select(Order).where(Order.payment_reference == reference))
+            order = order_result.scalar_one_or_none()
+            if order is not None:
+                await paystack.settle_order(order, db)
     except (paystack.PaystackError, httpx.HTTPError) as exc:
         # Paystack renvoie le webhook en cas d'erreur : on le laisse reessayer.
         logger.warning("Paystack verify (webhook) a echoue pour %s : %s", reference, exc)

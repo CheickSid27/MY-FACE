@@ -106,3 +106,62 @@ async def test_paystack_unavailable_without_key(make_client, monkeypatch):  # no
     resp = await photographe.post(f"/events/{event_id}/pack-purchases/paystack", json={"pack": "evenement"})
     assert resp.status_code == 503
     assert (await (await make_client()).get("/meta/features")).json()["paystack"] is False
+
+
+# --------------------------------------------------------------------------
+# Photos achetees en ligne par les invites (evenements de MYFACE)
+# --------------------------------------------------------------------------
+from app.models.user import User, UserRole  # noqa: E402
+from tests.test_payments import cart_factory  # noqa: E402, F401
+
+
+async def _event_of_cart(client, session_id: str) -> str:
+    return (await client.get(f"/cart/{session_id}")).json()["event_id"]
+
+
+async def test_guest_pays_online_on_myface_event(client, cart_factory, fake_paystack):  # noqa: F811
+    session_id = await cart_factory()
+    event_id = await _event_of_cart(client, session_id)
+    assert (await client.get(f"/events/{event_id}/public")).json()["online_payment"] is True
+
+    resp = await client.post(
+        "/payments/init",
+        json={"session_id": session_id, "contact_phone": "+2250700000000", "payment_method": "paystack"},
+    )
+    assert resp.status_code == 201, resp.text
+    order = resp.json()
+    assert order["redirect_url"].startswith("https://checkout.paystack.com/")
+    assert fake_paystack["init"][0]["amount"] == 1000
+    assert f"/event/{event_id}/pay/{order['order_id']}" in fake_paystack["init"][0]["callback"]
+
+    assert (await client.get(f"/payments/status/{order['order_id']}")).json()["status"] == "pending"
+    fake_paystack["tx"] = ("success", 1000)
+    assert (await client.get(f"/payments/status/{order['order_id']}")).json()["status"] == "success"
+
+
+async def test_order_webhook_marks_order_paid(client, cart_factory, fake_paystack):  # noqa: F811
+    session_id = await cart_factory()
+    order = (
+        await client.post(
+            "/payments/init",
+            json={"session_id": session_id, "contact_phone": "+2250700000000", "payment_method": "paystack"},
+        )
+    ).json()
+    reference = fake_paystack["init"][0]["reference"]
+    fake_paystack["tx"] = ("success", 1000)
+    raw, headers = _signed({"event": "charge.success", "data": {"reference": reference}})
+    assert (await client.post("/payments/paystack/webhook", content=raw, headers=headers)).status_code == 200
+    assert (await client.get(f"/payments/status/{order['order_id']}")).json()["status"] == "success"
+
+
+async def test_online_payment_only_for_myface_events(fake_paystack):
+    assert paystack.online_payment_available(User(role=UserRole.ADMIN)) is True
+    assert paystack.online_payment_available(User(role=UserRole.PHOTOGRAPHE)) is False
+    assert paystack.online_payment_available(None) is False
+
+
+async def test_kiosk_qr_only_for_paystack_pages(client):
+    ok = await client.get("/payments/paystack-qr.png", params={"url": "https://checkout.paystack.com/abc123"})
+    assert ok.status_code == 200 and ok.headers["content-type"] == "image/png"
+    bad = await client.get("/payments/paystack-qr.png", params={"url": "https://exemple.com/piege"})
+    assert bad.status_code == 400

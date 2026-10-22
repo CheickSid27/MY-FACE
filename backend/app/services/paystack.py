@@ -19,6 +19,7 @@ from dataclasses import dataclass
 import httpx
 
 from app.core.config import get_settings
+from app.models.user import User, UserRole
 
 
 class PaystackError(Exception):
@@ -35,6 +36,14 @@ class PaystackTransaction:
 
 def is_configured() -> bool:
     return bool(get_settings().paystack_secret_key)
+
+
+def online_payment_available(owner: User | None) -> bool:
+    """Paiement en ligne des photos par les invites : uniquement pour les
+    evenements de MYFACE (organisateur admin). Pour ceux d'un photographe,
+    l'argent lui revient : il reste paye directement sur son Wave ou son
+    Orange Money (partage automatique a prevoir avec un compte enregistre)."""
+    return is_configured() and owner is not None and owner.role == UserRole.ADMIN
 
 
 def _headers() -> dict[str, str]:
@@ -92,3 +101,23 @@ def signature_is_valid(raw_body: bytes, signature: str | None) -> bool:
         return False
     expected = hmac.new(secret.encode(), raw_body, hashlib.sha512).hexdigest()
     return hmac.compare_digest(expected, signature)
+
+
+async def settle_order(order, db) -> None:
+    """Commande de photos payee en ligne : redemande l'etat a Paystack et la
+    passe payee (SMS, telechargement) si le paiement est reussi, au bon
+    montant, en francs CFA. Une commande annulee faute de paiement dans le
+    delai est quand meme validee si l'argent est finalement arrive."""
+    from app.models.order import OrderStatus, PaymentMethod
+    from app.services.orders import set_order_status
+
+    if order.payment_method != PaymentMethod.PAYSTACK or order.status not in (
+        OrderStatus.PENDING,
+        OrderStatus.CANCELLED,
+    ):
+        return
+    tx = await verify_transaction(order.payment_reference)
+    if tx.status == "success" and tx.currency == "XOF" and tx.amount >= int(order.total_amount):
+        await set_order_status(order, OrderStatus.SUCCESS, db)
+    elif tx.status in ("failed", "reversed") and order.status == OrderStatus.PENDING:
+        await set_order_status(order, OrderStatus.FAILED, db)

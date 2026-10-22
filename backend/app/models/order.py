@@ -53,6 +53,10 @@ class PaymentMethod(str, enum.Enum):
     # Photos offertes par l'organisateur (Event.pricing["offert"]) : commande
     # a 0, payee d'office, sans page de paiement (voir POST /payments/offert).
     OFFERT = "offert"
+    # Paiement en ligne par Paystack (Wave, Orange, MTN, carte), confirme
+    # automatiquement. Seulement pour les evenements de MYFACE : l'argent
+    # arrive sur le compte de MYFACE (voir services/paystack.py).
+    PAYSTACK = "paystack"
 
 
 class Order(Base):

@@ -15,6 +15,7 @@ export const METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: "Espèces",
   geniuspay: "GeniusPay",
   offert: "Offert",
+  paystack: "Payer en ligne",
 };
 
 interface MethodIconProps {
