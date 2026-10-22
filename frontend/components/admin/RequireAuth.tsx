@@ -1,13 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import EmailVerificationBanner from "@/components/admin/EmailVerificationBanner";
 import { api } from "@/lib/api-client";
 import { isAuthenticated } from "@/lib/auth";
 import { useAuthStore } from "@/store/auth-store";
 
-export default function RequireAuth({ children }: { children: React.ReactNode }) {
+// La structure MYFACE Pro (app/admin/layout.tsx) verifie deja la session :
+// une page encore enveloppee dans RequireAuth ne la reverifie pas.
+const AuthChecked = createContext(false);
+
+export default function RequireAuth({
+  children,
+  bannerClassName,
+}: {
+  children: React.ReactNode;
+  /** Decalage du bandeau « Confirmez votre adresse » (menu lateral de MYFACE Pro). */
+  bannerClassName?: string;
+}) {
+  const alreadyChecked = useContext(AuthChecked);
+  if (alreadyChecked) return <>{children}</>;
+  return <RequireAuthCheck bannerClassName={bannerClassName}>{children}</RequireAuthCheck>;
+}
+
+function RequireAuthCheck({ children, bannerClassName }: { children: React.ReactNode; bannerClassName?: string }) {
   const router = useRouter();
   // "checking" pendant la validation reelle du token, puis "ok"/"denied".
   // Se contenter de la presence d'un token (ancien comportement) laissait un
@@ -58,9 +75,13 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   }
 
   return (
-    <>
-      {user && <EmailVerificationBanner user={user} />}
+    <AuthChecked.Provider value={true}>
+      {user && (
+        <div className={bannerClassName}>
+          <EmailVerificationBanner user={user} />
+        </div>
+      )}
       {children}
-    </>
+    </AuthChecked.Provider>
   );
 }

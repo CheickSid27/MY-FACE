@@ -202,7 +202,7 @@ async def init_payment(
             db,
             title="Nouvelle commande a confirmer (especes)",
             body=f"{order.total_amount:.0f} {order.currency}, {order.contact_phone}",
-            url=f"{settings.app_base_url}/admin/events/{event.id}/payments",
+            url=f"{settings.app_base_url}/admin/ventes",
         )
 
         return PaymentInitResponse(
@@ -363,7 +363,7 @@ async def mark_paid(
             db,
             title="Nouvelle commande a confirmer",
             body=f"{order.total_amount:.0f} {order.currency}, {order.contact_phone}",
-            url=f"{settings.app_base_url}/admin/events/{event.id}/payments",
+            url=f"{settings.app_base_url}/admin/ventes",
         )
 
     return await _build_status_response(order, db, storage)

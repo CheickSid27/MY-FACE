@@ -1,5 +1,6 @@
 "use client";
 
+import PageHeader from "@/components/pro/PageHeader";
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import RequireAuth from "@/components/admin/RequireAuth";
@@ -51,11 +52,9 @@ function AdminSettingsContent() {
     "w-full rounded-xl border border-ink-900/10 bg-white/70 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20";
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-surface-alt to-surface p-6">
+    <main>
       <div className="mx-auto max-w-xl">
-        <Link href="/admin/events" className="mb-4 inline-block text-sm font-medium text-ink-500 transition hover:text-brand">
-          &larr; Retour aux événements
-        </Link>
+        <PageHeader title="Réglages de MYFACE" back="/admin/account" />
         <form onSubmit={handleSubmit} className="glass rounded-2xl p-5">
           <h1 className="mb-1 text-xl font-bold text-ink-900">Paiement des packs</h1>
           <p className="mb-4 text-xs text-ink-500">

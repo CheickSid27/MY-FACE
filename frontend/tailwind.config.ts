@@ -32,6 +32,8 @@ const config: Config = {
         // components/photo/FramedPhoto.tsx) : distinct de la police
         // d'interface, pour un rendu "carton d'invitation".
         display: ["var(--font-display)", "Georgia", "serif"],
+        // Titres de MYFACE Pro (espace photographe et admin)
+        pro: ["var(--font-pro)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       boxShadow: {
         soft: "0 2px 12px 0 rgb(14 36 41 / 0.07)",

@@ -20,6 +20,7 @@ from app.routers import (
     packs,
     payments,
     photos,
+    workspace,
 )
 from app.services.face_clusters import face_cluster_cache, recent_event_ids
 from app.services.face_indexing import recover_unfinished_indexing
@@ -125,6 +126,7 @@ if settings.geniuspay_enabled:
     app.include_router(geniuspay.router)
 app.include_router(meta.router)
 app.include_router(packs.router)
+app.include_router(workspace.router)
 
 
 @app.get("/health")

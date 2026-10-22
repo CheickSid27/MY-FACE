@@ -1,8 +1,22 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import RequireAuth from "@/components/admin/RequireAuth";
+import InstallAppButton from "@/components/pro/InstallAppButton";
+import PageHeader from "@/components/pro/PageHeader";
+import {
+  BellIcon,
+  CalendarIcon,
+  ChatIcon,
+  ChevronRightIcon,
+  LockIcon,
+  LogoutIcon,
+  ReceiptIcon,
+  SettingsIcon,
+  ShieldIcon,
+  UsersIcon,
+} from "@/components/pro/icons";
 import { CheckIcon } from "@/components/icons";
 import { api, ApiError } from "@/lib/api-client";
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH, passwordProblem } from "@/lib/password";
@@ -83,7 +97,6 @@ function ProfileForm() {
 }
 
 function AccountContent() {
-  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -119,79 +132,153 @@ function AccountContent() {
     }
   }
 
-  return (
-    <main className="min-h-screen bg-gradient-to-b from-surface-alt to-surface p-6">
-      <div className="mx-auto max-w-md">
-        <button
-          type="button"
-          onClick={() => router.push("/admin/events")}
-          className="mb-4 text-sm font-medium text-ink-500 transition hover:text-brand"
-        >
-          &larr; Retour aux événements
-        </button>
+  const logout = useAuthStore((s) => s.logout);
+  const isAdmin = user?.role === "admin";
+  const name = user?.studio_name || user?.display_name || user?.email || "";
+  const row =
+    "flex min-h-[52px] items-center gap-3 px-4 py-2.5 text-[15px] transition hover:bg-[#FBF8F3]";
+  const ic = "flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-[#F1EBE1] text-ink-900";
 
-        <div className="glass mb-6 rounded-2xl p-5">
-          <h1 className="text-xl font-bold text-ink-900">Mon compte</h1>
-          {user && (
-            <p className="mt-1 text-sm text-ink-500">
-              {user.email} &middot; {user.role === "admin" ? "Administrateur" : "Photographe"}
-            </p>
+  return (
+    <>
+      <PageHeader title="Compte" />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
+        <div className="flex flex-col gap-4">
+          <section className="flex items-center gap-4 rounded-3xl border border-[#E6DED0] bg-white p-4">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-brand font-pro text-lg font-bold text-brand-accent">
+              {name.slice(0, 2).toUpperCase()}
+            </span>
+            <div className="min-w-0 flex-1">
+              <b className="block truncate text-base">{name}</b>
+              <span className="block truncate text-[13px] text-ink-500">{user?.email}</span>
+              <span className="mt-1 inline-block rounded-lg bg-[#E3EAEB] px-2 py-0.5 text-[11px] font-bold">
+                {isAdmin ? "Équipe MYFACE" : user?.must_verify_email ? "Adresse à confirmer" : "Photographe"}
+              </span>
+            </div>
+          </section>
+
+          <section>
+            <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wider text-ink-500">Mon activité</h2>
+            <div className="divide-y divide-[#EFE8DC] overflow-hidden rounded-3xl border border-[#E6DED0] bg-white">
+              <Link href="/admin/events" className={row}>
+                <span className={ic}><CalendarIcon size={18} /></span>
+                <span className="flex-1">Mes événements</span>
+                <ChevronRightIcon size={18} className="text-ink-500" />
+              </Link>
+              <Link href="/admin/ventes" className={row}>
+                <span className={ic}><ReceiptIcon size={18} /></span>
+                <span className="flex-1">Ventes</span>
+                <ChevronRightIcon size={18} className="text-ink-500" />
+              </Link>
+              <Link href="/admin/notifications" className={row}>
+                <span className={ic}><BellIcon size={18} /></span>
+                <span className="flex-1">Notifications</span>
+                <ChevronRightIcon size={18} className="text-ink-500" />
+              </Link>
+              <a href="#securite" className={row}>
+                <span className={ic}><LockIcon size={18} /></span>
+                <span className="flex-1">Mot de passe et sécurité</span>
+                <ChevronRightIcon size={18} className="text-ink-500" />
+              </a>
+            </div>
+          </section>
+
+          {isAdmin && (
+            <section>
+              <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wider text-ink-500">Espace MYFACE · équipe</h2>
+              <div className="divide-y divide-[#EFE8DC] overflow-hidden rounded-3xl border border-[#E6DED0] bg-white">
+                <Link href="/admin/packs" className={row}>
+                  <span className={`${ic} !bg-[#FDE7D9] !text-[#9A3F06]`}><ShieldIcon size={18} /></span>
+                  <span className="flex-1">Packs à valider</span>
+                  <ChevronRightIcon size={18} className="text-ink-500" />
+                </Link>
+                <Link href="/admin/users" className={row}>
+                  <span className={ic}><UsersIcon size={18} /></span>
+                  <span className="flex-1">Photographes et comptes</span>
+                  <ChevronRightIcon size={18} className="text-ink-500" />
+                </Link>
+                <Link href="/admin/settings" className={row}>
+                  <span className={ic}><SettingsIcon size={18} /></span>
+                  <span className="flex-1">Réglages de MYFACE et conservation des données</span>
+                  <ChevronRightIcon size={18} className="text-ink-500" />
+                </Link>
+              </div>
+            </section>
           )}
+
+          <div className="flex flex-col gap-2">
+            <InstallAppButton />
+            <a
+              href="https://wa.me/2250758509403"
+              target="_blank"
+              rel="noreferrer"
+              className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl border border-[#D9CFBF] bg-white text-sm font-bold"
+            >
+              <ChatIcon size={18} /> Aide sur WhatsApp
+            </a>
+            <button type="button" onClick={logout} className="flex min-h-[48px] items-center justify-center gap-2 text-sm font-semibold text-ink-500">
+              <LogoutIcon size={18} /> Se déconnecter
+            </button>
+          </div>
         </div>
 
-        <ProfileForm />
+        <div className="flex flex-col">
+          <div id="profil">
+            <ProfileForm />
+          </div>
 
-        <form onSubmit={handleSubmit} className="glass rounded-2xl p-5">
-          <h2 className="mb-4 text-sm font-semibold text-ink-900">Changer mon mot de passe</h2>
+          <form id="securite" onSubmit={handleSubmit} className="glass rounded-2xl p-5">
+            <h2 className="mb-4 text-sm font-semibold text-ink-900">Changer mon mot de passe</h2>
 
-          <label className="mb-1 block text-sm font-medium text-ink-700">Mot de passe actuel</label>
-          <input
-            type="password"
-            required
-            autoComplete="current-password"
-            value={current}
-            onChange={(e) => setCurrent(e.target.value)}
-            className={`${inputClass} mb-3`}
-          />
+            <label className="mb-1 block text-sm font-medium text-ink-700">Mot de passe actuel</label>
+            <input
+              type="password"
+              required
+              autoComplete="current-password"
+              value={current}
+              onChange={(e) => setCurrent(e.target.value)}
+              className={`${inputClass} mb-3`}
+            />
 
-          <label className="mb-1 block text-sm font-medium text-ink-700">Nouveau mot de passe</label>
-          <input
-            type="password"
-            required
-            minLength={PASSWORD_MIN_LENGTH}
-            maxLength={128}
-            autoComplete="new-password"
-            value={next}
-            onChange={(e) => setNext(e.target.value)}
-            className={`${inputClass} mb-1`}
-          />
-          <p className="mb-3 text-xs text-ink-500">{PASSWORD_HINT}</p>
+            <label className="mb-1 block text-sm font-medium text-ink-700">Nouveau mot de passe</label>
+            <input
+              type="password"
+              required
+              minLength={PASSWORD_MIN_LENGTH}
+              maxLength={128}
+              autoComplete="new-password"
+              value={next}
+              onChange={(e) => setNext(e.target.value)}
+              className={`${inputClass} mb-1`}
+            />
+            <p className="mb-3 text-xs text-ink-500">{PASSWORD_HINT}</p>
 
-          <label className="mb-1 block text-sm font-medium text-ink-700">Confirmer le nouveau mot de passe</label>
-          <input
-            type="password"
-            required
-            minLength={PASSWORD_MIN_LENGTH}
-            maxLength={128}
-            autoComplete="new-password"
-            value={confirmation}
-            onChange={(e) => setConfirmation(e.target.value)}
-            className={`${inputClass} mb-4`}
-          />
+            <label className="mb-1 block text-sm font-medium text-ink-700">Confirmer le nouveau mot de passe</label>
+            <input
+              type="password"
+              required
+              minLength={PASSWORD_MIN_LENGTH}
+              maxLength={128}
+              autoComplete="new-password"
+              value={confirmation}
+              onChange={(e) => setConfirmation(e.target.value)}
+              className={`${inputClass} mb-4`}
+            />
 
-          {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
-          {done && (
-            <p className="mb-3 flex items-center gap-1.5 text-sm text-emerald-700">
-              <CheckIcon /> Mot de passe modifié. Vos autres appareils ont été déconnectés.
-            </p>
-          )}
+            {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+            {done && (
+              <p className="mb-3 flex items-center gap-1.5 text-sm text-emerald-700">
+                <CheckIcon /> Mot de passe modifié. Vos autres appareils ont été déconnectés.
+              </p>
+            )}
 
-          <button type="submit" disabled={saving} className="btn-primary w-full !py-3 text-sm">
-            {saving ? "Enregistrement..." : "Changer le mot de passe"}
-          </button>
-        </form>
+            <button type="submit" disabled={saving} className="btn-primary w-full !py-3 text-sm">
+              {saving ? "Enregistrement..." : "Changer le mot de passe"}
+            </button>
+          </form>
+        </div>
       </div>
-    </main>
+    </>
   );
 }
 

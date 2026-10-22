@@ -1,5 +1,6 @@
 "use client";
 
+import PageHeader from "@/components/pro/PageHeader";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import RequireAuth from "@/components/admin/RequireAuth";
@@ -97,19 +98,9 @@ function UsersContent() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-surface-alt to-surface p-6">
+    <main>
       <div className="mx-auto max-w-2xl">
-        <div className="glass mb-6 flex items-center justify-between rounded-2xl px-5 py-4">
-          <button
-            type="button"
-            onClick={() => router.push("/admin/events")}
-            className="text-sm font-medium text-ink-500 transition hover:text-brand"
-          >
-            &larr; Retour aux événements
-          </button>
-          <h1 className="text-xl font-bold text-ink-900">Utilisateurs</h1>
-          <div className="w-24" />
-        </div>
+        <PageHeader title="Photographes et comptes" back="/admin/account" />
 
         <button type="button" onClick={() => setShowForm((v) => !v)} className="btn-primary mb-4 !px-5 !py-2.5 text-sm">
           {showForm ? "Annuler" : "+ Nouvel utilisateur"}

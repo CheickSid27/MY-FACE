@@ -451,3 +451,48 @@ export interface RetentionReport {
   photos_deleted: number;
   orders_anonymized: number;
 }
+
+// --- MYFACE Pro : accueil, ventes et notifications (routers/workspace.py) ---
+export interface WorkspaceLiveEvent {
+  id: string;
+  name: string;
+  date: string;
+  location: string;
+  pack: PackKey;
+  photo_count: number;
+  photo_limit: number | null;
+  indexed: number;
+  to_index: number;
+  moment: "live" | "upcoming" | "past";
+}
+
+export interface WorkspaceTodo {
+  kind: string;
+  title: string;
+  detail: string;
+  href: string;
+}
+
+export interface WorkspaceSummary {
+  event: WorkspaceLiveEvent | null;
+  events_count: number;
+  sales_today: number;
+  paid_orders_today: number;
+  orders_to_confirm: number;
+  currency: string;
+  todo: WorkspaceTodo[];
+}
+
+export interface WorkspaceOrder extends OrderRead {
+  event_id: string;
+  event_name: string;
+}
+
+export interface ActivityItem {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  href: string;
+  at: string;
+}

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Plus_Jakarta_Sans } from "next/font/google";
+import { Cormorant_Garamond, Plus_Jakarta_Sans, Unbounded } from "next/font/google";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -16,6 +16,14 @@ const cormorant = Cormorant_Garamond({
   display: "swap",
 });
 
+// Titres de l'espace photographe et admin (MYFACE Pro), comme le site vitrine
+const unbounded = Unbounded({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-pro",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "MYFACE",
   description: "Retrouvez, achetez et téléchargez vos photos d'événement",
@@ -28,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr" className={`${jakarta.variable} ${cormorant.variable}`}>
+    <html lang="fr" className={`${jakarta.variable} ${cormorant.variable} ${unbounded.variable}`}>
       <body>{children}</body>
     </html>
   );

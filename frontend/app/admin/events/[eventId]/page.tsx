@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import RequireAuth from "@/components/admin/RequireAuth";
 import Pagination from "@/components/gallery/Pagination";
@@ -8,12 +9,27 @@ import EventRetentionCard from "@/components/admin/EventRetentionCard";
 import GalleryOptionsCard from "@/components/packs/GalleryOptionsCard";
 import PackCard from "@/components/packs/PackCard";
 import BatchUploader from "@/components/upload/BatchUploader";
+import PageHeader from "@/components/pro/PageHeader";
+import { useWorkspace } from "@/components/pro/WorkspaceProvider";
+import EventFacesPanel from "@/components/pro/event/EventFacesPanel";
+import EventPaymentsPanel from "@/components/pro/event/EventPaymentsPanel";
+import EventStatsPanel from "@/components/pro/event/EventStatsPanel";
 import { useAuthStore } from "@/store/auth-store";
 import { AlertIcon, CheckIcon, CrossIcon, PrinterIcon } from "@/components/icons";
 import { api, ApiError } from "@/lib/api-client";
 import type { Event, EventIndexingSummary, EventPack, Photo, WatchedFolderRead } from "@/types/api";
 
 const WATCHED_FOLDER_POLL_MS = 5000;
+
+// Onglets de l'evenement (prototype MYFACE Pro), gardes dans l'adresse
+// (?onglet=...) pour les liens de l'accueil et des notifications.
+type Tab = "photos" | "visages" | "ventes" | "reglages";
+const TABS: { id: Tab; label: string }[] = [
+  { id: "photos", label: "Photos" },
+  { id: "visages", label: "Visages" },
+  { id: "ventes", label: "Ventes" },
+  { id: "reglages", label: "Réglages" },
+];
 const PHOTOS_PAGE_SIZE = 60;
 
 const inputClass =
@@ -473,7 +489,7 @@ function useObjectUrl(load: (() => Promise<string>) | null): string | null {
   return url;
 }
 
-function CopyButton({ text }: { text: string }) {
+function CopyButton({ text, dark = false }: { text: string; dark?: boolean }) {
   const [copied, setCopied] = useState(false);
   async function copy() {
     try {
@@ -488,104 +504,122 @@ function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={copy}
-      className="shrink-0 rounded-lg border border-ink-900/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 transition hover:bg-surface-alt"
+      className={
+        dark
+          ? "flex min-h-[42px] items-center justify-center rounded-xl border border-white/30 px-4 text-[13px] font-semibold text-[#F4EFE6]"
+          : "shrink-0 rounded-lg border border-ink-900/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 transition hover:bg-surface-alt"
+      }
     >
-      {copied ? "Copie !" : "Copier"}
+      {copied ? "Lien copié" : dark ? "Copier le lien" : "Copier"}
     </button>
   );
 }
 
-function ShareCard({ event }: { event: Event }) {
-  const router = useRouter();
-  const [showKiosk, setShowKiosk] = useState(false);
+/** Haut de l'evenement : QR code et lien des invites, affiche a imprimer. */
+function EventHero({ event, pack }: { event: Event; pack: EventPack | null }) {
   const loadGuestQr = useCallback(() => api.getEventQrObjectUrl(event.id, "guest"), [event.id]);
-  const loadKioskQr = useCallback(() => api.getEventQrObjectUrl(event.id, "kiosk"), [event.id]);
   const guestQr = useObjectUrl(loadGuestQr);
-  const kioskQr = useObjectUrl(showKiosk ? loadKioskQr : null);
   // Liens construits sur APP_BASE_URL (backend .env) : s'il pointe encore
   // vers localhost, ni le QR ni le lien ne s'ouvriront sur un telephone.
   const isLocalUrl = /\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(event.guest_url);
+  const used = pack && pack.photo_limit ? Math.min(100, Math.round((pack.photo_count / pack.photo_limit) * 100)) : null;
 
   return (
-    <div className="glass mb-6 rounded-2xl p-5">
-      <h2 className="mb-1 text-sm font-semibold text-ink-900">Partager avec les invités</h2>
-      <p className="mb-4 text-xs text-ink-500">
-        Imprimez ce QR code (affiche sur place, table, carton) ou envoyez le lien : chaque invité
-        retrouve ses photos sur son propre téléphone.
-      </p>
-
-      {isLocalUrl && (
-        <div className="mb-4 flex gap-2 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
-          <AlertIcon className="mt-0.5 shrink-0" />
-          <p>
-            L&apos;adresse publique de l&apos;application est encore <strong>{new URL(event.guest_url).origin}</strong> :
-            ce lien et ce QR ne fonctionneront pas sur le téléphone des invités. Renseignez l&apos;URL
-            publique (tunnel ou nom de domaine) dans <code>APP_BASE_URL</code> du fichier <code>.env</code>,
-            puis redemarrez le backend.
-          </p>
-        </div>
-      )}
-
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="flex h-36 w-36 shrink-0 items-center justify-center rounded-xl bg-white p-2 shadow-soft">
+    <section className="mb-5 flex flex-col gap-4 rounded-3xl bg-brand p-4 text-[#F4EFE6] sm:flex-row sm:items-center sm:p-5">
+      <div className="flex items-center gap-4 sm:contents">
+        <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-white p-2 sm:h-28 sm:w-28">
           {guestQr ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={guestQr} alt="QR code du lien invité" className="h-full w-full" />
+            <img src={guestQr} alt="QR code des invités" className="h-full w-full" />
           ) : (
-            <div className="skeleton h-full w-full rounded-lg" />
+            <div className="h-full w-full animate-pulse rounded-lg bg-ink-900/10" />
           )}
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="mb-1 text-xs font-medium text-ink-500">Lien invité</p>
-          <div className="mb-3 flex items-center gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-lg bg-surface-alt px-3 py-2 text-xs text-ink-900">
-              {event.guest_url}
-            </code>
-            <CopyButton text={event.guest_url} />
-          </div>
-          <button
-            type="button"
-            onClick={() => router.push(`/admin/events/${event.id}/poster`)}
-            className="btn-accent flex items-center gap-2 !px-4 !py-2.5 text-sm"
-          >
-            <PrinterIcon /> Imprimer l&apos;affiche QR
-          </button>
+        <div className="min-w-0 flex-1 sm:hidden">
+          <p className="text-[13px] text-[#A9BABD]">Les invités scannent ce code pour retrouver leurs photos.</p>
         </div>
       </div>
-
-      <div className="mt-5 border-t border-ink-900/5 pt-4">
-        <button
-          type="button"
-          onClick={() => setShowKiosk((v) => !v)}
-          className="text-xs font-semibold text-brand hover:underline"
-        >
-          {showKiosk ? "Masquer le lien borne" : "Afficher le lien borne (appareil physique uniquement)"}
-        </button>
-        {showKiosk && (
-          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-xl bg-white p-2 shadow-soft">
-              {kioskQr ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={kioskQr} alt="QR code du lien borne" className="h-full w-full" />
-              ) : (
-                <div className="skeleton h-full w-full rounded-lg" />
-              )}
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
+        <p className="hidden text-[13px] text-[#A9BABD] sm:block">
+          Les invités scannent ce code ou ouvrent le lien pour retrouver leurs photos.
+        </p>
+        {isLocalUrl && (
+          <p className="rounded-xl bg-amber-50 p-2.5 text-xs text-amber-900">
+            L&apos;adresse publique de l&apos;application n&apos;est pas configurée (APP_BASE_URL) : ce lien ne marche
+            pas sur un téléphone.
+          </p>
+        )}
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <Link
+            href={`/admin/events/${event.id}/poster`}
+            className="flex min-h-[42px] items-center justify-center gap-2 rounded-xl bg-brand-accent px-4 text-[13px] font-bold text-brand"
+          >
+            <PrinterIcon /> Affiche QR
+          </Link>
+          <CopyButton text={event.guest_url} dark />
+          <a
+            href={event.guest_url}
+            target="_blank"
+            rel="noreferrer"
+            className="col-span-2 flex min-h-[42px] items-center justify-center rounded-xl border border-white/30 px-4 text-[13px] font-semibold sm:col-span-1"
+          >
+            Voir la page invités
+          </a>
+        </div>
+        {pack && (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex justify-between text-[12px] text-[#A9BABD]">
+              <span>Pack {pack.pack.name}</span>
+              <span>
+                {pack.photo_count.toLocaleString("fr-FR")}
+                {pack.photo_limit ? ` / ${pack.photo_limit.toLocaleString("fr-FR")}` : ""} photos
+              </span>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="mb-1 text-xs text-ink-500">
-                À ouvrir uniquement sur la borne (active espèces, impression et aperçus sans
-                filigrane) : ne le diffusez pas aux invités.
-              </p>
-              <div className="flex items-center gap-2">
-                <code className="min-w-0 flex-1 truncate rounded-lg bg-surface-alt px-3 py-2 text-xs text-ink-900">
-                  {event.kiosk_url}
-                </code>
-                <CopyButton text={event.kiosk_url} />
+            {used !== null && (
+              <div className="h-1.5 overflow-hidden rounded bg-white/15">
+                <div className="h-full rounded bg-brand-accent" style={{ width: `${used}%` }} />
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>
+    </section>
+  );
+}
+
+/** Lien de la borne (appareil physique de l'evenement) : dans Reglages. */
+function KioskCard({ event }: { event: Event }) {
+  const [show, setShow] = useState(false);
+  const loadKioskQr = useCallback(() => api.getEventQrObjectUrl(event.id, "kiosk"), [event.id]);
+  const kioskQr = useObjectUrl(show ? loadKioskQr : null);
+  return (
+    <div className="glass mb-6 rounded-2xl p-5">
+      <h2 className="mb-1 text-sm font-semibold text-ink-900">Borne de l&apos;événement</h2>
+      <p className="mb-3 text-xs text-ink-500">
+        À ouvrir uniquement sur la borne (espèces, impression, aperçus sans filigrane) : ne le diffusez pas aux
+        invités.
+      </p>
+      <button type="button" onClick={() => setShow((v) => !v)} className="text-xs font-semibold text-brand hover:underline">
+        {show ? "Masquer le lien borne" : "Afficher le lien borne"}
+      </button>
+      {show && (
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-xl bg-white p-2 shadow-soft">
+            {kioskQr ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={kioskQr} alt="QR code du lien borne" className="h-full w-full" />
+            ) : (
+              <div className="skeleton h-full w-full rounded-lg" />
+            )}
+          </div>
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <code className="min-w-0 flex-1 truncate rounded-lg bg-surface-alt px-3 py-2 text-xs text-ink-900">
+              {event.kiosk_url}
+            </code>
+            <CopyButton text={event.kiosk_url} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -683,6 +717,28 @@ function AdminEventDetailContent() {
   const isAdmin = user?.role === "admin";
   const [eventPack, setEventPack] = useState<EventPack | null>(null);
   const [packRefresh, setPackRefresh] = useState(0);
+  const { refresh: refreshWorkspace } = useWorkspace();
+  const [tab, setTab] = useState<Tab>("photos");
+  const uploaderRef = useRef<HTMLDivElement | null>(null);
+  const [scrollToUploader, setScrollToUploader] = useState(false);
+
+  // Onglet demande par l'adresse ; retour de Paystack (?paystack=) : le
+  // volet Reglages contient le pack, qui verifie le paiement.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const wanted = params.get("onglet");
+    if (params.get("paystack")) setTab("reglages");
+    else if (wanted && TABS.some((x) => x.id === wanted)) setTab(wanted as Tab);
+    if (params.get("ajout")) setScrollToUploader(true);
+  }, []);
+
+  function selectTab(next: Tab) {
+    setTab(next);
+    const params = new URLSearchParams(window.location.search);
+    params.set("onglet", next);
+    params.delete("ajout");
+    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+  }
 
   const loadPhotos = useCallback(
     async (pageToLoad: number) => {
@@ -748,6 +804,13 @@ function AdminEventDetailContent() {
     };
   }, [eventId, loadPhotos]);
 
+  useEffect(() => {
+    if (scrollToUploader && tab === "photos" && event && uploaderRef.current) {
+      uploaderRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      setScrollToUploader(false);
+    }
+  }, [scrollToUploader, tab, event]);
+
   async function handleDelete() {
     if (!confirm("Supprimer définitivement cet événement, toutes ses photos et ses fichiers ?")) return;
     try {
@@ -780,187 +843,218 @@ function AdminEventDetailContent() {
     }
   }
 
-  if (error) return <p className="p-6 text-red-600">{error}</p>;
-  if (!event) return <p className="p-6 text-ink-500">Chargement...</p>;
+  if (error) return <p className="p-2 text-red-600">{error}</p>;
+  if (!event)
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="skeleton h-12 w-2/3 rounded-xl" />
+        <div className="skeleton h-40 rounded-3xl" />
+      </div>
+    );
 
   const totalPages = Math.max(1, Math.ceil(total / PHOTOS_PAGE_SIZE));
+  const priceLine = event.pricing.offert
+    ? "Photos offertes"
+    : `${event.pricing.unit_price.toLocaleString("fr-FR")} ${event.pricing.currency} la photo`;
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-surface-alt to-surface p-6">
-      <div className="mx-auto max-w-3xl">
-        <button
-          type="button"
-          onClick={() => router.push("/admin/events")}
-          className="mb-4 text-sm font-medium text-ink-500 transition hover:text-brand"
-        >
-          &larr; Retour aux événements
-        </button>
+    <>
+      <PageHeader
+        title={event.name}
+        subtitle={`${new Date(event.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} · ${event.location} · ${priceLine}`}
+        back="/admin/events"
+      />
 
-        <div className="glass mb-6 flex items-start justify-between rounded-2xl p-5">
-          <div>
-            <h1 className="text-xl font-bold text-ink-900">{event.name}</h1>
-            <p className="text-sm text-ink-500">
-              {new Date(event.date).toLocaleDateString("fr-FR")} &middot; {event.location}
-            </p>
-            <p className="mt-1 text-sm text-ink-500">
-              {event.pricing.offert ? "Photos offertes par l'organisateur" : `Prix unitaire : ${event.pricing.unit_price.toLocaleString("fr-FR")} ${event.pricing.currency}`}
-            </p>
+      <EventHero event={event} pack={eventPack} />
+
+      <div
+        className="sticky top-2 z-20 mb-5 flex gap-1 rounded-2xl bg-[#EAE3D6] p-1 shadow-[0_4px_14px_rgba(14,36,41,0.06)] lg:max-w-xl"
+        role="tablist"
+        aria-label="Volets de l'événement"
+      >
+        {TABS.map((x) => (
+          <button
+            key={x.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === x.id}
+            onClick={() => selectTab(x.id)}
+            className={`min-h-[42px] flex-1 rounded-xl text-[13px] font-semibold transition sm:text-sm ${
+              tab === x.id ? "bg-white text-ink-900 shadow-[0_2px_8px_rgba(14,36,41,0.1)]" : "text-ink-500"
+            }`}
+          >
+            {x.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "photos" && (
+        <div className="lg:grid lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-start lg:gap-6">
+          <div className="lg:sticky lg:top-20">
+            <div ref={uploaderRef} className="mb-5">
+              <BatchUploader
+                eventId={eventId}
+                onUploaded={() => {
+                  loadData();
+                  refreshWorkspace();
+                }}
+                remaining={eventPack && !eventPack.unlimited ? eventPack.remaining : null}
+              />
+            </div>
+            {indexing && <IndexingCard summary={indexing} onReindex={handleReindex} />}
+            {watchedFolder && (
+              <div className="glass mb-6 rounded-2xl p-5">
+                <h2 className="mb-1 text-sm font-semibold text-ink-900">Dossier surveillé</h2>
+                <p className="mb-3 text-xs text-ink-500">
+                  Déposez les photos (ex : depuis la carte SD de l&apos;appareil) dans ce dossier sur le PC : elles sont
+                  ajoutées automatiquement.
+                </p>
+                <code className="mb-3 block break-all rounded-lg bg-surface-alt px-3 py-2 text-xs text-ink-900">
+                  {watchedFolder.folder_path}
+                </code>
+                {watchedFolder.files.length > 0 && (
+                  <ul className="flex flex-col gap-1.5">
+                    {watchedFolder.files.map((f) => (
+                      <li key={f.filename} className="flex items-center justify-between gap-3 text-xs">
+                        <span className="truncate text-ink-700">{f.filename}</span>
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 font-medium ${
+                            f.status === "ingested"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : f.status === "error"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {f.status === "ingested"
+                            ? "Ajoutée"
+                            : f.status === "error"
+                              ? `Erreur${f.detail ? ` : ${f.detail}` : ""}`
+                              : "Copie en cours..."}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
+
+          <div>
+            <div className="mb-3 flex items-baseline justify-between">
+              <h2 className="font-pro text-[15px] font-semibold text-ink-900">
+                {total.toLocaleString("fr-FR")} photo{total > 1 ? "s" : ""}
+              </h2>
+              <span className="text-[13px] text-ink-500">Les plus récentes</span>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 xl:grid-cols-5">
+              {photos.map((photo) => {
+                const badge = STATUS_BADGES[photo.indexing_status];
+                return (
+                  <div key={photo.id} className="group relative overflow-hidden rounded-xl">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={photo.thumbnail_url}
+                      alt={photo.original_filename}
+                      loading="lazy"
+                      className="aspect-square w-full object-cover"
+                    />
+                    {badge && (
+                      <span
+                        className={`absolute bottom-1 left-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${badge.className}`}
+                      >
+                        {badge.label}
+                      </span>
+                    )}
+                    {photo.indexing_status === "done" && (
+                      <span className="absolute bottom-1 left-1 hidden rounded-full bg-emerald-600/90 px-1.5 py-0.5 text-[10px] font-bold text-white group-hover:flex">
+                        <CheckIcon />
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePhoto(photo)}
+                      disabled={deletingPhotoId === photo.id}
+                      aria-label={`Supprimer ${photo.original_filename}`}
+                      className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-xs text-white transition-colors duration-150 hover:bg-red-600 disabled:cursor-wait"
+                    >
+                      <CrossIcon />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            {photos.length === 0 && (
+              <div className="rounded-3xl border border-dashed border-[#D9CFBF] bg-white p-6 text-center text-sm text-ink-500">
+                Aucune photo pour le moment. Ajoutez-en avec le bouton d&apos;envoi.
+              </div>
+            )}
+            {totalPages > 1 && (
+              <div className="mt-4 flex justify-center">
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  onPageChange={(p) => {
+                    loadPhotos(p).catch(() => setError("Impossible de charger les photos."));
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === "visages" && (
+        <>
+          {indexing && <IndexingCard summary={indexing} onReindex={handleReindex} />}
+          <EventFacesPanel eventId={eventId} />
+        </>
+      )}
+
+      {tab === "ventes" && (
+        <>
+          <EventStatsPanel eventId={eventId} />
+          <EventPaymentsPanel eventId={eventId} />
+        </>
+      )}
+
+      {/* Monte en permanence (masque hors Reglages) : le pack verifie le
+          retour d'un paiement Paystack et alimente le haut de la page. */}
+      <div className={tab === "reglages" ? "lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-6" : "hidden"}>
+        <div>
+          <PackCard
+            eventId={eventId}
+            eventName={event.name}
+            isAdmin={isAdmin}
+            refreshKey={packRefresh}
+            onLoaded={setEventPack}
+          />
+          <EventInfoEditor key={`info-${event.updated_at}`} event={event} onSaved={setEvent} />
+          <PricingEditor key={`pricing-${event.updated_at}`} event={event} onSaved={setEvent} />
+        </div>
+        <div>
+          {eventPack && (
+            <GalleryOptionsCard
+              key={`options-${event.updated_at}`}
+              event={event}
+              features={eventPack.features}
+              studioName={user?.studio_name || user?.display_name || null}
+              onSaved={setEvent}
+            />
+          )}
+          <FrameCaptionEditor key={`frame-${event.updated_at}`} event={event} onSaved={setEvent} />
+          <KioskCard event={event} />
+          <EventRetentionCard event={event} isAdmin={isAdmin} onChanged={loadData} />
           <button
             type="button"
             onClick={handleDelete}
-            className="text-sm font-medium text-red-600 transition hover:text-red-800"
+            className="mb-6 flex min-h-[48px] w-full items-center justify-center rounded-2xl border border-red-200 bg-white text-sm font-semibold text-red-700 transition hover:bg-red-50"
           >
-            Supprimer
+            Supprimer l&apos;événement
           </button>
         </div>
-
-        <PackCard
-          eventId={eventId}
-          eventName={event.name}
-          isAdmin={isAdmin}
-          refreshKey={packRefresh}
-          onLoaded={setEventPack}
-        />
-
-        <div className="mb-6 flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => router.push(`/admin/events/${eventId}/clusters`)}
-            className="btn-primary !px-4 !py-2.5 text-sm"
-          >
-            Voir les personnes détectées
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push(`/admin/events/${eventId}/stats`)}
-            className="btn-accent !px-4 !py-2.5 text-sm"
-          >
-            Statistiques
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push(`/admin/events/${eventId}/payments`)}
-            className="btn-ghost !px-4 !py-2.5 text-sm"
-          >
-            Paiements
-          </button>
-        </div>
-
-        <ShareCard event={event} />
-        <EventInfoEditor key={`info-${event.updated_at}`} event={event} onSaved={setEvent} />
-        <FrameCaptionEditor key={`frame-${event.updated_at}`} event={event} onSaved={setEvent} />
-        <PricingEditor key={`pricing-${event.updated_at}`} event={event} onSaved={setEvent} />
-        {eventPack && (
-          <GalleryOptionsCard
-            key={`options-${event.updated_at}`}
-            event={event}
-            features={eventPack.features}
-            studioName={user?.studio_name || user?.display_name || null}
-            onSaved={setEvent}
-          />
-        )}
-        <EventRetentionCard event={event} isAdmin={isAdmin} onChanged={loadData} />
-
-        <div className="mb-6">
-          <BatchUploader
-            eventId={eventId}
-            onUploaded={loadData}
-            remaining={eventPack && !eventPack.unlimited ? eventPack.remaining : null}
-          />
-        </div>
-
-        {watchedFolder && (
-          <div className="glass mb-6 rounded-2xl p-5">
-            <h2 className="mb-1 text-sm font-semibold text-ink-900">Dossier surveille</h2>
-            <p className="mb-3 text-xs text-ink-500">
-              Déposez les photos (ex: depuis la carte SD de l&apos;appareil) dans ce dossier sur le
-              PC : elles sont ajoutees automatiquement, sans passer par l&apos;upload manuel.
-            </p>
-            <code className="mb-3 block break-all rounded-lg bg-surface-alt px-3 py-2 text-xs text-ink-900">
-              {watchedFolder.folder_path}
-            </code>
-            {watchedFolder.files.length > 0 && (
-              <ul className="flex flex-col gap-1.5">
-                {watchedFolder.files.map((f) => (
-                  <li key={f.filename} className="flex items-center justify-between gap-3 text-xs">
-                    <span className="truncate text-ink-700">{f.filename}</span>
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 font-medium ${
-                        f.status === "ingested"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : f.status === "error"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-amber-100 text-amber-700"
-                      }`}
-                    >
-                      {f.status === "ingested"
-                        ? "Ajoutee"
-                        : f.status === "error"
-                          ? `Erreur${f.detail ? ` : ${f.detail}` : ""}`
-                          : "Copie en cours..."}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-
-        {indexing && <IndexingCard summary={indexing} onReindex={handleReindex} />}
-
-        <h2 className="mb-3 text-lg font-semibold text-ink-900">Photos ({total})</h2>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
-          {photos.map((photo) => {
-            const badge = STATUS_BADGES[photo.indexing_status];
-            return (
-              <div key={photo.id} className="group relative overflow-hidden rounded-lg shadow-soft">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={photo.thumbnail_url}
-                  alt={photo.original_filename}
-                  loading="lazy"
-                  className="aspect-square w-full object-cover"
-                />
-                {badge && (
-                  <span
-                    className={`absolute bottom-1 left-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${badge.className}`}
-                  >
-                    {badge.label}
-                  </span>
-                )}
-                {photo.indexing_status === "done" && (
-                  <span className="absolute bottom-1 left-1 hidden rounded-full bg-emerald-600/90 px-1.5 py-0.5 text-[10px] font-bold text-white group-hover:flex">
-                    <CheckIcon />
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleDeletePhoto(photo)}
-                  disabled={deletingPhotoId === photo.id}
-                  aria-label={`Supprimer ${photo.original_filename}`}
-                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-xs text-white transition-colors duration-150 hover:bg-red-600 disabled:cursor-wait"
-                >
-                  <CrossIcon />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-        {photos.length === 0 && <p className="text-ink-500">Aucune photo uploadee.</p>}
-        {totalPages > 1 && (
-          <div className="mt-4 flex justify-center">
-            <Pagination
-              currentPage={page}
-              totalPages={totalPages}
-              onPageChange={(p) => {
-                loadPhotos(p).catch(() => setError("Impossible de charger les photos."));
-              }}
-            />
-          </div>
-        )}
       </div>
-    </main>
+    </>
   );
 }
 

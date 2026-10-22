@@ -19,7 +19,7 @@ export default function AdminLoginPage() {
     e.preventDefault();
     const success = await login(email.trim(), password);
     if (success) {
-      router.push("/admin/events");
+      router.push("/admin");
     }
   }
 

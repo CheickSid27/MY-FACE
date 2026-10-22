@@ -50,7 +50,7 @@ function VerifierEmail() {
             {email ? `${email} est confirmée.` : "Votre adresse est confirmée."} Vous pouvez maintenant créer vos
             événements et envoyer vos photos.
           </p>
-          <Link href={loggedIn ? "/admin/events" : "/admin/login"} className="btn-primary block w-full text-center">
+          <Link href={loggedIn ? "/admin" : "/admin/login"} className="btn-primary block w-full text-center">
             {loggedIn ? "Aller à mon espace" : "Se connecter"}
           </Link>
         </>

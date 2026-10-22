@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth";
 import { getGalleryAccess } from "@/lib/gallery-access";
 import type {
+  ActivityItem,
   CartRead,
   ClusterListResponse,
   DownloadResponse,
@@ -44,6 +45,8 @@ import type {
   UserAdmin,
   UserCreate,
   WatchedFolderRead,
+  WorkspaceOrder,
+  WorkspaceSummary,
 } from "@/types/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -479,6 +482,19 @@ export const api = {
 
   getEventStats(eventId: string): Promise<EventStats> {
     return request<EventStats>(`/admin/events/${eventId}/stats`);
+  },
+
+  // --- MYFACE Pro (routers/workspace.py) ---
+  getWorkspaceSummary(): Promise<WorkspaceSummary> {
+    return request<WorkspaceSummary>("/workspace/summary");
+  },
+
+  listWorkspaceOrders(view: "to_confirm" | "paid" = "to_confirm", days = 7): Promise<WorkspaceOrder[]> {
+    return request<WorkspaceOrder[]>(withQuery("/workspace/orders", { view, days }));
+  },
+
+  getWorkspaceActivity(): Promise<ActivityItem[]> {
+    return request<ActivityItem[]>("/workspace/activity");
   },
 
   listOrders(eventId: string, status?: OrderStatus): Promise<OrderRead[]> {

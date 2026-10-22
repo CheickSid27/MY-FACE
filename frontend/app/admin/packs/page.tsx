@@ -1,5 +1,6 @@
 "use client";
 
+import PageHeader from "@/components/pro/PageHeader";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import RequireAuth from "@/components/admin/RequireAuth";
@@ -77,13 +78,10 @@ function AdminPacksContent() {
   const total = purchases.filter((p) => p.status === "paid").reduce((sum, p) => sum + p.amount, 0);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-surface-alt to-surface p-6">
+    <main>
       <div className="mx-auto max-w-3xl">
-        <Link href="/admin/events" className="mb-4 inline-block text-sm font-medium text-ink-500 transition hover:text-brand">
-          &larr; Retour aux événements
-        </Link>
+        <PageHeader title="Packs des photographes" back="/admin/account" />
         <div className="glass mb-4 rounded-2xl px-5 py-4">
-          <h1 className="text-xl font-bold text-ink-900">Packs des photographes</h1>
           <p className="text-xs text-ink-500">
             Vérifiez sur le compte Mobile Money de MYFACE que le paiement est arrivé (montant, référence, numéro),
             puis validez : le pack s&apos;active immédiatement sur l&apos;événement.
