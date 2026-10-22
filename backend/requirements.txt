@@ -20,3 +20,5 @@ numpy>=1.26.4
 qrcode>=7.4.2
 africastalking>=1.2.9
 pywebpush>=2.0.0
+# Fichiers RAW des appareils photo (LibRaw)
+rawpy>=0.21.0

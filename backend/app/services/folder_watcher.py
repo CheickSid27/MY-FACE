@@ -34,6 +34,7 @@ from app.models.event import Event
 from app.models.photo import Photo
 from app.services.face_indexing import index_photos_faces
 from app.services.ingestion import InvalidImageError, ingest_photo
+from app.services.raw_images import RAW_EXTENSIONS
 from app.services.packs import (
     count_event_photos,
     effective_photo_limit,
@@ -51,6 +52,8 @@ CONTENT_TYPES = {
     ".jpeg": "image/jpeg",
     ".png": "image/png",
     ".webp": "image/webp",
+    # RAW des boitiers : convertis a l'import (voir services/raw_images.py)
+    **{ext: "application/octet-stream" for ext in RAW_EXTENSIONS},
 }
 
 

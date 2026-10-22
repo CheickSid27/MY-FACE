@@ -32,6 +32,10 @@ class Photo(Base):
     # sont toujours generees a la demande (presignees, expiration courte) via
     # `app.services.photo_urls`, jamais stockees en base (voir storage.py).
     original_key: Mapped[str] = mapped_column(String(512), nullable=False)
+    # Fichier RAW envoye par le photographe, garde tel quel (None pour un
+    # JPEG/PNG/WebP). original_key est alors le JPEG pleine resolution tire
+    # de ce RAW (voir services/raw_images.py).
+    raw_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
     thumbnail_key: Mapped[str] = mapped_column(String(512), nullable=False)
     # Version intermediaire (grand format, bonne qualite mais pas l'original)
     # pour l'apercu plein ecran/zoom avant achat : la miniature de grille

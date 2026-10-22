@@ -10,11 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.photo import IndexingStatus, Photo
 from app.services.storage import StorageService
+from app.services.raw_images import is_raw_filename, raw_to_jpeg
 from app.services.thumbnails import InvalidImageError, generate_preview, generate_thumbnail
 from app.services.watermark import WATERMARK_TEXT, apply_watermark, watermarked_preview_key
 
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
-MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024
+# 70 Mo : JPEG haute qualite des boitiers recents et fichiers RAW (22/10)
+MAX_FILE_SIZE_BYTES = 70 * 1024 * 1024
 
 
 @dataclass
@@ -52,16 +54,31 @@ async def ingest_photo(
 
     Leve ValueError / InvalidImageError si le fichier est invalide, a
     l'appelant de decider comment reporter l'erreur (reponse HTTP, log, ...)."""
-    if content_type not in ALLOWED_CONTENT_TYPES:
+    raw_data: bytes | None = None
+    if is_raw_filename(filename):
+        # RAW : le navigateur annonce un type quelconque, seule l'extension
+        # compte. Le RAW est garde, un JPEG pleine resolution sert d'original.
+        if len(data) > MAX_FILE_SIZE_BYTES:
+            raise ValueError("Fichier trop volumineux (max 70 Mo)")
+        if not data:
+            raise ValueError("Fichier vide")
+        raw_data = data
+        data = await asyncio.to_thread(raw_to_jpeg, raw_data)
+        content_type = "image/jpeg"
+    elif content_type not in ALLOWED_CONTENT_TYPES:
         raise ValueError(f"Type de fichier non pris en charge : {content_type}")
-    if len(data) > MAX_FILE_SIZE_BYTES:
-        raise ValueError("Fichier trop volumineux (max 25 Mo)")
+    if len(data) > MAX_FILE_SIZE_BYTES and raw_data is None:
+        raise ValueError("Fichier trop volumineux (max 70 Mo)")
     if not data:
         raise ValueError("Fichier vide")
 
     derivatives = await asyncio.to_thread(_build_derivatives, data, watermark_text)
 
     photo_id = uuid.uuid4()
+    raw_extension = (filename or "photo.raw").rsplit(".", 1)[-1].lower() if raw_data is not None else None
+    if raw_data is not None:
+        # Les invites recoivent le JPEG : meme nom, extension .jpg
+        filename = f"{(filename or 'photo').rsplit('.', 1)[0]}.jpg"
     extension = (filename or "photo.jpg").rsplit(".", 1)[-1].lower()
     original_key = f"events/{event_id}/originals/{photo_id}.{extension}"
     thumbnail_key = f"events/{event_id}/thumbnails/{photo_id}.jpg"
@@ -70,7 +87,12 @@ async def ingest_photo(
 
     # Les 4 envois sont independants : en parallele, le temps d'ingestion
     # d'une photo n'est plus la somme de 4 allers-retours vers le stockage.
+    raw_key = f"events/{event_id}/raw/{photo_id}.{raw_extension}" if raw_data is not None else None
+    uploads = []
+    if raw_data is not None and raw_key is not None:
+        uploads.append(storage.upload(raw_key, raw_data, "application/octet-stream"))
     await asyncio.gather(
+        *uploads,
         storage.upload(original_key, data, content_type),
         storage.upload(thumbnail_key, derivatives.thumbnail, "image/jpeg"),
         storage.upload(preview_key, derivatives.preview, "image/jpeg"),
@@ -81,6 +103,7 @@ async def ingest_photo(
         id=photo_id,
         event_id=event_id,
         original_key=original_key,
+        raw_key=raw_key,
         thumbnail_key=thumbnail_key,
         preview_key=preview_key,
         preview_watermarked_key=preview_wm_key,

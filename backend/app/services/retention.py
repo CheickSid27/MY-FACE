@@ -39,7 +39,7 @@ ANONYMIZED_PHONE = "(supprimé)"
 # Dossiers des fichiers d'une photo dans le stockage (voir ingestion.py,
 # watermark.py, face_crops.py). Les QR marchands (payment_qr/) ne sont pas
 # des donnees des invites : ils restent.
-_PHOTO_PREFIXES = ("originals", "thumbnails", "previews", "previews-wm", "face-crops")
+_PHOTO_PREFIXES = ("originals", "raw", "thumbnails", "previews", "previews-wm", "face-crops")
 
 
 @dataclass

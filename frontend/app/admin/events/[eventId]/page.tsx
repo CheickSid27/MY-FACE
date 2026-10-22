@@ -572,7 +572,8 @@ function EventHero({ event, pack }: { event: Event; pack: EventPack | null }) {
               <span>Pack {pack.pack.name}</span>
               <span>
                 {pack.photo_count.toLocaleString("fr-FR")}
-                {pack.photo_limit ? ` / ${pack.photo_limit.toLocaleString("fr-FR")}` : ""} photos
+                {pack.photo_limit ? ` / ${pack.photo_limit.toLocaleString("fr-FR")}` : ""} photo
+                {(pack.photo_limit ?? pack.photo_count) > 1 ? "s" : ""}
               </span>
             </div>
             {used !== null && (

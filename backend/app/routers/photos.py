@@ -66,7 +66,7 @@ async def upload_photos(
             continue
         if file.size is not None and file.size > MAX_FILE_SIZE_BYTES:
             # refuse avant lecture : un fichier enorme ne passe pas en memoire
-            errors.append(PhotoUploadError(filename=file.filename or "unknown", error="Fichier trop volumineux (max 25 Mo)"))
+            errors.append(PhotoUploadError(filename=file.filename or "unknown", error="Fichier trop volumineux (max 70 Mo)"))
             continue
         try:
             data = await file.read()
@@ -136,6 +136,7 @@ async def delete_photo(
     ]
     event_id = photo.event_id
     file_keys = [
+        *([photo.raw_key] if photo.raw_key else []),
         photo.original_key,
         photo.thumbnail_key,
         photo.preview_key,
