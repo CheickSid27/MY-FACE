@@ -1,8 +1,8 @@
+import asyncio
 import uuid
 from datetime import datetime, timezone
 
-import asyncio
-
+import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, Response, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,11 +23,8 @@ from app.core.security import (
     secret_fingerprint,
     verify_password,
 )
-from app.deps import ACCOUNT_SUSPENDED_DETAIL, SESSION_REVOKED_DETAIL, get_current_user
+from app.deps import ACCOUNT_SUSPENDED_DETAIL, SESSION_REVOKED_DETAIL, get_current_user, require_verified_user
 from app.models.user import User, UserRole
-from app.services.avatars import AVATAR_CONTENT_TYPES, AVATAR_MAX_BYTES, avatar_key, make_avatar
-from app.services.storage import StorageService, get_storage_service
-from app.services.thumbnails import InvalidImageError
 from app.schemas.auth import (
     AccessTokenResponse,
     ForgotPasswordRequest,
@@ -39,14 +36,19 @@ from app.schemas.auth import (
     TokenResponse,
     VerifyEmailRequest,
 )
-from app.schemas.user import UserProfileUpdate, UserRead
+from app.schemas.user import PayoutRead, PayoutUpdate, UserProfileUpdate, UserRead
+from app.services import paystack
+from app.services.avatars import AVATAR_CONTENT_TYPES, AVATAR_MAX_BYTES, avatar_key, make_avatar
 from app.services.email import (
     EmailService,
     get_email_service,
     password_reset_email,
     verification_email,
 )
+from app.services.phone import normalize_phone_or_ci
 from app.services.rate_limit import client_ip, limiter
+from app.services.storage import StorageService, get_storage_service
+from app.services.thumbnails import InvalidImageError
 
 # Inscriptions par adresse : assez pour un studio qui cree plusieurs comptes,
 # trop peu pour remplir la base de comptes factices.
@@ -249,6 +251,89 @@ async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depen
 @router.get("/me", response_model=UserRead)
 async def me(current_user: User = Depends(get_current_user)) -> User:
     return current_user
+
+
+def _payout_read(user: User) -> PayoutRead:
+    account = user.payout_account or ""
+    masked = f"•• {account[-4:]}" if account else None
+    return PayoutRead(
+        enabled=bool(user.payout_enabled and user.paystack_subaccount_code),
+        method=user.payout_method,
+        account_masked=masked,
+        name=user.payout_name,
+        available=paystack.is_configured(),
+    )
+
+
+@router.get("/me/payout", response_model=PayoutRead)
+async def get_payout(current_user: User = Depends(get_current_user)) -> PayoutRead:
+    return _payout_read(current_user)
+
+
+@router.put("/me/payout", response_model=PayoutRead)
+async def save_payout(
+    payload: PayoutUpdate,
+    current_user: User = Depends(require_verified_user),
+    db: AsyncSession = Depends(get_db),
+) -> PayoutRead:
+    """Le photographe active le paiement en ligne de ses ventes : Paystack lui
+    verse directement l'argent (sur son Wave, Orange Money, MTN ou compte
+    bancaire), sans commission MYFACE, frais Paystack deduits."""
+    if not paystack.is_configured():
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Paiement en ligne indisponible")
+    account = payload.account.replace(" ", "").replace(".", "").replace("-", "")
+    if payload.method == "bank":
+        if not payload.bank_code:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Choisissez votre banque")
+        if len(account) != 24:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Le RIB fait 24 caractères (sans « CI » et les 2 chiffres de l'IBAN)",
+            )
+        bank = payload.bank_code
+    else:
+        try:
+            international = normalize_phone_or_ci(account)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        if not international.startswith("+225"):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Numéro de Côte d'Ivoire uniquement")
+        # Paystack attend le numero local a 10 chiffres (07 01 02 03 04)
+        account = international.removeprefix("+225")
+        bank = paystack.PAYOUT_BANK_CODES[payload.method]
+    try:
+        code = await paystack.save_subaccount(
+            current_user.paystack_subaccount_code,
+            business_name=payload.name.strip(),
+            settlement_bank=bank,
+            account_number=account,
+            description=f"Photographe MYFACE {current_user.email}",
+        )
+    except (paystack.PaystackError, httpx.HTTPError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Paystack a refusé ces informations : {exc}",
+        ) from exc
+    current_user.paystack_subaccount_code = code
+    current_user.payout_method = payload.method
+    current_user.payout_account = account
+    current_user.payout_name = payload.name.strip()
+    current_user.payout_enabled = True
+    await db.commit()
+    await db.refresh(current_user)
+    return _payout_read(current_user)
+
+
+@router.delete("/me/payout", response_model=PayoutRead)
+async def disable_payout(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> PayoutRead:
+    """Retour au paiement direct (QR + confirmation) sur ses evenements."""
+    current_user.payout_enabled = False
+    await db.commit()
+    await db.refresh(current_user)
+    return _payout_read(current_user)
 
 
 @router.post("/me/avatar", response_model=UserRead)

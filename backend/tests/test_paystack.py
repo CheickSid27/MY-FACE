@@ -23,7 +23,7 @@ def fake_paystack(monkeypatch):
     monkeypatch.setattr(get_settings(), "paystack_secret_key", SECRET)
     state: dict = {"init": [], "tx": None}
 
-    async def initialize(email, amount, reference, callback_url, metadata):
+    async def initialize(email, amount, reference, callback_url, metadata, split=None):
         state["init"].append({"email": email, "amount": amount, "reference": reference, "callback": callback_url})
         return f"https://checkout.paystack.com/{reference}"
 
@@ -165,3 +165,61 @@ async def test_kiosk_qr_only_for_paystack_pages(client):
     assert ok.status_code == 200 and ok.headers["content-type"] == "image/png"
     bad = await client.get("/payments/paystack-qr.png", params={"url": "https://exemple.com/piege"})
     assert bad.status_code == 400
+
+
+# --------------------------------------------------------------------------
+# Partage : ventes des photographes versees par Paystack (sous-comptes)
+# --------------------------------------------------------------------------
+async def test_photographer_payout_splits_guest_payments(make_client, fake_paystack, monkeypatch, seed_photo, storage_service, test_session_factory):  # noqa: F811
+    saved = {}
+
+    async def save_subaccount(existing_code, business_name, settlement_bank, account_number, description):
+        saved.update(bank=settlement_bank, account=account_number, existing=existing_code)
+        return existing_code or "ACCT_test123"
+
+    monkeypatch.setattr(paystack, "save_subaccount", save_subaccount)
+    split_sent = {}
+
+    async def initialize(email, amount, reference, callback_url, metadata, split=None):
+        split_sent.update(split or {})
+        return f"https://checkout.paystack.com/{reference}"
+
+    monkeypatch.setattr(paystack, "initialize_transaction", initialize)
+
+    photographe = await _register(make_client)
+    event_id = await _create_event(photographe)
+    anon = await make_client()
+    assert (await anon.get(f"/events/{event_id}/public")).json()["online_payment"] is False
+
+    resp = await photographe.put("/auth/me/payout", json={"method": "wave", "account": "07 01 02 03 04", "name": "Awa Kone"})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["enabled"] is True and resp.json()["account_masked"] == "•• 0304"
+    assert saved == {"bank": "WAVE_CI", "account": "0701020304", "existing": None}
+    assert (await anon.get(f"/events/{event_id}/public")).json()["online_payment"] is True
+
+    from tests.test_payments import _jpeg_bytes
+
+    photo_id = await seed_photo(event_id, storage_service, test_session_factory, "p.jpg", _jpeg_bytes())
+    session_id = (await anon.post("/cart/add", json={"event_id": event_id, "photo_id": photo_id})).json()["session_id"]
+    resp = await anon.post(
+        "/payments/init", json={"session_id": session_id, "contact_phone": "+2250700000000", "payment_method": "paystack"}
+    )
+    assert resp.status_code == 201, resp.text
+    assert split_sent == {"subaccount": "ACCT_test123", "transaction_charge": 0, "bearer": "subaccount"}
+
+    # desactive : retour au paiement direct
+    assert (await photographe.delete("/auth/me/payout")).json()["enabled"] is False
+    assert (await anon.get(f"/events/{event_id}/public")).json()["online_payment"] is False
+
+
+async def test_admin_can_paste_a_subaccount_code(make_client, create_user, fake_paystack):  # noqa: F811
+    photographe = await _register(make_client)
+    me = (await photographe.get("/auth/me")).json()
+    admin = await _admin(make_client, create_user)
+    assert (await admin.put(f"/admin/users/{me['id']}/payout-code", json={"subaccount_code": "pas-un-code"})).status_code == 422
+    resp = await admin.put(f"/admin/users/{me['id']}/payout-code", json={"subaccount_code": "ACCT_manuel42"})
+    assert resp.status_code == 200
+    rows = (await admin.get("/admin/users")).json()
+    row = next(r for r in rows if r["id"] == me["id"])
+    assert row["payout_enabled"] is True and row["paystack_subaccount_code"] == "ACCT_manuel42"
+    assert (await photographe.get("/auth/me/payout")).json()["enabled"] is True

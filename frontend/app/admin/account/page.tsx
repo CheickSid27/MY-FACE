@@ -4,6 +4,7 @@ import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import RequireAuth from "@/components/admin/RequireAuth";
 import InstallAppButton from "@/components/pro/InstallAppButton";
+import PayoutCard from "@/components/pro/PayoutCard";
 import UserAvatar from "@/components/pro/UserAvatar";
 import PageHeader from "@/components/pro/PageHeader";
 import {
@@ -221,6 +222,8 @@ function AccountContent() {
               </span>
             </div>
           </section>
+
+          {!isAdmin && <PayoutCard />}
 
           <section>
             <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wider text-ink-500">Mon activité</h2>

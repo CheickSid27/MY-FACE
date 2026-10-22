@@ -47,6 +47,8 @@ import type {
   WatchedFolderRead,
   WorkspaceOrder,
   WorkspaceSummary,
+  PayoutMethod,
+  PayoutRead,
 } from "@/types/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -176,6 +178,34 @@ export const api = {
     });
     setTokens(data.access_token, data.refresh_token);
     return data;
+  },
+
+  // --- Versement des ventes en ligne (partage Paystack) ---
+  getPayout(): Promise<PayoutRead> {
+    return request<PayoutRead>("/auth/me/payout");
+  },
+
+  savePayout(payload: { method: PayoutMethod; account: string; name: string; bank_code: string | null }): Promise<PayoutRead> {
+    return request<PayoutRead>("/auth/me/payout", { method: "PUT", body: JSON.stringify(payload) });
+  },
+
+  disablePayout(): Promise<PayoutRead> {
+    return request<PayoutRead>("/auth/me/payout", { method: "DELETE" });
+  },
+
+  listPaystackBanks(): Promise<{ code: string; name: string }[]> {
+    return request<{ code: string; name: string }[]>("/payments/paystack/banks");
+  },
+
+  adminSetPayoutCode(userId: string, subaccountCode: string): Promise<User> {
+    return request<User>(`/admin/users/${userId}/payout-code`, {
+      method: "PUT",
+      body: JSON.stringify({ subaccount_code: subaccountCode }),
+    });
+  },
+
+  adminClearPayoutCode(userId: string): Promise<User> {
+    return request<User>(`/admin/users/${userId}/payout-code`, { method: "DELETE" });
   },
 
   /** Photo de profil : recadree en carre par le serveur. */

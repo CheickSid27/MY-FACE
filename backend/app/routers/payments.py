@@ -280,6 +280,7 @@ async def _init_paystack_order(
             reference=order.payment_reference,
             callback_url=f"{settings.app_base_url}/event/{event.id}/pay/{order.id}",
             metadata={"order_id": str(order.id), "event_id": str(event.id), "phone": order.contact_phone},
+            split=paystack.split_for(owner),
         )
     except (paystack.PaystackError, httpx.HTTPError) as exc:
         await db.rollback()
@@ -369,6 +370,17 @@ async def mark_paid(
         )
 
     return await _build_status_response(order, db, storage)
+
+
+@router.get("/paystack/banks")
+async def paystack_banks() -> list[dict]:
+    """Banques de Cote d'Ivoire pour le versement sur RIB (formulaire Compte)."""
+    if not paystack.is_configured():
+        return []
+    try:
+        return await paystack.list_banks()
+    except (paystack.PaystackError, httpx.HTTPError):
+        return []
 
 
 @router.get("/paystack-qr.png")

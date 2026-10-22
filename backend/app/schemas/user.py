@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator
 
@@ -54,6 +55,34 @@ class UserProfileUpdate(BaseModel):
         return normalize_phone_or_ci(value)
 
 
+PayoutMethod = Literal["wave", "orange", "mtn", "bank"]
+
+
+class PayoutRead(BaseModel):
+    """Versement des ventes en ligne au photographe (partage Paystack)."""
+
+    enabled: bool
+    method: PayoutMethod | None = None
+    account_masked: str | None = None
+    name: str | None = None
+    available: bool = True  # Paystack configure sur ce serveur
+
+
+class PayoutUpdate(BaseModel):
+    method: PayoutMethod
+    # Numero Mobile Money (10 chiffres) ou RIB (24 caracteres)
+    account: str = Field(min_length=8, max_length=40)
+    name: str = Field(min_length=2, max_length=120)
+    # Code banque Paystack (liste GET /payments/paystack/banks) si method == bank
+    bank_code: str | None = Field(default=None, max_length=20)
+
+
+class AdminPayoutCode(BaseModel):
+    """Sous-compte cree a la main dans le tableau de bord Paystack."""
+
+    subaccount_code: str = Field(pattern=r"^ACCT_[A-Za-z0-9]+$", max_length=40)
+
+
 class UserAdminRead(UserRead):
     """Vue admin d'un compte : activite et packs payes."""
 
@@ -61,6 +90,8 @@ class UserAdminRead(UserRead):
     photo_count: int = 0
     packs_paid_total: int = 0
     packs_pending: int = 0
+    payout_enabled: bool = False
+    paystack_subaccount_code: str | None = None
 
 
 class UserAdminUpdate(BaseModel):

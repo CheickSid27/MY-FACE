@@ -19,7 +19,7 @@ from app.models.user import User
 from app.schemas.order import OrderConfirmRequest, OrderDetailRead, OrderItemRead, OrderRead
 from app.schemas.retention import RetentionExemptUpdate, RetentionReportRead
 from app.schemas.stats import DailySales, EventStats
-from app.schemas.user import UserAdminRead, UserAdminUpdate, UserCreate, UserRead
+from app.schemas.user import AdminPayoutCode, UserAdminRead, UserAdminUpdate, UserCreate, UserRead
 from app.services.access import can_manage_event, get_manageable_event
 from app.services.orders import EXPIRABLE_STATUSES, expire_stale_orders, set_order_status
 from app.services.photo_urls import to_photo_read
@@ -318,9 +318,46 @@ async def list_users(
             photo_count=photos_by_user.get(user.id, 0),
             packs_paid_total=int(paid_by_user.get(user.id, 0)),
             packs_pending=pending_by_user.get(user.id, 0),
+            payout_enabled=bool(user.payout_enabled and user.paystack_subaccount_code),
+            paystack_subaccount_code=user.paystack_subaccount_code,
         )
         for user in users
     ]
+
+
+@router.put("/users/{user_id}/payout-code", response_model=UserRead)
+async def set_payout_code(
+    user_id: uuid.UUID,
+    payload: AdminPayoutCode,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Sous-compte Paystack cree a la main par l'equipe (tableau de bord
+    Paystack, rubrique Subaccounts) : on colle son code ici pour activer le
+    paiement en ligne sur les evenements de ce photographe."""
+    user = await db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Utilisateur introuvable")
+    user.paystack_subaccount_code = payload.subaccount_code
+    user.payout_enabled = True
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+@router.delete("/users/{user_id}/payout-code", response_model=UserRead)
+async def clear_payout_code(
+    user_id: uuid.UUID,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    user = await db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Utilisateur introuvable")
+    user.payout_enabled = False
+    await db.commit()
+    await db.refresh(user)
+    return user
 
 
 @router.patch("/users/{user_id}", response_model=UserRead)

@@ -24,6 +24,19 @@ export interface UserAdmin extends User {
   photo_count: number;
   packs_paid_total: number;
   packs_pending: number;
+  payout_enabled?: boolean;
+  paystack_subaccount_code?: string | null;
+}
+
+export type PayoutMethod = "wave" | "orange" | "mtn" | "bank";
+
+/** Versement des ventes en ligne au photographe (partage Paystack). */
+export interface PayoutRead {
+  enabled: boolean;
+  method: PayoutMethod | null;
+  account_masked: string | null;
+  name: string | null;
+  available: boolean;
 }
 
 export interface RegisterPayload {

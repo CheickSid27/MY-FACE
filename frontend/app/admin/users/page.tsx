@@ -77,6 +77,28 @@ function UsersContent() {
     }
   }
 
+  // Sous-compte cree a la main dans le tableau de bord Paystack (Subaccounts) :
+  // son code active le paiement en ligne sur les evenements du photographe.
+  async function setPayoutCode(user: UserAdmin) {
+    const code = window.prompt(
+      "Code du sous-compte Paystack (commence par ACCT_), créé dans Paystack > Subaccounts :",
+      user.paystack_subaccount_code ?? ""
+    );
+    if (!code) return;
+    try {
+      await api.adminSetPayoutCode(user.id, code.trim());
+      await loadUsers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Code refusé.");
+    }
+  }
+
+  async function clearPayoutCode(user: UserAdmin) {
+    if (!confirm("Désactiver le paiement en ligne de ce photographe ?")) return;
+    await api.adminClearPayoutCode(user.id);
+    await loadUsers();
+  }
+
   async function confirmEmail(user: UserAdmin) {
     if (!confirm(`Confirmer l'adresse ${user.email} sans le lien envoyé par e-mail ?`)) return;
     try {
@@ -183,6 +205,21 @@ function UsersContent() {
                       payés : {formatFcfa(user.packs_paid_total)}
                       {user.packs_pending > 0 && (
                         <span className="ml-1 font-semibold text-amber-700">· {user.packs_pending} paiement(s) à vérifier</span>
+                      )}
+                    </p>
+                  )}
+                  {user.role === "photographe" && (
+                    <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                      <span className={user.payout_enabled ? "font-semibold text-emerald-700" : "text-ink-500"}>
+                        Paiement en ligne : {user.payout_enabled ? `actif (${user.paystack_subaccount_code})` : "inactif"}
+                      </span>
+                      <button type="button" onClick={() => setPayoutCode(user)} className="font-semibold text-brand hover:underline">
+                        {user.payout_enabled ? "Changer le code Paystack" : "Coller un code Paystack"}
+                      </button>
+                      {user.payout_enabled && (
+                        <button type="button" onClick={() => clearPayoutCode(user)} className="font-semibold text-ink-500 hover:underline">
+                          Désactiver
+                        </button>
                       )}
                     </p>
                   )}

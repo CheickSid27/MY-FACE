@@ -46,6 +46,15 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     # Photo de profil (carre 512 px, voir services/avatars.py), None = initiales
     avatar_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    # Paiement en ligne des invites, verse au photographe par Paystack
+    # (« sous-compte » Paystack, voir services/paystack.py) : wave, orange,
+    # mtn ou bank, numero ou RIB, titulaire. Inactif tant que payout_enabled
+    # est faux.
+    paystack_subaccount_code: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    payout_method: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    payout_account: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    payout_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    payout_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
 
     @property
     def avatar_version(self) -> str | None:
