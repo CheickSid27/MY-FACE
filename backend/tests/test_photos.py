@@ -257,3 +257,17 @@ async def test_bulk_delete_only_in_own_event(auth_client: AsyncClient, client: A
     client.headers.pop("Authorization", None)
     assert (await client.post("/photos/bulk-delete", json={"event_id": event_a, "photo_ids": [photo_b]})).status_code in (401, 403)
 
+
+async def test_watermark_handles_accents():
+    """« Sidibé » : police avec accents (DejaVu dans l'image Docker), sinon
+    accents retires plutot que des carres."""
+    from app.services import watermark
+
+    data = watermark.apply_watermark(_make_jpeg_bytes(), "SIDIBÉ")
+    assert Image.open(io.BytesIO(data)).format == "JPEG"
+    if watermark.DEJAVU_BOLD.exists():
+        assert "DejaVu" in watermark._font(40).getname()[0]
+        assert watermark._label("SIDIBÉ") == "SIDIBÉ"
+    else:
+        assert watermark._label("SIDIBÉ") == "SIDIBE"
+

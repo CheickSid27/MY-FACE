@@ -15,6 +15,8 @@ import asyncio
 import io
 import logging
 import math
+import unicodedata
+from pathlib import Path
 from collections.abc import Callable
 from functools import lru_cache
 
@@ -42,11 +44,26 @@ def watermarked_preview_key(event_id, photo_id) -> str:
     return f"events/{event_id}/previews-wm/{photo_id}.jpg"
 
 
+# Police libre avec toutes les lettres accentuees (paquet fonts-dejavu-core de
+# l'image Docker). La police integree a Pillow n'a pas les accents : un studio
+# « Sidibé » donnait « SIDIB⊠ » sur les apercus (constate le 22/10).
+DEJAVU_BOLD = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
+
+
 @lru_cache(maxsize=16)
 def _font(size: int) -> ImageFont.FreeTypeFont:
-    # Police vectorielle embarquee par Pillow (>= 10.1, FreeType) : aucune
-    # police systeme n'est installee dans l'image Docker du backend.
+    if DEJAVU_BOLD.exists():
+        return ImageFont.truetype(str(DEJAVU_BOLD), size=size)
     return ImageFont.load_default(size=size)
+
+
+def _label(text: str) -> str:
+    """Texte du motif. Sans la police DejaVu, les accents sont retires
+    (« SIDIBE ») plutot que d'afficher des carres."""
+    if DEJAVU_BOLD.exists():
+        return text
+    decomposed = unicodedata.normalize("NFKD", text)
+    return "".join(c for c in decomposed if not unicodedata.combining(c) and ord(c) < 128)
 
 
 def apply_watermark(image_bytes: bytes, text: str = WATERMARK_TEXT) -> bytes:
@@ -56,7 +73,7 @@ def apply_watermark(image_bytes: bytes, text: str = WATERMARK_TEXT) -> bytes:
 
     font_size = max(14, int(min(width, height) * 0.07))
     font = _font(font_size)
-    label = text
+    label = _label(text)
     left, top, right, bottom = font.getbbox(label)
     # Espacement genereux entre les repetitions : le motif doit empecher la
     # reutilisation de la photo, pas empecher l'invite de se reconnaitre.
