@@ -3,7 +3,7 @@ import logging
 import uuid
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db, get_session_factory
@@ -22,8 +22,9 @@ from app.schemas.photo import (
 )
 from app.services.access import get_manageable_event, is_kiosk_request
 from app.services.activity import log_activity
-from app.services.face_clusters import face_cluster_cache
-from app.services.face_crops import face_crop_key
+from app.schemas.face import PhotoFace, PhotoFacesResponse
+from app.services.face_clusters import FACE_CROP_URL_TTL_SECONDS, face_cluster_cache
+from app.services.face_crops import ensure_photo_face_crops, face_crop_key
 from app.services.face_indexing import index_photos_faces
 from app.services.gallery_access import require_gallery_access
 from app.services.ingestion import MAX_FILE_SIZE_BYTES, InvalidImageError, ingest_photo
@@ -38,6 +39,7 @@ from app.services.photo_urls import to_photo_reads
 from app.services.storage import StorageService, get_storage_service
 
 logger = logging.getLogger("myface.photos")
+DOUBLON = "Une photo porte déjà ce nom dans cet événement"
 
 router = APIRouter(tags=["photos"])
 
@@ -68,8 +70,19 @@ async def upload_photos(
 
     uploaded: list[Photo] = []
     errors: list[PhotoUploadError] = []
+    # Un nom de fichier par evenement (majuscules et minuscules confondues) :
+    # le meme fichier envoye deux fois est refuse, dans le meme envoi comme
+    # dans un envoi precedent (5 doublons trouves sur un evenement le 23/10).
+    noms = {
+        n.lower()
+        for n in (await db.execute(select(Photo.original_filename).where(Photo.event_id == event_id))).scalars().all()
+    }
 
     for file in files:
+        nom = file.filename or "photo.jpg"
+        if nom.lower() in noms:
+            errors.append(PhotoUploadError(filename=nom, error=DOUBLON))
+            continue
         if remaining is not None and remaining <= 0:
             errors.append(
                 PhotoUploadError(filename=file.filename or "unknown", error=limit_reached_message(event, limit))
@@ -91,6 +104,7 @@ async def upload_photos(
                 watermark_text=watermark_text,
             )
             uploaded.append(photo)
+            noms.add(nom.lower())
             if remaining is not None:
                 remaining -= 1
         except (ValueError, InvalidImageError) as exc:
@@ -262,6 +276,55 @@ async def delete_photo(
     for key in file_keys:
         if key:
             await storage.delete(key)
+
+
+@router.get("/photos/{photo_id}/faces", response_model=PhotoFacesResponse)
+async def get_photo_faces(
+    photo_id: uuid.UUID,
+    kiosk_token: str | None = Query(default=None),
+    access: str | None = Query(default=None),
+    current_user: User | None = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_db),
+    storage: StorageService = Depends(get_storage_service),
+    session_factory=Depends(get_session_factory),
+) -> PhotoFacesResponse:
+    """Les visages d'une photo, de gauche a droite (bulles sous la photo dans
+    la visionneuse) : vignette du visage et groupe de la personne, pour ouvrir
+    toutes ses photos comme « Trouver mon visage ». Memes droits que la galerie."""
+    photo = await db.get(Photo, photo_id)
+    if photo is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo introuvable")
+    event = await db.get(Event, photo.event_id)
+    require_gallery_access(event, kiosk_token=kiosk_token, access_token=access, user=current_user)
+    rows = (
+        await db.execute(
+            select(FaceEmbedding.id, FaceEmbedding.bounding_box, FaceEmbedding.crop_key).where(
+                FaceEmbedding.photo_id == photo_id
+            )
+        )
+    ).all()
+    if not rows:
+        return PhotoFacesResponse(faces=[])
+    keys = await ensure_photo_face_crops(photo.event_id, photo.original_key, [tuple(r) for r in rows], storage)
+    nouvelles = [{"id": fid, "crop_key": keys[fid]} for fid, _, key in rows if not key and fid in keys]
+    if nouvelles:
+        await db.execute(update(FaceEmbedding), nouvelles)
+        await db.commit()
+    snapshot = await face_cluster_cache.get(
+        photo.event_id, db, storage, allow_stale=True, session_factory=session_factory
+    )
+    faces = []
+    for fid, bbox, _ in sorted(rows, key=lambda r: r.bounding_box.get("x1", 0)):
+        if fid not in keys:
+            continue
+        faces.append(
+            PhotoFace(
+                id=fid,
+                face_url=await storage.get_presigned_url(keys[fid], expires_in=FACE_CROP_URL_TTL_SECONDS),
+                cluster_id=snapshot.face_clusters.get(fid),
+            )
+        )
+    return PhotoFacesResponse(faces=faces)
 
 
 @router.get("/events/{event_id}/photos", response_model=PhotoListResponse)

@@ -178,6 +178,7 @@ export default function EventFacesPanel({ eventId, onPhotosDeleted }: { eventId:
             selectedPhotoIds={new Set()}
             onToggleSelect={noopSelect}
             showCartAction={false}
+            showFileName
           />
         )}
     </div>

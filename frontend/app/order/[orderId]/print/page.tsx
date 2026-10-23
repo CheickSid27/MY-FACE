@@ -164,10 +164,9 @@ export default function PrintOrderPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={photo.thumbnail_url}
-                alt={photo.filename}
+                alt="Photo à imprimer"
                 className="aspect-square w-full object-cover"
               />
-              <p className="truncate px-1.5 py-1 text-[10px] text-ink-500">{photo.filename}</p>
             </div>
           ))}
         </div>

@@ -38,6 +38,19 @@ class FaceCluster(BaseModel):
     photos: list[PhotoRead]
 
 
+class PhotoFace(BaseModel):
+    """Un visage d'une photo (bulles de la visionneuse) : sa vignette et le
+    groupe de la personne, pour ouvrir toutes ses photos."""
+
+    id: uuid.UUID
+    face_url: str
+    cluster_id: int | None = None
+
+
+class PhotoFacesResponse(BaseModel):
+    faces: list[PhotoFace]
+
+
 class ClusterListResponse(BaseModel):
     clusters: list[FaceCluster]
     unclustered_count: int

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckIcon } from "@/components/icons";
 import { flyToCart } from "@/lib/fly-to-cart";
 import FramedPhoto from "@/components/photo/FramedPhoto";
+import PhotoFaces from "@/components/gallery/PhotoFaces";
 import type { Photo } from "@/types/api";
 
 interface PhotoLightboxProps {
@@ -20,6 +21,11 @@ interface PhotoLightboxProps {
   showCartAction?: boolean;
   /** Voir Event.frame_caption : absent/vide = pas de cadre decoratif. */
   frameCaption?: string | null;
+  /** Evenement : bulles des visages de la photo sous l'image (invites, borne). */
+  eventId?: string;
+  onBulkSelect?: (photos: Photo[]) => void;
+  /** Nom du fichier sous la photo : seulement pour le photographe et l'equipe. */
+  showFileName?: boolean;
 }
 
 const SWIPE_THRESHOLD = 60;
@@ -49,6 +55,9 @@ export default function PhotoLightbox({
   addingPhotoId,
   showCartAction = true,
   frameCaption,
+  eventId,
+  onBulkSelect,
+  showFileName = false,
 }: PhotoLightboxProps) {
   const photo = photos[index];
   const hasPrev = index > 0;
@@ -62,6 +71,11 @@ export default function PhotoLightbox({
   const panX = useMotionValue(0);
   const panY = useMotionValue(0);
   const [isZoomed, setIsZoomed] = useState(false);
+  // Une boite des visages est ouverte par-dessus : le clavier ne pilote plus la visionneuse.
+  const boiteOuverte = useRef(false);
+  const surBoite = useCallback((ouverte: boolean) => {
+    boiteOuverte.current = ouverte;
+  }, []);
   // Gestes du zoom (doigts, souris) : pointeurs en cours, pincement, double toucher.
   const pointers = useRef(new Map<number, Point>());
   const pinch = useRef<{ dist: number; mid: Point } | null>(null);
@@ -148,6 +162,7 @@ export default function PhotoLightbox({
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
+      if (boiteOuverte.current) return;
       if (e.key === "Escape") onClose();
       if (e.key === "ArrowLeft") goPrev();
       if (e.key === "ArrowRight") goNext();
@@ -324,7 +339,7 @@ export default function PhotoLightbox({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={photo.thumbnail_url}
-                  alt={photo.original_filename}
+                  alt={`Photo ${index + 1} sur ${photos.length}`}
                   className={`max-h-[70vh] max-w-full select-none object-contain ${frameCaption ? "" : "rounded-2xl shadow-elevated"}`}
                   draggable={false}
                 />
@@ -332,7 +347,7 @@ export default function PhotoLightbox({
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={photo.preview_url}
-                    alt={photo.original_filename}
+                    alt={`Photo ${index + 1} sur ${photos.length}`}
                     className={`absolute inset-0 h-full w-full select-none object-contain transition-opacity duration-300 ${frameCaption ? "" : "rounded-2xl shadow-elevated"} ${
                       previewLoaded ? "opacity-100" : "opacity-0"
                     }`}
@@ -358,7 +373,18 @@ export default function PhotoLightbox({
 
       {/* barre basse */}
       <div className="relative z-20 flex flex-col items-center gap-3 p-5" onClick={(e) => e.stopPropagation()}>
-        <p className="max-w-[80vw] truncate text-xs text-white/70">{photo.original_filename}</p>
+        {showFileName && <p className="max-w-[80vw] truncate text-xs text-white/70">{photo.original_filename}</p>}
+        {eventId && (
+          <PhotoFaces
+            eventId={eventId}
+            photoId={photo.id}
+            selectedPhotoIds={selectedPhotoIds}
+            onToggleSelect={onToggleSelect}
+            onBulkSelect={onBulkSelect}
+            addingPhotoId={addingPhotoId}
+            onOverlayChange={surBoite}
+          />
+        )}
         {showCartAction && (
           <button
             type="button"

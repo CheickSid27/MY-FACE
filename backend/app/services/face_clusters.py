@@ -23,7 +23,7 @@ import time
 import uuid
 from collections import defaultdict
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 from sklearn.cluster import DBSCAN
@@ -90,6 +90,8 @@ class ClusterSnapshot:
 class EventClusters:
     clusters: tuple[ClusterSnapshot, ...]
     photos: dict[uuid.UUID, PhotoSnapshot]
+    # visage (FaceEmbedding.id) -> groupe : bulles des visages de la visionneuse
+    face_clusters: dict[uuid.UUID, int] = field(default_factory=dict)
 
 
 def _dbscan_labels(vectors: np.ndarray) -> np.ndarray:
@@ -124,6 +126,7 @@ async def compute_event_clusters(event_id: uuid.UUID, db: AsyncSession, storage:
 
     photos = {row.Photo.id: PhotoSnapshot.from_photo(row.Photo) for row in rows}
     groups: dict[int, dict] = {}
+    face_clusters: dict[uuid.UUID, int] = {}
     next_singleton_id = -1
     for label, row in zip(labels, rows):
         if label == -1:
@@ -131,6 +134,7 @@ async def compute_event_clusters(event_id: uuid.UUID, db: AsyncSession, storage:
             next_singleton_id -= 1
         else:
             cluster_id = int(label)
+        face_clusters[row.id] = cluster_id
         group = groups.setdefault(cluster_id, {"photo_ids": set(), "best": None})
         group["photo_ids"].add(row.Photo.id)
         if group["best"] is None or row.confidence > group["best"].confidence:
@@ -180,7 +184,7 @@ async def compute_event_clusters(event_id: uuid.UUID, db: AsyncSession, storage:
         )
         for (cluster_id, group), key in zip(ordered, crop_keys)
     )
-    return EventClusters(clusters=clusters, photos=photos)
+    return EventClusters(clusters=clusters, photos=photos, face_clusters=face_clusters)
 
 
 @dataclass(frozen=True)

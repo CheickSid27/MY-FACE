@@ -271,3 +271,17 @@ async def test_watermark_handles_accents():
     else:
         assert watermark._label("SIDIBÉ") == "SIDIBE"
 
+
+async def test_same_name_refused(auth_client: AsyncClient):
+    """Un nom de fichier par evenement : dans le meme envoi comme plus tard."""
+    event_id = await _create_event(auth_client)
+    files = [("files", ("IMG_01.JPG", _make_jpeg_bytes(), "image/jpeg")),
+             ("files", ("img_01.jpg", _make_jpeg_bytes((1, 2, 3)), "image/jpeg"))]
+    data = (await auth_client.post(f"/photos/upload?event_id={event_id}", files=files)).json()
+    assert len(data["uploaded"]) == 1
+    assert data["errors"][0]["error"] == "Une photo porte déjà ce nom dans cet événement"
+    again = [("files", ("Img_01.jpg", _make_jpeg_bytes((9, 9, 9)), "image/jpeg"))]
+    data = (await auth_client.post(f"/photos/upload?event_id={event_id}", files=again)).json()
+    assert data["uploaded"] == [] and len(data["errors"]) == 1
+    assert (await auth_client.get(f"/events/{event_id}/photos")).json()["total"] == 1
+

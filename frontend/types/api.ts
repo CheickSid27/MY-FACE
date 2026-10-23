@@ -545,3 +545,10 @@ export interface ActivityFilters {
   end?: string;
   q?: string;
 }
+
+// Visages d'une photo (bulles de la visionneuse)
+export interface PhotoFace {
+  id: string;
+  face_url: string;
+  cluster_id: number | null;
+}

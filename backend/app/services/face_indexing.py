@@ -21,9 +21,24 @@ from app.core.database import AsyncSessionLocal
 from app.models.face_embedding import FaceEmbedding
 from app.models.photo import IndexingStatus, Photo
 from app.services.face_clusters import face_cluster_cache
-from app.services.face_crops import face_crop_key
+from app.services.face_crops import ensure_photo_face_crops, face_crop_key
 from app.services.face_recognition import ImageDecodeError, detect_faces_async
 from app.services.storage import StorageService, get_storage_service
+
+
+
+class _MemoireStorage:
+    """Le stockage, sauf l'original deja en memoire (pas de 2e telechargement)."""
+
+    def __init__(self, storage, key, data):
+        self._storage, self._key, self._data = storage, key, data
+
+    async def download(self, key):
+        return self._data if key == self._key else await self._storage.download(key)
+
+    async def upload(self, key, data, content_type):
+        await self._storage.upload(key, data, content_type)
+
 
 logger = logging.getLogger("myface.face_indexing")
 
@@ -99,21 +114,35 @@ async def index_photo_faces(
                     await db.execute(delete(FaceEmbedding).where(FaceEmbedding.photo_id == photo.id))
                     replaced_crop_keys = [crop_key or face_crop_key(event_id, fid) for fid, crop_key in previous]
 
-                for face in faces:
-                    db.add(
-                        FaceEmbedding(
-                            photo_id=photo.id,
-                            vector=face.embedding,
-                            bounding_box={
-                                "x1": face.bounding_box[0],
-                                "y1": face.bounding_box[1],
-                                "x2": face.bounding_box[2],
-                                "y2": face.bounding_box[3],
-                            },
-                            confidence=face.confidence,
-                            sharpness=face.sharpness,
-                        )
+                nouveaux = [
+                    FaceEmbedding(
+                        photo_id=photo.id,
+                        vector=face.embedding,
+                        bounding_box={
+                            "x1": face.bounding_box[0],
+                            "y1": face.bounding_box[1],
+                            "x2": face.bounding_box[2],
+                            "y2": face.bounding_box[3],
+                        },
+                        confidence=face.confidence,
+                        sharpness=face.sharpness,
                     )
+                    for face in faces
+                ]
+                db.add_all(nouveaux)
+                await db.flush()
+                # Vignette de chaque visage tout de suite (l'image est deja en
+                # memoire) : les bulles de la visionneuse s'affichent sans
+                # attendre. En cas d'echec, elles seront faites a la demande.
+                try:
+                    cles = await ensure_photo_face_crops(
+                        event_id, photo.original_key, [(f.id, f.bounding_box, None) for f in nouveaux],
+                        _MemoireStorage(storage, photo.original_key, image_bytes),
+                    )
+                    for f in nouveaux:
+                        f.crop_key = cles.get(f.id)
+                except Exception:
+                    logger.exception("Vignettes des visages de la photo %s non faites", photo_id)
 
                 photo.indexing_status = IndexingStatus.DONE
                 await db.commit()

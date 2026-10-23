@@ -50,6 +50,33 @@ def _crop_bytes(image_bytes: bytes, bbox: dict) -> bytes:
     return buffer.getvalue()
 
 
+async def ensure_photo_face_crops(
+    event_id: uuid.UUID,
+    original_key: str,
+    faces: list[tuple[uuid.UUID, dict, str | None]],
+    storage: StorageService,
+) -> dict[uuid.UUID, str]:
+    """Vignettes de tous les visages d'une photo (bulles de la visionneuse) :
+    celles qui manquent sont fabriquees en une fois (un seul telechargement de
+    l'original). Renvoie {id du visage: cle} ; l'appelant memorise les cles
+    nouvelles (FaceEmbedding.crop_key)."""
+    keys = {face_id: key for face_id, _, key in faces if key}
+    missing = [(face_id, bbox) for face_id, bbox, key in faces if not key]
+    if not missing:
+        return keys
+    original = await storage.download(original_key)
+
+    def _all() -> list[bytes]:
+        return [_crop_bytes(original, bbox) for _, bbox in missing]
+
+    crops = await asyncio.to_thread(_all)
+    new_keys = [face_crop_key(event_id, face_id) for face_id, _ in missing]
+    await asyncio.gather(*(storage.upload(k, c, "image/jpeg") for k, c in zip(new_keys, crops)))
+    for (face_id, _), key in zip(missing, new_keys):
+        keys[face_id] = key
+    return keys
+
+
 async def ensure_face_crop(
     face_embedding_id: uuid.UUID,
     event_id: uuid.UUID,

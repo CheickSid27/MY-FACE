@@ -324,3 +324,27 @@ async def test_public_clusters_watermark_except_kiosk(
 async def test_clusters_requires_auth(client: AsyncClient):
     resp = await client.get("/events/00000000-0000-0000-0000-000000000000/clusters")
     assert resp.status_code in (401, 403)
+
+
+async def test_photo_faces_bubbles(auth_client: AsyncClient, client: AsyncClient, storage_service, test_session_factory):
+    """Visages d'une photo pour les bulles de la visionneuse : vignette deja
+    faite a l'analyse, groupe de la personne, de gauche a droite."""
+    event_id = await _create_event(auth_client)
+    ids = [await _seed_photo(event_id, storage_service, test_session_factory, n, _real_face_image_bytes())
+           for n in ("a.jpg", "b.jpg")]
+    for pid in ids:
+        await index_photo_faces(pid, storage=storage_service, session_factory=test_session_factory)
+    async with test_session_factory() as s:
+        rows = (await s.execute(select(FaceEmbedding).where(FaceEmbedding.photo_id == uuid.UUID(ids[0])))).scalars().all()
+        assert rows and all(r.crop_key for r in rows)
+    client.headers.pop("Authorization", None)
+    resp = await client.get(f"/photos/{ids[0]}/faces")
+    assert resp.status_code == 200
+    faces = resp.json()["faces"]
+    assert len(faces) == len(rows)
+    assert all(f["face_url"] and f["cluster_id"] is not None for f in faces)
+    clusters = (await client.get(f"/events/{event_id}/clusters/public")).json()["clusters"]
+    ids_groupes = {c["cluster_id"] for c in clusters}
+    assert {f["cluster_id"] for f in faces} <= ids_groupes
+    assert (await client.get(f"/photos/{uuid.uuid4()}/faces")).status_code == 404
+

@@ -106,7 +106,8 @@ Au-dela de la limite du pack, chaque photo envoyee est refusee avec le message �
 
 | Methode | Route | Description |
 |---|---|---|
-| POST 🔒 | `/photos/upload?event_id=` | Upload par lots (multipart) : JPEG, PNG, WebP ou RAW (CR2, CR3, NEF, ARW, DNG, RAF...), 70 Mo max par photo ; RAW garde + JPEG pleine resolution |
+| POST 🔒 | `/photos/upload?event_id=` | Upload par lots (multipart) : JPEG, PNG, WebP ou RAW (CR2, CR3, NEF, ARW, DNG, RAF...), 70 Mo max par photo ; RAW garde + JPEG pleine resolution ; un nom de fichier deja present dans l'evenement (majuscules et minuscules confondues) est refuse |
+| GET 🌐🔑 | `/photos/{id}/faces` | Visages de la photo, de gauche a droite : vignette (`face_url`) et groupe (`cluster_id`), pour les bulles de la visionneuse ; memes droits que la galerie (`kiosk_token`, `access`) |
 | GET 🌐🔑 | `/events/{id}/photos` | Liste paginee (`page`, `page_size` <= 200, `kiosk_token`, `access` pour une galerie protegee) |
 | DELETE 🔒 | `/photos/{id}` | Supprime une photo et tous ses fichiers derives (409 si deja vendue) |
 | POST 🔒 | `/photos/bulk-delete` | Supprime plusieurs photos d'un evenement d'un coup (`event_id`, `photo_ids`, 2 000 max) : selection, ou toutes les photos d'une personne (groupe de visages, ou retrouvee par sa photo) ; les photos deja vendues sont gardees et listees (`kept_sold`) |

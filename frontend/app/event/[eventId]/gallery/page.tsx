@@ -444,6 +444,8 @@ export default function GalleryPage() {
           selectedPhotoIds={selectedIds}
           onToggleSelect={handleToggleSelect}
           frameCaption={frameCaption}
+          eventId={eventId}
+          onBulkSelect={handleBulkAdd}
         />
       )}
 

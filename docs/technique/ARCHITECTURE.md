@@ -234,6 +234,16 @@ probleme : evenement, date, telephone, moyen et reference de paiement, liste nom
 paiements (recherche par telephone, numero de commande ou reference) et imprimable en A4
 (`/admin/orders/{id}/receipt`, avec le QR de telechargement du client).
 
+## Visionneuse : bulles des visages
+
+Sous la photo ouverte, a la place du nom du fichier (montre seulement au photographe et a l'equipe),
+une bulle par visage de la photo (`GET /photos/{id}/faces`, `components/gallery/PhotoFaces.tsx`) :
+3 au plus cote a cote ; au-dela, 3 bulles a moitie superposees et une 4e avec une fleche qui ouvre
+« Les visages de cette photo ». Toucher un visage ouvre toutes les photos de la personne (son groupe,
+meme vue que « Trouver mon visage », `components/faces/PersonPhotos.tsx`). Les vignettes des visages
+sont faites des l'analyse de la photo (`face_crops.ensure_photo_face_crops`), sinon a la premiere
+ouverture, puis gardees (`crop_key`). Un nom de fichier n'existe qu'une fois par evenement.
+
 ## Filigrane et mode borne
 
 L'apercu 1600px est assez net pour etre capture et utilise sans achat. Chaque photo a donc une

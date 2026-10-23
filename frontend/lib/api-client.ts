@@ -35,6 +35,7 @@ import type {
   PaymentMethod,
   PaymentStatusResponse,
   PhoneCountry,
+  PhotoFace,
   PhotoListResponse,
   PhotoUploadResult,
   PricingDiscount,
@@ -402,6 +403,13 @@ export const api = {
         method: "POST",
         body: formData,
       }
+    );
+  },
+
+  /** Visages d'une photo, de gauche a droite (bulles de la visionneuse). */
+  getPhotoFaces(photoId: string, eventId: string, kioskToken?: string | null): Promise<{ faces: PhotoFace[] }> {
+    return request<{ faces: PhotoFace[] }>(
+      withQuery(`/photos/${photoId}/faces`, { kiosk_token: kioskToken, access: getGalleryAccess(eventId) })
     );
   },
 

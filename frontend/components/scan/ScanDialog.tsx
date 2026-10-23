@@ -507,6 +507,7 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
             onNavigate={setLightboxIndex}
             selectedPhotoIds={selectedIds}
             onToggleSelect={handlePhotoClick}
+            eventId={eventId}
           />
         </div>
       )}
