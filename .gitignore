@@ -86,3 +86,9 @@ docs/artci/
 # Fichiers locaux d'outils (configuration de l'apercu Claude, cache TypeScript)
 .claude/
 frontend/tsconfig.tsbuildinfo
+# v5 : photos et captures de l'evenement MA SOUTENANCE (personnes reelles), sorties
+marketing/motion-design/v5/photos/
+marketing/motion-design/v5/apercus/
+marketing/motion-design/v5/*.mp4
+marketing/motion-design/v5/*.wav
+marketing/motion-design/v5/voix/*.wav

@@ -9,41 +9,36 @@ annoncée ; pas de prix chiffré des packs (« petit prix ») ; l'IA et « Trouv
 le réseau social est dessiné de façon générique (aucun logo ni écran de Facebook : on ne copie pas
 une marque).
 
-## Les voix (Gemini)
+## La voix et le texte
 
-| Rôle | Voix proposée | Statut |
+Décision du 23/10 : **une seule voix, Zephyr**, comme les versions précédentes. Texte final dans
+`voix/texte.txt` : prise unique de 58,6 s découpée en 11 phrases (50,2 s de parole). Film : 64,5 s.
+
+| Scène | Images | Texte (Zephyr) |
 |---|---|---|
-| Narratrice MYFACE | Zephyr | déjà utilisée (v3, v4) |
-| Le photographe | Puck ou Charon | nouvelle |
-| L'invitée | Aoede ou Laomedeia | nouvelle |
-| L'organisatrice (option) | Sulafat | nouvelle dans ce film |
-
-## Le déroulé (60 s)
-
-| Temps | Images | Texte à l'écran | Voix |
-|---|---|---|---|
-| 0-7 s | Un fil de réseau social générique : album « Soutenance · 2 347 photos », un pouce qui fait défiler sans fin | « 2 347 photos… et la vôtre ? » | **Photographe** : Comme beaucoup de photographes, je publiais des milliers de photos gratuitement sur les réseaux. Mes clients passaient des heures à se chercher. |
-| 7-13 s | Logo MYFACE, puis le lien court app.myfaceci.online/e/TZ6K4DFM | « 1 seul lien » | **Zephyr** : Avec MYFACE, un seul lien suffit : chacun retrouve ses photos en un selfie. |
-| 13-19 s | Inscription photographe, puis glisser-déposer des photos de la soutenance, badge « RAW » | « Votre compte en 1 minute » | **Photographe** : J'ai créé mon compte, déposé mes photos, même en RAW, et le premier événement était offert. |
-| 19-25 s | Une photo de la soutenance : balayage, cadre sur le visage, puis « Personne 1 · 64 photos » | « L'IA reconnaît chaque visage » | **Zephyr** : Notre intelligence artificielle reconnaît chaque visage, et range les photos par personne. |
-| 25-32 s | Accueil « MA SOUTENANCE », « Trouver mon visage », ses photos | « Un QR code, un selfie » | **Invitée** : J'ai scanné le QR code... et toutes mes photos de la soutenance étaient là ! |
-| 32-39 s | Visionneuse avec le filigrane du studio, zoom au doigt, puis paiement en ligne | « Offertes ou payantes : vous choisissez » | **Zephyr** : Offertes ou payantes, c'est vous qui choisissez. En ligne, l'argent va directement au photographe. |
-| 39-43 s | Téléphone qui vibre : « Nouvelle vente » | « Chaque vente, en direct » | **Photographe** : Et mon téléphone vibre à chaque vente. |
-| 43-50 s | MYFACE Pro : accueil, l'événement, statistiques | « MYFACE Pro » | **Zephyr** : Suivez tout dans MYFACE Pro, sur téléphone comme sur ordinateur. |
-| 50-55 s | Les packs, « 0 % de commission » | « Zéro commission » | **Zephyr** : Plus de photos ? Passez au pack supérieur, à petit prix. MYFACE ne prend rien sur vos ventes. |
-| 55-60 s | Logo, signature, adresse | « myfaceci.online/photographes » | **Zephyr** : MYFACE. Scanne. Retrouve. Repars avec. |
+| Réseaux | Fil générique, album « 2 347 photos » de la soutenance | Photographes : vous publiez des milliers de photos gratuitement sur les réseaux ? |
+| On se cherche | Le fil défile, « Et vous, vous êtes où ? » | Vos clients font défiler pendant des heures, et souvent, ils ne se trouvent jamais. |
+| Un lien | Logo, lien court TZ6K4DFM, vrai QR code, « 1 seul lien, 1 selfie » | Avec MyFace, un seul lien suffit : chacun retrouve ses photos en un selfie. |
+| Le compte | Page d'inscription, puis les photos qui volent vers MYFACE (64), « même RAW », « Gratuit pour commencer » | Créez votre compte en une minute, déposez vos photos, même en RAW, et commencez gratuitement. |
+| L'IA | Photo avec ton amie : balayage, « Personne 1 », « Personne 2 », puis 64 et 8 photos | Notre intelligence artificielle reconnaît chaque visage, et range les photos par personne. |
+| L'invité | Accueil MA SOUTENANCE, galerie, « Trouver mon visage », « 64 photos retrouvées » | Vos invités scannent le QR code, touchent « Trouver mon visage »... et toutes leurs photos sont là. |
+| Le choix | Visionneuse avec filigrane et zoom, « Offertes / Payantes », Wave, Orange Money, MTN, carte, « Votre compte » | Offertes ou payantes, c'est vous qui choisissez. En ligne, l'argent arrive directement sur votre compte. |
+| La vente | Téléphone qui vibre, notification « Nouvelle vente » | Et votre téléphone vibre à chaque vente. |
+| MYFACE Pro | Écran de l'événement et onglet Visages | Suivez tout dans MyFace Pro, sur téléphone comme sur ordinateur. |
+| Les packs | Découverte (gratuit, 10 photos), Événement (500), Pro (2 000), « 0 % de commission » | Besoin de plus de photos ? Passez au pack supérieur, à petit prix. Et MyFace ne prend rien sur vos ventes. |
+| Fin | Logo, signature, myfaceci.online/photographes | MyFace. Scanne, retrouve, repars avec. |
 
 ## Images
 
 - **Faites** (pages publiques, 1290 × 2796, `v5/captures/`, hors Git) : accueil avec le code tapé,
   page d'accueil de « MA SOUTENANCE », galerie, « Trouver mon visage », « Personne 1, 64 photos »,
   visionneuse avec filigrane, inscription photographe.
-- **À fournir** (compte photographe connecté, captures du téléphone) : accueil de MYFACE Pro, haut de
-  l'événement avec le QR et le code, onglet Photos, Ventes ou une notification de vente, Statistiques,
-  Compte « Paiement en ligne de vos ventes ».
+- **MYFACE Pro** : haut de l'événement et onglet Visages, capturés dans le navigateur (538 × 848, contenu
+  identique pour le photographe). Des captures faites sur ton téléphone seraient plus nettes : à remplacer si tu les envoies.
+- **Photos** : les 64 aperçus nets de l'événement (`v5/photos/`, hors Git) ; QR code réel du lien court.
 
 ## À savoir
 
 - Les personnes visibles sur les photos de la soutenance doivent être d'accord pour apparaître dans
   une publicité (droit à l'image).
-- Le filigrane affiche « SIDIB⊠ » au lieu de « SIDIBÉ » : défaut de police à corriger avant le film.
+- Filigrane corrigé le 23/10 (« Cheick sidibé », avec l'accent).

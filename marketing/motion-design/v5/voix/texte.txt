@@ -1,0 +1,14 @@
+# Voix off du motion design v5 (1 min, photographes), voix Gemini Zephyr comme les v3 et v4.
+# Une phrase par ligne : identifiant|scene|texte. {MYFACE} est remplace par MyFace pour la voix.
+# Genere avec : python marketing/motion-design/v5/voix/generer_voix_v5.py
+V01|reseaux|Photographes : vous publiez des milliers de photos gratuitement sur les réseaux ?
+V02|cherche|Vos clients font défiler pendant des heures, et souvent, ils ne se trouvent jamais.
+V03|lien|Avec {MYFACE}, un seul lien suffit : chacun retrouve ses photos en un selfie.
+V04|compte|Créez votre compte en une minute, déposez vos photos, même en RAW, et commencez gratuitement.
+V05|ia|Notre intelligence artificielle reconnaît chaque visage, et range les photos par personne.
+V06|invite|Vos invités scannent le QR code, touchent « Trouver mon visage »... et toutes leurs photos sont là.
+V07|choix|Offertes ou payantes, c'est vous qui choisissez. En ligne, l'argent arrive directement sur votre compte.
+V08|vente|Et votre téléphone vibre à chaque vente.
+V09|pro|Suivez tout dans {MYFACE} Pro, sur téléphone comme sur ordinateur.
+V10|packs|Besoin de plus de photos ? Passez au pack supérieur, à petit prix. Et {MYFACE} ne prend rien sur vos ventes.
+V11|fin|{MYFACE}. Scanne, retrouve, repars avec.
