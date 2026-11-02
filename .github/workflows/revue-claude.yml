@@ -1,0 +1,72 @@
+# Revue de code automatique par Claude sur chaque pull request.
+#
+# Ce workflow ne fait RIEN tant que le secret ANTHROPIC_API_KEY n'est pas
+# configure dans le depot (Settings > Secrets and variables > Actions).
+# Sans la cle, il se termine en succes avec une simple note : il ne peut donc
+# jamais bloquer ni colorer en rouge un depot qui fonctionne aujourd'hui.
+
+name: Revue Claude
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  revue:
+    name: Relecture du diff
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Verifier la presence de la cle API
+        id: cle
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            echo "presente=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "presente=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Secret ANTHROPIC_API_KEY absent : revue ignoree (ce n'est pas une erreur)."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.cle.outputs.presente == 'true'
+        with:
+          fetch-depth: 0
+
+      - name: Revue
+        if: steps.cle.outputs.presente == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Relis le diff de cette pull request du projet MYFACE (plateforme de
+            photos d'evenement avec reconnaissance faciale : FastAPI + SQLAlchemy
+            async, PostgreSQL + pgvector, Next.js 14, stockage S3).
+
+            Signale en priorite, et uniquement si tu en es sur :
+            - fuite de donnees personnelles ou biometriques (embeddings faciaux,
+              selfies, numeros de telephone) : le selfie ne doit jamais etre
+              enregistre, les embeddings ne doivent jamais sortir de l'evenement
+              auquel ils appartiennent ;
+            - controle d'acces manquant : une route qui ne verifie pas le JWT,
+              le role, l'appartenance a l'evenement, ou le jeton du mode borne ;
+            - filigrane contourne, ou URL d'original accessible sans commande payee ;
+            - erreur de calcul sur les prix, les lots, les remises de volume ou
+              les tirages papier ;
+            - requete SQL non bornee par event_id, ou bug async/await (session
+              SQLAlchemy partagee entre taches, connexion asyncpg sur une autre
+              boucle d'evenements) ;
+            - migration Alembic qui perdrait des donnees existantes.
+
+            Ne commente pas le style : le depot a volontairement du retard sur ruff.
+            Si le diff est sain, dis-le en une phrase et n'invente pas de remarque.
+            Reponds en francais.
+          claude_args: --allowed-tools "Read,Grep,Glob"

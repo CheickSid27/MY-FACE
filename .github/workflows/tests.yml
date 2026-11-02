@@ -1,0 +1,120 @@
+# Suite de tests automatique MYFACE.
+#
+# Ce fichier est PUREMENT ADDITIF : il ne modifie aucun code applicatif.
+# Il reproduit, sur les serveurs GitHub, ce que fait la commande documentee
+# dans le README :
+#     docker compose run --rm --no-deps -w /app backend python3 -m pytest
+#
+# Difference assumee : on n'utilise pas l'image Docker du backend (basee sur
+# nvidia/cuda, plusieurs Go, inutile sans GPU sur un runner GitHub). On
+# installe les dependances directement, en remplacant onnxruntime-gpu par la
+# version CPU. Les tests n'appellent jamais l'IA : ils remplacent le stockage
+# par un double en memoire et ne chargent aucun modele InsightFace.
+
+name: Tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (pytest + Postgres reel)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: myface
+          POSTGRES_PASSWORD: myface
+          POSTGRES_DB: myface
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U myface"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      # Les tests tournent toujours contre myface_test, jamais contre
+      # DATABASE_URL (qui peut pointer vers Neon en production).
+      SECRET_KEY: cle-de-test-ci-sans-valeur-en-production
+      DATABASE_URL: postgresql+asyncpg://myface:myface@localhost:5432/myface
+      TEST_DATABASE_URL: postgresql+asyncpg://myface:myface@localhost:5432/myface_test
+      STORAGE_BACKEND: local
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Creer la base de test
+        run: |
+          PGPASSWORD=myface psql -h localhost -U myface -d myface \
+            -c "SELECT 'CREATE DATABASE myface_test' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'myface_test')\gexec"
+
+      - name: Bibliotheques systeme (opencv, Pillow, LibRaw)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Installer les dependances
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          # insightface compile son extension native a l'installation et a
+          # besoin de numpy et cython deja presents.
+          pip install "numpy>=1.26.4" cython
+          # Pas de GPU sur un runner GitHub : onnxruntime-gpu (~500 Mo) est
+          # remplace par la version CPU. requirements.txt n'est pas modifie.
+          sed 's/^onnxruntime-gpu.*/onnxruntime>=1.19.0/' requirements.txt > requirements-ci.txt
+          pip install -r requirements-ci.txt
+          pip install "pytest>=8.3.3" "pytest-asyncio>=0.24.0" "ruff>=0.6.9"
+
+      - name: Lint (informatif, ne fait jamais echouer)
+        working-directory: backend
+        continue-on-error: true
+        run: ruff check . --output-format=github
+
+      - name: Tests
+        working-directory: backend
+        run: python -m pytest -q
+
+  frontend:
+    name: Frontend (types TypeScript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Installer les dependances
+        working-directory: frontend
+        run: npm ci
+
+      - name: Verification des types (tsconfig strict)
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Garde-fou mise en page (votre script prebuild)
+        working-directory: frontend
+        continue-on-error: true
+        run: node scripts/check-layout.mjs
