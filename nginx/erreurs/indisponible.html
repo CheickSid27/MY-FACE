@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="30">
+<meta name="robots" content="noindex">
+<title>MYFACE revient dans un instant</title>
+<style>
+  /* Page servie quand l'application ne repond pas (nginx : 502, 503, 504 ;
+     Worker Cloudflare : PC eteint). Autonome : aucune ressource externe. */
+  :root { --fond: #0E2429; --texte: #F4EFE6; --doux: #A9C3C0; --accent: #F26A1B; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--fond); color: var(--texte);
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px));
+    text-align: center;
+  }
+  main { max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .logo { font-size: 30px; font-weight: 800; letter-spacing: .02em; }
+  .logo span { color: var(--accent); }
+  .cadre { width: 72px; height: 72px; position: relative; }
+  .cadre i { position: absolute; width: 22px; height: 22px; border-color: var(--accent); border-style: solid; }
+  .cadre i:nth-child(1) { top: 0; left: 0; border-width: 4px 0 0 4px; border-radius: 6px 0 0 0; }
+  .cadre i:nth-child(2) { top: 0; right: 0; border-width: 4px 4px 0 0; border-radius: 0 6px 0 0; }
+  .cadre i:nth-child(3) { bottom: 0; left: 0; border-width: 0 0 4px 4px; border-radius: 0 0 0 6px; }
+  .cadre i:nth-child(4) { bottom: 0; right: 0; border-width: 0 4px 4px 0; border-radius: 0 0 6px 0; }
+  h1 { margin: 8px 0 0; font-size: 24px; line-height: 1.25; }
+  p { margin: 0; color: var(--doux); line-height: 1.5; }
+  .note { font-size: 13px; }
+  a { color: var(--texte); font-weight: 600; }
+  @media (prefers-reduced-motion: no-preference) {
+    .cadre { animation: souffle 2.4s ease-in-out infinite; }
+    @keyframes souffle { 50% { transform: scale(1.06); } }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="cadre" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <div class="logo">MY<span>FACE</span></div>
+  <h1>MYFACE revient dans un instant</h1>
+  <p>Le service est momentanément indisponible. Vos photos sont en sécurité et vous attendent.</p>
+  <p class="note">Cette page se recharge toute seule. Vous pouvez aussi <a href="">réessayer maintenant</a>.</p>
+</main>
+</body>
+</html>

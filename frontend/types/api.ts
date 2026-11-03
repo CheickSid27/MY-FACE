@@ -121,6 +121,22 @@ export interface EventPack {
   purchases: PackPurchase[];
 }
 
+/** Mode maintenance vu par les pages invites (GET /meta/status). */
+export interface MaintenanceStatus {
+  maintenance: boolean;
+  message: string | null;
+  /** L'espace des photographes est aussi ferme (l'admin garde l'acces). */
+  photographers: boolean;
+}
+
+/** Bouton du mode maintenance (admin). */
+export interface MaintenanceAdmin {
+  active: boolean;
+  message: string | null;
+  since: string | null;
+  photographers: boolean;
+}
+
 export interface PackPaymentInfo {
   wave?: string | null;
   orange?: string | null;
@@ -202,6 +218,8 @@ export interface EventPublicRead {
   photographer_name: string | null;
   password_required: boolean;
   gallery_access: boolean;
+  /** Parties de l'evenement (onglets de la galerie), vide = aucune */
+  sections: EventSection[];
   // Photos en ligne jusqu'a cette date (null = pas de suppression prevue)
   photos_available_until: string | null;
   photos_purged: boolean;
@@ -237,6 +255,24 @@ export interface Photo {
   original_filename: string;
   indexing_status: IndexingStatus;
   uploaded_at: string;
+  /** Partie de l'evenement (mairie, reception...), null = aucune */
+  section_id?: string | null;
+}
+
+/** Partie d'un evenement : un onglet de la galerie. */
+export interface EventSection {
+  id: string;
+  name: string;
+  starts_at: string | null;
+  location: string | null;
+  position: number;
+  photo_count: number;
+}
+
+export interface EventSectionInput {
+  name: string;
+  starts_at: string | null;
+  location: string | null;
 }
 
 export interface PhotoListResponse {

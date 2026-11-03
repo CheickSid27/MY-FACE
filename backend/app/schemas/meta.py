@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PhoneCountryRead(BaseModel):
@@ -11,3 +11,25 @@ class PhoneCountryRead(BaseModel):
     example: str
     hint: str
     trunk_prefix: str | None = None
+
+
+class MaintenanceStatusRead(BaseModel):
+    """Ce que voient les pages invites (public)."""
+
+    maintenance: bool
+    message: str | None = None
+    photographers: bool = False
+
+
+class MaintenanceAdminRead(BaseModel):
+    active: bool
+    message: str | None = None
+    since: str | None = None
+    photographers: bool = False
+
+
+class MaintenanceUpdate(BaseModel):
+    active: bool
+    message: str | None = Field(default=None, max_length=300)
+    # aussi fermer l'espace des photographes (l'admin garde l'acces)
+    photographers: bool = False

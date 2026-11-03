@@ -13,6 +13,7 @@ from pydantic import (
 )
 
 from app.core.config import get_settings
+from app.schemas.section import SectionRead
 
 # Plafonds de saisie : au-dela, c'est une faute de frappe (un zero de trop),
 # pas un vrai tarif.
@@ -197,6 +198,8 @@ class EventPublicRead(BaseModel):
     # (jeton `access` valide, borne ou organisateur connecte).
     password_required: bool = False
     gallery_access: bool = True
+    # Parties de l'evenement (mairie, reception...) : onglets de la galerie ; vide = aucune
+    sections: list[SectionRead] = []
     # Conservation des donnees : date jusqu'a laquelle les photos restent en
     # ligne (None = pas de suppression prevue), et photos deja supprimees.
     photos_available_until: datetime | None = None

@@ -35,6 +35,7 @@ from app.schemas.event import (
 from app.schemas.face import ClusterListResponse
 from app.schemas.payment_method import EventPaymentMethodRead
 from app.schemas.watched_folder import WatchedFileRead, WatchedFolderRead
+from app.routers.sections import list_sections
 from app.services.activity import log_activity
 from app.services.short_codes import new_short_code, normalize_code
 from app.services import paystack
@@ -236,6 +237,7 @@ async def get_event_public(
         gallery_access=has_gallery_access(event, kiosk_token=kiosk_token, access_token=access, user=current_user),
         photos_available_until=photos_deadline(event),
         photos_purged=event.photos_purged_at is not None,
+        sections=await list_sections(db, event.id),
     )
 
 

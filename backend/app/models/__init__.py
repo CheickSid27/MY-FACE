@@ -3,6 +3,7 @@ from app.models.app_setting import AppSetting
 from app.models.cart import CartItem, CartSession
 from app.models.event import Event
 from app.models.event_payment_method import EventPaymentMethod
+from app.models.event_section import EventSection
 from app.models.face_embedding import FaceEmbedding
 from app.models.order import Order, OrderItem, OrderStatus, PaymentMethod
 from app.models.pack_purchase import PackPurchase, PackPurchaseStatus
@@ -17,6 +18,7 @@ __all__ = [
     "CartSession",
     "Event",
     "EventPaymentMethod",
+    "EventSection",
     "FaceEmbedding",
     "Order",
     "OrderItem",

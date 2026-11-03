@@ -26,6 +26,7 @@ from app.models.order import Order, OrderItem, OrderStatus, PaymentMethod
 from app.models.user import User
 from app.routers.payments import _apply_webhook_result
 from app.schemas.geniuspay import GeniusPayInitRequest, GeniusPayInitResponse
+from app.services import maintenance
 from app.services import geniuspay
 from app.services.pricing import calculate_total, item_prices
 
@@ -39,6 +40,7 @@ async def init_geniuspay_payment(
     payload: GeniusPayInitRequest,
     db: AsyncSession = Depends(get_db),
 ) -> GeniusPayInitResponse:
+    await maintenance.ensure_open_for_guests(db)
     result = await db.execute(
         select(CartSession)
         .where(CartSession.id == payload.session_id)

@@ -1,9 +1,11 @@
 import Link from "next/link";
 import MyfaceLogo from "@/components/brand/Logo";
 import EventCodeForm from "@/components/event/EventCodeForm";
+import MaintenanceGate from "@/components/maintenance/MaintenanceGate";
 
 export default function RootPage() {
   return (
+    <MaintenanceGate>
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-brand px-6 text-center text-white">
       <MyfaceLogo size={96} tone="light" />
       <h1 className="text-3xl font-bold">
@@ -24,5 +26,6 @@ export default function RootPage() {
         Vous êtes photographe ? Découvrez MYFACE pour vos événements
       </Link>
     </main>
+    </MaintenanceGate>
   );
 }

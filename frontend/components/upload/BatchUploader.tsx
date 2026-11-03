@@ -13,11 +13,13 @@ interface BatchUploaderProps {
   remaining?: number | null;
   /** Pack plein : ouvre la proposition de pack superieur. */
   onLimitReached?: () => void;
+  /** Partie de l'evenement ou ranger les photos (mairie, reception...), null = aucune */
+  sectionId?: string | null;
 }
 
 const LIMIT_MESSAGE = "Limite du pack atteinte : passez au pack supérieur pour l'ajouter";
 
-export default function BatchUploader({ eventId, onUploaded, remaining = null, onLimitReached }: BatchUploaderProps) {
+export default function BatchUploader({ eventId, onUploaded, remaining = null, onLimitReached, sectionId = null }: BatchUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -62,7 +64,7 @@ export default function BatchUploader({ eventId, onUploaded, remaining = null, o
     let sent = 0;
     for (const chunk of chunksOf(files)) {
       try {
-        const result = await api.uploadPhotos(eventId, chunk);
+        const result = await api.uploadPhotos(eventId, chunk, sectionId);
         allErrors.push(...result.errors);
       } catch (err) {
         chunk.forEach((file) =>

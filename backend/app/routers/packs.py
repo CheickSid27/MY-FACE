@@ -34,6 +34,7 @@ from app.schemas.pack import (
     PaystackCheckout,
     PaystackPurchaseCreate,
 )
+from app.services import maintenance
 from app.services.activity import log_activity
 from app.services import paystack
 from app.services.access import can_manage_event, get_manageable_event
@@ -173,6 +174,7 @@ async def create_pack_purchase(
     l'achat reste « en attente » jusqu'a la verification par un admin, qui
     recoit une notification. Passer d'Evenement a Pro ne coute que la
     difference."""
+    await maintenance.ensure_open_for_user(db, current_user)
     event, owner, target, due = await _check_new_purchase(event_id, payload.pack, current_user, db)
 
     purchase = PackPurchase(
@@ -272,6 +274,7 @@ async def start_paystack_purchase(
     """Ouvre un paiement Paystack pour un pack : renvoie le lien de la page
     de paiement. Le pack s'active seul quand Paystack confirme le paiement
     (webhook ou retour sur l'application), sans validation par un admin."""
+    await maintenance.ensure_open_for_user(db, current_user)
     if not paystack.is_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

@@ -19,6 +19,8 @@ class PhotoRead(BaseModel):
     original_filename: str
     indexing_status: IndexingStatus
     uploaded_at: datetime
+    # Partie de l'evenement (mairie, reception...), None = aucune
+    section_id: uuid.UUID | None = None
 
 
 class PhotoUploadError(BaseModel):

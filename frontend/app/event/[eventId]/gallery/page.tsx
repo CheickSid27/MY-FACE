@@ -6,15 +6,34 @@ import FindFacesDialog from "@/components/faces/FindFacesDialog";
 import Pagination from "@/components/gallery/Pagination";
 import PhotoGrid from "@/components/gallery/PhotoGrid";
 import PhotoLightbox from "@/components/gallery/PhotoLightbox";
+import SectionTabs, { sectionDetails } from "@/components/gallery/SectionTabs";
 import { CameraIcon, CartIcon, UsersIcon } from "@/components/icons";
 import ScanDialog from "@/components/scan/ScanDialog";
 import { api, ApiError } from "@/lib/api-client";
 import { getCartSessionId, setCartSessionId } from "@/lib/cart";
 import { useKioskInactivityReset } from "@/lib/kiosk-inactivity-reset";
 import { getKioskToken, isKioskMode } from "@/lib/kiosk";
-import type { CartRead, Photo, PhotoListResponse } from "@/types/api";
+import type { CartRead, EventSection, Photo, PhotoListResponse } from "@/types/api";
 
 const PAGE_SIZE = 60;
+
+// Onglet choisi, retrouve en revenant du panier ou de l'accueil (onglet du navigateur seulement)
+function savedTab(eventId: string): string | null {
+  try {
+    return sessionStorage.getItem(`myface-onglet-${eventId}`);
+  } catch {
+    return null;
+  }
+}
+
+function saveTab(eventId: string, sectionId: string | null) {
+  try {
+    if (sectionId) sessionStorage.setItem(`myface-onglet-${eventId}`, sectionId);
+    else sessionStorage.removeItem(`myface-onglet-${eventId}`);
+  } catch {
+    // stockage indisponible : l'onglet repart sur « Toutes »
+  }
+}
 
 export default function GalleryPage() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -26,12 +45,18 @@ export default function GalleryPage() {
   const [error, setError] = useState<string | null>(null);
   const [frameCaption, setFrameCaption] = useState<string | null>(null);
   const [kiosk, setKiosk] = useState(false);
+  // Parties de l'evenement (mairie, reception...) et onglet affiche (null = toutes)
+  const [sections, setSections] = useState<EventSection[]>([]);
+  const [sectionId, setSectionId] = useState<string | null>(null);
+  const sectionRef = useRef<string | null>(null);
+  const [allCount, setAllCount] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     api
       .getEventPublic(eventId, getKioskToken(eventId))
       .then((event) => {
         setFrameCaption(event.frame_caption);
+        setSections(event.sections ?? []);
         // Galerie protegee par mot de passe, pas encore deverrouillee sur cet
         // appareil : retour a l'accueil de l'evenement, qui demande le mot de passe.
         if (event.password_required && !event.gallery_access) router.replace(`/event/${eventId}`);
@@ -68,7 +93,10 @@ export default function GalleryPage() {
   // On pre-charge silencieusement la page suivante des qu'une page s'affiche,
   // pour que le clic "suivant" (le parcours le plus courant) semble instantane
   // la plupart du temps au lieu d'attendre ~0.5-1s a chaque fois.
-  const pageCacheRef = useRef<Map<number, PhotoListResponse>>(new Map());
+  // Cle de page : onglet + numero. Les pages restent aussi en memoire de la
+  // visite (lib/visit-cache.ts) : revenir du panier ou de l'accueil est instantane.
+  const pageCacheRef = useRef<Map<string, PhotoListResponse>>(new Map());
+  const cacheKey = (pageToLoad: number) => `${sectionRef.current ?? "toutes"}:${pageToLoad}`;
 
   useEffect(() => {
     pageCacheRef.current.clear();
@@ -78,8 +106,9 @@ export default function GalleryPage() {
     async (pageToLoad: number) => {
       // Jeton borne transmis : le serveur sert alors les apercus nets ; sur
       // le telephone d'un invite, ils sont filigranes (voir lib/kiosk.ts).
-      const data = await api.listPhotos(eventId, pageToLoad, PAGE_SIZE, getKioskToken(eventId));
-      pageCacheRef.current.set(pageToLoad, data);
+      const section = sectionRef.current;
+      const data = await api.listPhotosGuest(eventId, pageToLoad, PAGE_SIZE, getKioskToken(eventId), section);
+      pageCacheRef.current.set(`${section ?? "toutes"}:${pageToLoad}`, data);
       return data;
     },
     [eventId]
@@ -90,12 +119,13 @@ export default function GalleryPage() {
   // toujours en haut sans etat de scroll a restaurer.
   const loadPage = useCallback(
     async (pageToLoad: number) => {
-      const cached = pageCacheRef.current.get(pageToLoad);
+      const cached = pageCacheRef.current.get(cacheKey(pageToLoad));
       if (!cached) setLoading(true);
       try {
         const data = cached ?? (await fetchAndCache(pageToLoad));
         setPhotos(data.items);
         setTotal(data.total);
+        if (sectionRef.current === null) setAllCount(data.total);
         setPage(pageToLoad);
       } catch (err) {
         if (err instanceof ApiError && err.status === 403) {
@@ -111,14 +141,34 @@ export default function GalleryPage() {
   );
 
   useEffect(() => {
+    const saved = savedTab(eventId);
+    sectionRef.current = saved;
+    setSectionId(saved);
     loadPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
+  // Onglet memorise qui n'existe plus (partie supprimee) : retour a « Toutes »
+  useEffect(() => {
+    if (sections.length > 0 && sectionRef.current && !sections.some((s) => s.id === sectionRef.current)) {
+      changeSection(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sections]);
+
+  function changeSection(next: string | null) {
+    if (next === sectionRef.current) return;
+    sectionRef.current = next;
+    setSectionId(next);
+    saveTab(eventId, next);
+    setLightboxIndex(null);
+    loadPage(1);
+  }
+
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     const next = page + 1;
-    if (next <= totalPages && !pageCacheRef.current.has(next)) {
+    if (next <= totalPages && !pageCacheRef.current.has(cacheKey(next))) {
       fetchAndCache(next).catch(() => {
         // pre-chargement best-effort : un echec ici sera simplement retente au clic reel
       });
@@ -380,6 +430,13 @@ export default function GalleryPage() {
           <UsersIcon /> Trouver mon visage
         </button>
       </div>
+
+      <SectionTabs sections={sections} active={sectionId} onChange={changeSection} allCount={allCount} />
+      {(() => {
+        const current = sections.find((s) => s.id === sectionId);
+        const details = current ? sectionDetails(current) : "";
+        return details ? <p className="px-4 pb-1 text-xs text-ink-500">{details}</p> : null;
+      })()}
 
       {error && <p className="p-4 text-center text-red-600">{error}</p>}
 

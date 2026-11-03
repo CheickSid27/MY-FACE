@@ -26,6 +26,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import numpy as np
+import sklearn
 from sklearn.cluster import DBSCAN
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,6 +62,7 @@ class PhotoSnapshot:
     original_filename: str
     indexing_status: IndexingStatus
     uploaded_at: dt.datetime
+    section_id: uuid.UUID | None = None
 
     @classmethod
     def from_photo(cls, photo: Photo) -> "PhotoSnapshot":
@@ -73,6 +75,7 @@ class PhotoSnapshot:
             original_filename=photo.original_filename,
             indexing_status=photo.indexing_status,
             uploaded_at=photo.uploaded_at,
+            section_id=photo.section_id,
         )
 
 
@@ -94,12 +97,21 @@ class EventClusters:
     face_clusters: dict[uuid.UUID, int] = field(default_factory=dict)
 
 
+# Memoire de travail du calcul des distances (Mo par bloc). Par defaut,
+# scikit-learn s'autorise des blocs de 1 Go : mesure du 02/11 sur des visages
+# synthetiques, 6 435 visages = +170 Mo, 16 000 visages = echec (blocs de
+# 512 Mo refuses par Windows, et Docker tombe avec). Avec 128 Mo : 89 Mo et
+# 0,5 s pour 6 435 visages, 141 Mo et 2,3 s pour 16 000, memes groupes.
+DBSCAN_WORKING_MEMORY_MB = 128
+
+
 def _dbscan_labels(vectors: np.ndarray) -> np.ndarray:
-    return DBSCAN(
-        eps=settings.face_cluster_eps,
-        min_samples=settings.face_cluster_min_samples,
-        metric="cosine",
-    ).fit_predict(vectors)
+    with sklearn.config_context(working_memory=DBSCAN_WORKING_MEMORY_MB):
+        return DBSCAN(
+            eps=settings.face_cluster_eps,
+            min_samples=settings.face_cluster_min_samples,
+            metric="cosine",
+        ).fit_predict(vectors)
 
 
 async def compute_event_clusters(event_id: uuid.UUID, db: AsyncSession, storage: StorageService) -> EventClusters:

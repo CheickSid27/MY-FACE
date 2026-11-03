@@ -6,6 +6,7 @@ import {
   setTokens,
 } from "@/lib/auth";
 import { getGalleryAccess } from "@/lib/gallery-access";
+import { remember } from "@/lib/visit-cache";
 import type {
   ActivityFilters,
   ActivityItem,
@@ -26,6 +27,10 @@ import type {
   OrderStatus,
   Pack,
   PackKey,
+  EventSection,
+  EventSectionInput,
+  MaintenanceAdmin,
+  MaintenanceStatus,
   PackPaymentInfo,
   PackPaymentMethod,
   PackPurchase,
@@ -268,10 +273,10 @@ export const api = {
     return request<Event>(`/events/${eventId}`);
   },
 
+  /** Pages invites : garde en memoire pendant la visite (voir lib/visit-cache.ts). */
   getEventPublic(eventId: string, kioskToken?: string | null): Promise<EventPublicRead> {
-    return request<EventPublicRead>(
-      withQuery(`/events/${eventId}/public`, { kiosk_token: kioskToken, access: getGalleryAccess(eventId) })
-    );
+    const path = withQuery(`/events/${eventId}/public`, { kiosk_token: kioskToken, access: getGalleryAccess(eventId) });
+    return remember(path, () => request<EventPublicRead>(path));
   },
 
   /** Mot de passe d'une galerie protegee : renvoie le jeton d'acces. */
@@ -337,7 +342,8 @@ export const api = {
     eventId: string,
     page = 1,
     pageSize = 60,
-    kioskToken?: string | null
+    kioskToken?: string | null,
+    sectionId?: string | null
   ): Promise<PhotoListResponse> {
     return request<PhotoListResponse>(
       withQuery(`/events/${eventId}/photos`, {
@@ -345,20 +351,67 @@ export const api = {
         page_size: pageSize,
         kiosk_token: kioskToken,
         access: getGalleryAccess(eventId),
+        section_id: sectionId,
       })
     );
   },
 
-  uploadPhotos(eventId: string, files: File[]): Promise<PhotoUploadResult> {
+  /** Galerie invite : une page de photos, toutes parties ou une seule (onglet),
+   * gardee en memoire pendant la visite (retour a la galerie instantane). */
+  listPhotosGuest(
+    eventId: string,
+    page: number,
+    pageSize: number,
+    kioskToken?: string | null,
+    sectionId?: string | null
+  ): Promise<PhotoListResponse> {
+    const path = withQuery(`/events/${eventId}/photos`, {
+      page,
+      page_size: pageSize,
+      kiosk_token: kioskToken,
+      access: getGalleryAccess(eventId),
+      section_id: sectionId,
+    });
+    return remember(path, () => request<PhotoListResponse>(path));
+  },
+
+  uploadPhotos(eventId: string, files: File[], sectionId?: string | null): Promise<PhotoUploadResult> {
     const formData = new FormData();
     files.forEach((file) => formData.append("files", file));
-    return request<PhotoUploadResult>(`/photos/upload?event_id=${eventId}`, {
+    return request<PhotoUploadResult>(withQuery("/photos/upload", { event_id: eventId, section_id: sectionId }), {
       method: "POST",
       body: formData,
     });
   },
 
   /** Supprime plusieurs photos d'un evenement ; les photos deja vendues sont gardees. */
+  // --- Parties de l'evenement (mairie, reception...) -----------------------
+  listSections(eventId: string): Promise<EventSection[]> {
+    return request<EventSection[]>(`/events/${eventId}/sections`);
+  },
+
+  createSection(eventId: string, payload: EventSectionInput): Promise<EventSection> {
+    return request<EventSection>(`/events/${eventId}/sections`, { method: "POST", body: JSON.stringify(payload) });
+  },
+
+  updateSection(eventId: string, sectionId: string, payload: Partial<EventSectionInput> & { position?: number }): Promise<EventSection[]> {
+    return request<EventSection[]>(`/events/${eventId}/sections/${sectionId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deleteSection(eventId: string, sectionId: string): Promise<void> {
+    return request<void>(`/events/${eventId}/sections/${sectionId}`, { method: "DELETE" });
+  },
+
+  movePhotosToSection(eventId: string, photoIds: string[], sectionId: string | null): Promise<{ moved: number }> {
+    return request<{ moved: number }>(`/events/${eventId}/photos/section`, {
+      method: "POST",
+      body: JSON.stringify({ photo_ids: photoIds, section_id: sectionId }),
+    });
+  },
+
   bulkDeletePhotos(eventId: string, photoIds: string[]): Promise<{ deleted: number; kept_sold: string[] }> {
     return request<{ deleted: number; kept_sold: string[] }>("/photos/bulk-delete", {
       method: "POST",
@@ -408,9 +461,8 @@ export const api = {
 
   /** Visages d'une photo, de gauche a droite (bulles de la visionneuse). */
   getPhotoFaces(photoId: string, eventId: string, kioskToken?: string | null): Promise<{ faces: PhotoFace[] }> {
-    return request<{ faces: PhotoFace[] }>(
-      withQuery(`/photos/${photoId}/faces`, { kiosk_token: kioskToken, access: getGalleryAccess(eventId) })
-    );
+    const path = withQuery(`/photos/${photoId}/faces`, { kiosk_token: kioskToken, access: getGalleryAccess(eventId) });
+    return remember(path, () => request<{ faces: PhotoFace[] }>(path), 5 * 60_000);
   },
 
   getClusters(eventId: string): Promise<ClusterListResponse> {
@@ -418,12 +470,11 @@ export const api = {
   },
 
   getClustersPublic(eventId: string, kioskToken?: string | null): Promise<ClusterListResponse> {
-    return request<ClusterListResponse>(
-      withQuery(`/events/${eventId}/clusters/public`, {
-        kiosk_token: kioskToken,
-        access: getGalleryAccess(eventId),
-      })
-    );
+    const path = withQuery(`/events/${eventId}/clusters/public`, {
+      kiosk_token: kioskToken,
+      access: getGalleryAccess(eventId),
+    });
+    return remember(path, () => request<ClusterListResponse>(path));
   },
 
   getWatchedFolder(eventId: string): Promise<WatchedFolderRead> {
@@ -671,6 +722,23 @@ export const api = {
     payload: { pack: PackKey; photo_limit_override?: number | null; note?: string | null }
   ): Promise<EventPack> {
     return request<EventPack>(`/admin/events/${eventId}/pack`, { method: "PUT", body: JSON.stringify(payload) });
+  },
+
+  // --- Mode maintenance -------------------------------------------------------
+  getPlatformStatus(): Promise<MaintenanceStatus> {
+    return request<MaintenanceStatus>("/meta/status");
+  },
+
+  getAdminMaintenance(): Promise<MaintenanceAdmin> {
+    return request<MaintenanceAdmin>("/admin/settings/maintenance");
+  },
+
+  setAdminMaintenance(payload: {
+    active: boolean;
+    message: string | null;
+    photographers: boolean;
+  }): Promise<MaintenanceAdmin> {
+    return request<MaintenanceAdmin>("/admin/settings/maintenance", { method: "PUT", body: JSON.stringify(payload) });
   },
 
   getAdminPackPayment(): Promise<PackPaymentInfo> {

@@ -92,3 +92,17 @@ marketing/motion-design/v5/apercus/
 marketing/motion-design/v5/*.mp4
 marketing/motion-design/v5/*.wav
 marketing/motion-design/v5/voix/*.wav
+
+# Motion design v6 (six scenarios) : films, sons, images de controle ; se regenerent avec
+# v6/film_sN.py et v6/son_v6.py (captures : v6/captures_demo.mjs, visages : v6/visages_demo.py)
+marketing/motion-design/v6/films/
+marketing/motion-design/v6/apercus/
+marketing/motion-design/v6/*.log
+marketing/motion-design/v6/__pycache__/
+
+# Candidatures (pitch, fiche des besoins, presentations) : documents personnels,
+# hors du depot public
+docs/candidatures/
+
+# Pub Higgsfield : premiers brouillons des plans (remplaces par plans/*.png)
+marketing/motion-design/higgsfield-pub/plans/v1/

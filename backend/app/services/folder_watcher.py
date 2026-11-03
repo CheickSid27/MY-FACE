@@ -8,7 +8,9 @@ est plus lent mais marche partout, sans dependance supplementaire.
 
 Structure attendue : {settings.watched_folder_path}/<event_id>/*.jpg, un
 sous-dossier par evenement (cree automatiquement a la creation de
-l'evenement, voir routers/events.py). Chaque fichier image y apparaissant est
+l'evenement, voir routers/events.py). Un sous-dossier de plus range les
+photos dans une partie de l'evenement : <event_id>/Mairie/*.jpg va dans la
+partie « Mairie », creee si elle n'existe pas encore (services/sections.py). Chaque fichier image y apparaissant est
 ingere automatiquement des que sa taille est stable entre deux scans
 (evite de lire un fichier encore en cours de copie).
 
@@ -35,6 +37,7 @@ from app.models.photo import Photo
 from app.services.face_indexing import index_photos_faces
 from app.services.ingestion import InvalidImageError, ingest_photo
 from app.services.raw_images import RAW_EXTENSIONS
+from app.services.sections import find_or_create_section, same_section
 from app.services.packs import (
     count_event_photos,
     effective_photo_limit,
@@ -76,6 +79,8 @@ class _FoundFile:
     path: str
     name: str
     state: _FileState
+    # Nom du sous-dossier (partie de l'evenement), None = racine de l'evenement
+    section_name: str | None = None
 
 
 def _read_file(path: str) -> bytes:
@@ -161,6 +166,15 @@ class FolderWatcher:
             except ValueError:
                 continue
             for entry in os.scandir(folder.path):
+                if entry.is_dir() and not entry.name.startswith("."):
+                    # un niveau de plus : une partie de l'evenement
+                    for sub in os.scandir(entry.path):
+                        if sub.is_file() and os.path.splitext(sub.name)[1].lower() in CONTENT_TYPES:
+                            stat = sub.stat()
+                            found.append(_FoundFile(
+                                event_id, sub.path, sub.name, _FileState(stat.st_size, stat.st_mtime), entry.name
+                            ))
+                    continue
                 if not entry.is_file():
                     continue
                 if os.path.splitext(entry.name)[1].lower() not in CONTENT_TYPES:
@@ -177,7 +191,11 @@ class FolderWatcher:
         ingested: list[uuid.UUID] = []
 
         for found in files:
-            key = f"{found.event_id}/{found.name}"
+            key = (
+                f"{found.event_id}/{found.section_name}/{found.name}"
+                if found.section_name
+                else f"{found.event_id}/{found.name}"
+            )
             if self._settled.get(key) == found.state:
                 continue
 
@@ -208,24 +226,36 @@ class FolderWatcher:
 
     async def _ingest_file(self, found: _FoundFile, key: str, storage: StorageService) -> uuid.UUID | None:
         filename = found.name
+        shown = f"{found.section_name}/{filename}" if found.section_name else filename
         try:
             content_type = CONTENT_TYPES[os.path.splitext(filename)[1].lower()]
 
             async with self.session_factory() as db:
                 event = await db.get(Event, found.event_id)
                 if event is None:
-                    self._recent_status[key] = WatchedFileStatus(filename, "error", "evenement inconnu")
+                    self._recent_status[key] = WatchedFileStatus(shown, "error", "evenement inconnu")
                     return None
+
+                section_id = None
+                if found.section_name:
+                    section = await find_or_create_section(db, event.id, found.section_name)
+                    if section is None:
+                        self._recent_status[key] = WatchedFileStatus(shown, "error", "20 parties au maximum par événement")
+                        return None
+                    section_id = section.id
 
                 # Deja ingere lors d'un scan precedent (ex: apres un redemarrage
                 # du backend qui a perdu l'etat en memoire) : on evite le doublon
                 # en verifiant par nom de fichier original, AVANT de lire le
                 # fichier (jusqu'a 25 Mo) pour rien.
                 existing = await db.execute(
-                    select(Photo.id).where(Photo.event_id == found.event_id, Photo.original_filename == filename)
+                    select(Photo.id).where(
+                        Photo.event_id == found.event_id, Photo.original_filename == filename, same_section(section_id)
+                    )
                 )
                 if existing.first() is not None:
-                    self._recent_status[key] = WatchedFileStatus(filename, "ingested", "deja present")
+                    await db.commit()  # garde la partie creee pour ce sous-dossier
+                    self._recent_status[key] = WatchedFileStatus(shown, "ingested", "deja present")
                     return None
 
                 # Limite de photos du pack de l'evenement (service photographe,
@@ -234,7 +264,7 @@ class FolderWatcher:
                 limit = effective_photo_limit(event, owner)
                 if limit is not None and await count_event_photos(db, event.id) >= limit:
                     self._recent_status[key] = WatchedFileStatus(
-                        filename, "error", limit_reached_message(event, limit)
+                        shown, "error", limit_reached_message(event, limit)
                     )
                     return None
 
@@ -248,17 +278,18 @@ class FolderWatcher:
                     storage,
                     watermark_text=watermark_text_for(event, owner),
                 )
+                photo.section_id = section_id
                 await db.commit()
                 photo_id = photo.id
 
-            self._recent_status[key] = WatchedFileStatus(filename, "ingested")
+            self._recent_status[key] = WatchedFileStatus(shown, "ingested")
             logger.info("Dossier surveille : %s ingere pour l'evenement %s", filename, found.event_id)
             return photo_id
         except (ValueError, InvalidImageError) as exc:
-            self._recent_status[key] = WatchedFileStatus(filename, "error", str(exc))
+            self._recent_status[key] = WatchedFileStatus(shown, "error", str(exc))
         except Exception as exc:  # noqa: BLE001
             logger.exception("Echec ingestion dossier surveille : %s", filename)
-            self._recent_status[key] = WatchedFileStatus(filename, "error", str(exc))
+            self._recent_status[key] = WatchedFileStatus(shown, "error", str(exc))
         return None
 
 

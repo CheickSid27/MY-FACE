@@ -31,6 +31,7 @@ class PhotoLike(Protocol):
     preview_watermarked_key: str | None
     original_filename: str
     indexing_status: IndexingStatus
+    section_id: uuid.UUID | None
     uploaded_at: dt.datetime
 
 
@@ -54,6 +55,7 @@ async def to_photo_read(photo: PhotoLike, storage: StorageService, *, clean_prev
         original_filename=photo.original_filename,
         indexing_status=photo.indexing_status,
         uploaded_at=photo.uploaded_at,
+        section_id=photo.section_id,
     )
 
 

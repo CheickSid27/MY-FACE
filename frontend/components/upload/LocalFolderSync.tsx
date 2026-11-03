@@ -86,15 +86,38 @@ async function listFiles(dir: DirEntry, prefix = "", depth = 0): Promise<{ path:
 
 const keyOf = (path: string, file: File) => `${path}|${file.size}|${file.lastModified}`;
 
+/** Sous-dossier de premier niveau = partie de l'evenement (« Mairie/IMG_1.jpg »
+ * va dans « Mairie ») ; null = fichier a la racine du dossier choisi. */
+const sectionNameOf = (path: string): string | null => (path.includes("/") ? path.split("/")[0].trim() || null : null);
+
 interface LocalFolderSyncProps {
   eventId: string;
   /** Photos encore autorisees par le pack ; null = illimite. */
   remaining: number | null;
   onUploaded: () => void;
   onLimitReached: () => void;
+  /** Partie de l'evenement ou ranger les photos du dossier, null = aucune */
+  sectionId?: string | null;
 }
 
-export default function LocalFolderSync({ eventId, remaining, onUploaded, onLimitReached }: LocalFolderSyncProps) {
+export default function LocalFolderSync({ eventId, remaining, onUploaded, onLimitReached, sectionId = null }: LocalFolderSyncProps) {
+  // lue au moment de chaque envoi (la synchronisation tourne en boucle)
+  const sectionRef = useRef<string | null>(sectionId);
+  sectionRef.current = sectionId;
+  // nom de partie (en minuscules) -> identifiant, rempli au premier envoi
+  const sectionIdsRef = useRef<Map<string, string> | null>(null);
+
+  async function sectionFor(name: string | null): Promise<string | null> {
+    if (name === null) return sectionRef.current;
+    if (sectionIdsRef.current === null) {
+      sectionIdsRef.current = new Map((await api.listSections(eventId)).map((s) => [s.name.trim().toLowerCase(), s.id]));
+    }
+    const known = sectionIdsRef.current.get(name.toLowerCase());
+    if (known) return known;
+    const created = await api.createSection(eventId, { name, starts_at: null, location: null });
+    sectionIdsRef.current.set(name.toLowerCase(), created.id);
+    return created.id;
+  }
   const [supported, setSupported] = useState<boolean | null>(null);
   const [handle, setHandle] = useState<DirEntry | null>(null);
   const [needsPermission, setNeedsPermission] = useState(false);
@@ -155,7 +178,7 @@ export default function LocalFolderSync({ eventId, remaining, onUploaded, onLimi
     try {
       const files = await listFiles(handle);
       const now = Date.now();
-      const ready: { key: string; file: File }[] = [];
+      const ready: { key: string; file: File; section: string | null }[] = [];
       let pending = 0;
       const rejected: Recent[] = [];
       for (const { path, file } of files) {
@@ -176,7 +199,7 @@ export default function LocalFolderSync({ eventId, remaining, onUploaded, onLimi
           rejected.push({ name: file.name, state: "error", detail: reason });
           continue;
         }
-        ready.push({ key, file });
+        ready.push({ key, file, section: sectionNameOf(path) });
       }
       if (rejected.length) pushRecent(rejected);
 
@@ -190,10 +213,21 @@ export default function LocalFolderSync({ eventId, remaining, onUploaded, onLimi
       if (batch.length > 0) {
         setSending(batch.length);
         let limitHit = false;
-        for (const chunk of chunksOf(batch.map((r) => r.file))) {
-          const entries = batch.filter((r) => chunk.includes(r.file));
+        // un envoi par partie : chaque sous-dossier va dans sa partie
+        const groups = new Map<string, typeof batch>();
+        batch.forEach((r) => {
+          const k = r.section ?? "";
+          groups.set(k, [...(groups.get(k) ?? []), r]);
+        });
+        const work: { section: string | null; chunk: File[]; entries: typeof batch }[] = [];
+        groups.forEach((items, k) => {
+          for (const chunk of chunksOf(items.map((r) => r.file))) {
+            work.push({ section: k || null, chunk, entries: items.filter((r) => chunk.includes(r.file)) });
+          }
+        });
+        for (const { section, chunk, entries } of work) {
           try {
-            const result = await api.uploadPhotos(eventId, chunk);
+            const result = await api.uploadPhotos(eventId, chunk, await sectionFor(section));
             const failed = new Map(result.errors.map((e) => [e.filename, e.error]));
             const done: Recent[] = [];
             for (const { key, file } of entries) {
@@ -213,6 +247,7 @@ export default function LocalFolderSync({ eventId, remaining, onUploaded, onLimi
             await persist(handle);
           } catch (err) {
             // Reseau ou serveur indisponible : on reessaiera au prochain passage.
+            sectionIdsRef.current = null; // une partie a pu etre supprimee : relue au prochain passage
             setError(err instanceof Error ? err.message : "Envoi interrompu, nouvel essai dans un instant.");
             break;
           }
@@ -320,7 +355,7 @@ export default function LocalFolderSync({ eventId, remaining, onUploaded, onLimi
       {supported && handle && (
         <>
           <p className="mb-3 text-xs text-ink-500">
-            Les photos déposées dans ce dossier (et ses sous-dossiers) sont ajoutées toutes seules. Laissez cette page
+            Les photos déposées dans ce dossier sont ajoutées toutes seules. Un sous-dossier par partie (ex : Mairie, Réception) : ses photos vont dans la partie du même nom, créée si besoin. Laissez cette page
             ouverte pendant l&apos;événement.
           </p>
           <div className="mb-3 flex items-center gap-2 rounded-xl bg-surface-alt px-3 py-2">

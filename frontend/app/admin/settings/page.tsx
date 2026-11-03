@@ -4,13 +4,14 @@ import PageHeader from "@/components/pro/PageHeader";
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import RequireAuth from "@/components/admin/RequireAuth";
+import MaintenanceCard from "@/components/admin/MaintenanceCard";
 import RetentionCard from "@/components/admin/RetentionCard";
 import { api, ApiError } from "@/lib/api-client";
 import { PACK_PAYMENT_METHODS } from "@/lib/packs";
 import { useAuthStore } from "@/store/auth-store";
 import type { PackPaymentInfo } from "@/types/api";
 
-/** Reglages MYFACE : numeros Mobile Money ou les photographes envoient le
+/** Reglages MYFACE : mode maintenance, numeros Mobile Money ou les photographes envoient le
  * paiement de leurs packs, numero WhatsApp de contact, et conservation des
  * donnees (suppression automatique). */
 function AdminSettingsContent() {
@@ -55,6 +56,7 @@ function AdminSettingsContent() {
     <main>
       <div className="mx-auto max-w-xl">
         <PageHeader title="Réglages de MYFACE" back="/admin/account" />
+        <MaintenanceCard />
         <form onSubmit={handleSubmit} className="glass rounded-2xl p-5">
           <h1 className="mb-1 text-xl font-bold text-ink-900">Paiement des packs</h1>
           <p className="mb-4 text-xs text-ink-500">

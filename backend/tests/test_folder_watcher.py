@@ -115,3 +115,35 @@ async def test_ignores_non_event_folders(tmp_path, storage_service, test_session
     await watcher._scan_once()
     await watcher._scan_once()
     assert watcher.status_for_event(uuid.UUID(unknown))[0].detail == "evenement inconnu"
+
+
+async def test_subfolders_become_event_sections(auth_client, tmp_path, storage_service, test_session_factory):
+    """Mairie/ et Reception/ : une partie chacune (creee au besoin) ; le meme nom
+    de fichier est accepte dans deux parties (deux appareils numerotent pareil)."""
+    from app.models.event_section import EventSection
+
+    event_id = await _create_event(auth_client)
+    deja = (await auth_client.post(f"/events/{event_id}/sections", json={"name": "Mairie"})).json()
+    for sous in ("mairie", "Réception"):
+        (tmp_path / event_id / sous).mkdir(parents=True)
+        (tmp_path / event_id / sous / "IMG_0001.jpg").write_bytes(_jpeg_bytes())
+    (tmp_path / event_id / "racine.jpg").write_bytes(_jpeg_bytes())
+
+    watcher = _watcher(tmp_path, storage_service, test_session_factory, [])
+    await watcher._scan_once()
+    await watcher._scan_once()
+    assert await _photo_count(test_session_factory, event_id) == 3
+
+    async with test_session_factory() as db:
+        sections = {s.name: s.id for s in (await db.execute(select(EventSection))).scalars().all()}
+        photos = (await db.execute(select(Photo.original_filename, Photo.section_id))).all()
+    assert set(sections) == {"Mairie", "Réception"}          # « mairie » rejoint la partie existante
+    assert str(sections["Mairie"]) == deja["id"]
+    assert sorted((n, s) for n, s in photos) == sorted([
+        ("IMG_0001.jpg", sections["Mairie"]), ("IMG_0001.jpg", sections["Réception"]), ("racine.jpg", None)])
+
+    # relance : rien en double
+    restarted = _watcher(tmp_path, storage_service, test_session_factory, [])
+    await restarted._scan_once()
+    await restarted._scan_once()
+    assert await _photo_count(test_session_factory, event_id) == 3

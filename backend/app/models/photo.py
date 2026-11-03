@@ -28,6 +28,11 @@ class Photo(Base):
     event_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    # Partie de l'evenement (mairie, reception...) ; None = aucune partie
+    # (evenement sans parties, ou photo pas encore rangee). Voir event_section.py.
+    section_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("event_sections.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     # Cles de stockage uniquement : le bucket est prive, les URLs de lecture
     # sont toujours generees a la demande (presignees, expiration courte) via
     # `app.services.photo_urls`, jamais stockees en base (voir storage.py).

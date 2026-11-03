@@ -34,6 +34,8 @@ ACTIONS: dict[str, str] = {
     "photos_supprimees": "Photos supprimées (plusieurs)",
     "selfie": "Selfie d'un invité",
     "telechargement": "Photos téléchargées par un invité",
+    "maintenance_activee": "Mode maintenance activé",
+    "maintenance_desactivee": "Mode maintenance désactivé",
     "pack_declare": "Paiement de pack déclaré",
     "pack_paye": "Pack payé en ligne",
     "pack_valide": "Pack validé par MYFACE",

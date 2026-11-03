@@ -21,6 +21,7 @@ from app.schemas.payment import (
     PaymentInitResponse,
     PaymentStatusResponse,
 )
+from app.services import maintenance
 from app.services import paystack
 from app.services.access import is_kiosk_request
 from app.services.orders import expire_order_if_stale, set_order_status
@@ -89,6 +90,7 @@ async def claim_free_photos(
     """Photos offertes par l'organisateur : commande a 0, payee d'office, le
     client part directement sur la page de telechargement. Refuse si
     l'evenement n'est pas en mode offert (verifie serveur)."""
+    await maintenance.ensure_open_for_guests(db)
     result = await db.execute(
         select(CartSession)
         .where(CartSession.id == payload.session_id)
@@ -150,6 +152,7 @@ async def init_payment(
     db: AsyncSession = Depends(get_db),
     storage: StorageService = Depends(get_storage_service),
 ) -> PaymentInitResponse:
+    await maintenance.ensure_open_for_guests(db)
     if payload.payment_method in _NOT_INITIABLE_HERE:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=_NOT_INITIABLE_HERE[payload.payment_method]

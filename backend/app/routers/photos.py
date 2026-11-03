@@ -20,6 +20,7 @@ from app.schemas.photo import (
     PhotoUploadError,
     PhotoUploadResult,
 )
+from app.services import maintenance
 from app.services.access import get_manageable_event, is_kiosk_request
 from app.services.activity import log_activity
 from app.schemas.face import PhotoFace, PhotoFacesResponse
@@ -35,6 +36,8 @@ from app.services.packs import (
     limit_reached_message,
     watermark_text_for,
 )
+from app.routers.sections import get_event_section
+from app.services.sections import same_section
 from app.services.photo_urls import to_photo_reads
 from app.services.storage import StorageService, get_storage_service
 
@@ -57,8 +60,13 @@ async def upload_photos(
     db: AsyncSession = Depends(get_db),
     storage: StorageService = Depends(get_storage_service),
     session_factory=Depends(get_session_factory),
+    # Partie de l'evenement ou ranger ces photos (mairie, reception...), facultatif
+    section_id: uuid.UUID | None = Query(default=None),
 ) -> PhotoUploadResult:
+    await maintenance.ensure_open_for_user(db, current_user)
     event = await get_manageable_event(event_id, current_user, db)
+    if section_id is not None:
+        await get_event_section(db, event_id, section_id)
 
     # Service photographe : nombre de photos limite par le pack de
     # l'evenement (voir services/packs.py). Les fichiers au-dela de la limite
@@ -70,12 +78,18 @@ async def upload_photos(
 
     uploaded: list[Photo] = []
     errors: list[PhotoUploadError] = []
-    # Un nom de fichier par evenement (majuscules et minuscules confondues) :
-    # le meme fichier envoye deux fois est refuse, dans le meme envoi comme
-    # dans un envoi precedent (5 doublons trouves sur un evenement le 23/10).
+    # Un nom de fichier par partie de l'evenement (majuscules et minuscules
+    # confondues) : le meme fichier envoye deux fois est refuse, dans le meme
+    # envoi comme dans un envoi precedent (5 doublons trouves le 23/10). Deux
+    # appareils numerotent pareil (IMG_0001 a la mairie et a la reception) :
+    # le meme nom est donc accepte dans une autre partie.
     noms = {
         n.lower()
-        for n in (await db.execute(select(Photo.original_filename).where(Photo.event_id == event_id))).scalars().all()
+        for n in (
+            await db.execute(
+                select(Photo.original_filename).where(Photo.event_id == event_id, same_section(section_id))
+            )
+        ).scalars().all()
     }
 
     for file in files:
@@ -103,6 +117,7 @@ async def upload_photos(
                 storage,
                 watermark_text=watermark_text,
             )
+            photo.section_id = section_id
             uploaded.append(photo)
             noms.add(nom.lower())
             if remaining is not None:
@@ -334,6 +349,8 @@ async def list_event_photos(
     page_size: int = Query(default=50, ge=1, le=200),
     kiosk_token: str | None = Query(default=None),
     access: str | None = Query(default=None),
+    # Onglet de la galerie : une partie de l'evenement (absent = toutes)
+    section_id: uuid.UUID | None = Query(default=None),
     current_user: User | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
     storage: StorageService = Depends(get_storage_service),
@@ -353,7 +370,7 @@ async def list_event_photos(
     # comme une latence perceptible a chaque changement de page de galerie.
     result = await db.execute(
         select(Photo, func.count(Photo.id).over().label("total_count"))
-        .where(Photo.event_id == event_id)
+        .where(Photo.event_id == event_id, *([Photo.section_id == section_id] if section_id else []))
         .order_by(Photo.uploaded_at.desc(), Photo.id)
         .offset((page - 1) * page_size)
         .limit(page_size)
@@ -366,7 +383,11 @@ async def list_event_photos(
         # La window function ne compte que les lignes de CETTE page : sur une
         # page vide (au-dela du total reel), on doit re-interroger le compte
         # separement pour ne pas renvoyer total=0 a tort.
-        total_result = await db.execute(select(func.count(Photo.id)).where(Photo.event_id == event_id))
+        total_result = await db.execute(
+            select(func.count(Photo.id)).where(
+                Photo.event_id == event_id, *([Photo.section_id == section_id] if section_id else [])
+            )
+        )
         total = total_result.scalar_one()
 
     return PhotoListResponse(

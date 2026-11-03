@@ -10,6 +10,8 @@ import GalleryOptionsCard from "@/components/packs/GalleryOptionsCard";
 import PackCard from "@/components/packs/PackCard";
 import PackLimitDialog from "@/components/packs/PackLimitDialog";
 import BatchUploader from "@/components/upload/BatchUploader";
+import SectionsCard from "@/components/admin/SectionsCard";
+import SectionTabs from "@/components/gallery/SectionTabs";
 import LocalFolderSync from "@/components/upload/LocalFolderSync";
 import PageHeader from "@/components/pro/PageHeader";
 import { useWorkspace } from "@/components/pro/WorkspaceProvider";
@@ -21,7 +23,8 @@ import { AlertIcon, CheckIcon, CrossIcon, PrinterIcon } from "@/components/icons
 import { api, ApiError } from "@/lib/api-client";
 import { formatEventCode } from "@/lib/event-code";
 import { bulkDeleteMessage } from "@/lib/bulk-delete";
-import type { Event, EventIndexingSummary, EventPack, Photo, WatchedFolderRead } from "@/types/api";
+import type {
+  EventSection, Event, EventIndexingSummary, EventPack, Photo, WatchedFolderRead } from "@/types/api";
 
 const WATCHED_FOLDER_POLL_MS = 5000;
 
@@ -738,6 +741,13 @@ function AdminEventDetailContent() {
   const [tab, setTab] = useState<Tab>("photos");
   const uploaderRef = useRef<HTMLDivElement | null>(null);
   const [scrollToUploader, setScrollToUploader] = useState(false);
+  // Parties de l'evenement (mairie, reception...) : partie des nouvelles photos
+  // et onglet de la grille (null = toutes)
+  const [sections, setSections] = useState<EventSection[]>([]);
+  const [uploadSectionId, setUploadSectionId] = useState<string | null>(null);
+  const [filterSectionId, setFilterSectionId] = useState<string | null>(null);
+  const filterSectionRef = useRef<string | null>(null);
+  filterSectionRef.current = filterSectionId;
 
   // Onglet demande par l'adresse ; retour de Paystack (?paystack=) : le
   // volet Reglages contient le pack, qui verifie le paiement.
@@ -759,7 +769,7 @@ function AdminEventDetailContent() {
 
   const loadPhotos = useCallback(
     async (pageToLoad: number) => {
-      const data = await api.listPhotos(eventId, pageToLoad, PHOTOS_PAGE_SIZE);
+      const data = await api.listPhotos(eventId, pageToLoad, PHOTOS_PAGE_SIZE, null, filterSectionRef.current);
       setPhotos(data.items);
       setTotal(data.total);
       setPage(pageToLoad);
@@ -772,8 +782,13 @@ function AdminEventDetailContent() {
 
   const loadData = useCallback(async () => {
     try {
-      const [eventData] = await Promise.all([api.getEvent(eventId), loadPhotos(pageRef.current)]);
+      const [eventData, sectionsData] = await Promise.all([
+        api.getEvent(eventId),
+        api.listSections(eventId),
+        loadPhotos(pageRef.current),
+      ]);
       setEvent(eventData);
+      setSections(sectionsData);
       setPackRefresh((n) => n + 1);
     } catch {
       setError("Impossible de charger l'événement.");
@@ -895,6 +910,27 @@ function AdminEventDetailContent() {
     }
   }
 
+  async function moveSelected(value: string) {
+    if (!value || selected.size === 0) return;
+    const target = value === "aucune" ? null : value;
+    setBulkBusy(true);
+    setBulkNotice(null);
+    try {
+      const result = await api.movePhotosToSection(eventId, Array.from(selected), target);
+      const name = target ? sections.find((s) => s.id === target)?.name ?? "la partie" : null;
+      setBulkNotice(
+        `${result.moved} photo${result.moved > 1 ? "s" : ""} ${name ? `rangée${result.moved > 1 ? "s" : ""} dans « ${name} »` : `sortie${result.moved > 1 ? "s" : ""} de leur partie`}.`
+      );
+      stopSelecting();
+      setSections(await api.listSections(eventId));
+      await loadPhotos(pageRef.current);
+    } catch (err) {
+      setBulkNotice(errorText(err, "Rangement impossible."));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   async function deleteSelected() {
     const n = selected.size;
     if (n === 0) return;
@@ -986,9 +1022,24 @@ function AdminEventDetailContent() {
       {tab === "photos" && (
         <div className="lg:grid lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-start lg:gap-6">
           <div className="lg:sticky lg:top-20">
+            <SectionsCard
+              eventId={eventId}
+              sections={sections}
+              onChange={(next) => {
+                setSections(next);
+                if (filterSectionId && !next.some((s) => s.id === filterSectionId)) {
+                  setFilterSectionId(null);
+                  filterSectionRef.current = null;
+                  loadPhotos(1);
+                }
+              }}
+              uploadSectionId={uploadSectionId}
+              onUploadSectionChange={setUploadSectionId}
+            />
             <div ref={uploaderRef} className="mb-5">
               <BatchUploader
                 eventId={eventId}
+                sectionId={uploadSectionId}
                 onUploaded={() => {
                   loadData();
                   refreshWorkspace();
@@ -1002,6 +1053,7 @@ function AdminEventDetailContent() {
             {!isAdmin && (
               <LocalFolderSync
                 eventId={eventId}
+                sectionId={uploadSectionId}
                 remaining={eventPack && !eventPack.unlimited ? eventPack.remaining : null}
                 onUploaded={handleFolderUploaded}
                 onLimitReached={openLimit}
@@ -1013,7 +1065,8 @@ function AdminEventDetailContent() {
                 <h2 className="mb-1 text-sm font-semibold text-ink-900">Dossier surveillé</h2>
                 <p className="mb-3 text-xs text-ink-500">
                   Déposez les photos (ex : depuis la carte SD de l&apos;appareil) dans ce dossier sur le PC : elles sont
-                  ajoutées automatiquement.
+                  ajoutées automatiquement. Un sous-dossier par partie (ex : Mairie, Réception) range ses photos dans la
+                  partie du même nom, créée si besoin.
                 </p>
                 <code className="mb-3 block break-all rounded-lg bg-surface-alt px-3 py-2 text-xs text-ink-900">
                   {watchedFolder.folder_path}
@@ -1069,6 +1122,17 @@ function AdminEventDetailContent() {
                   </button>
                 ))}
             </div>
+            <div className="-mx-4 mb-2">
+              <SectionTabs
+                sections={sections}
+                active={filterSectionId}
+                onChange={(next) => {
+                  setFilterSectionId(next);
+                  filterSectionRef.current = next;
+                  loadPhotos(1);
+                }}
+              />
+            </div>
             {bulkNotice && <p className="mb-3 rounded-2xl bg-[#FDF6EE] p-3 text-sm text-ink-700">{bulkNotice}</p>}
             {selecting && (
               <div className="sticky top-16 z-10 mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-[#E6DED0] bg-white p-2.5 shadow-[0_4px_14px_rgba(14,36,41,0.08)]">
@@ -1100,6 +1164,25 @@ function AdminEventDetailContent() {
                     if (file) findPersonPhotos(file);
                   }}
                 />
+                {sections.length > 0 && (
+                  <select
+                    aria-label="Ranger la sélection dans une partie"
+                    disabled={bulkBusy || selected.size === 0}
+                    value=""
+                    onChange={(e) => moveSelected(e.target.value)}
+                    className="min-h-[36px] rounded-xl border border-[#E6DED0] bg-white px-2 text-[13px] font-semibold disabled:opacity-50"
+                  >
+                    <option value="" disabled>
+                      Ranger dans…
+                    </option>
+                    {sections.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                    <option value="aucune">Aucune partie</option>
+                  </select>
+                )}
                 <button
                   type="button"
                   disabled={bulkBusy || selected.size === 0}

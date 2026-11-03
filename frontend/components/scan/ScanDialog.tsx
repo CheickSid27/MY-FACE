@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import PhotoLightbox from "@/components/gallery/PhotoLightbox";
+import SectionTabs, { useEventSections } from "@/components/gallery/SectionTabs";
 import { AlertIcon, CameraIcon, CheckIcon, SearchIcon } from "@/components/icons";
 import { api, ApiError } from "@/lib/api-client";
 import { getCartSessionId, setCartSessionId } from "@/lib/cart";
@@ -30,6 +31,14 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
   const [step, setStep] = useState<Step>("consent");
   const [error, setError] = useState<string | null>(null);
   const [matches, setMatches] = useState<FaceScanMatch[]>([]);
+  // Parties de l'evenement : le selfie cherche partout, l'invite filtre ensuite
+  const sections = useEventSections(eventId);
+  const [sectionId, setSectionId] = useState<string | null>(null);
+  const sectionCounts: Record<string, number> = {};
+  matches.forEach(({ photo }) => {
+    if (photo.section_id) sectionCounts[photo.section_id] = (sectionCounts[photo.section_id] ?? 0) + 1;
+  });
+  const shown = sectionId ? matches.filter(({ photo }) => photo.section_id === sectionId) : matches;
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [itemIdByPhoto, setItemIdByPhoto] = useState<Record<string, string>>({});
   const [cartCount, setCartCount] = useState(0);
@@ -183,6 +192,7 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
     try {
       const result = await api.scanFace(eventId, blob, true, getKioskToken(eventId));
       setMatches(result.matches);
+      setSectionId(null);
       setStep("results");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Erreur lors du scan.");
@@ -439,8 +449,20 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
               // beaucoup de resultats (photos superposees, constate le 22/10
               // avec 64 photos). Garde-fou : scripts/check-layout.mjs.
               <div className="flex-1 overflow-y-auto p-4">
+                <div className="-mx-4 -mt-2 mb-2">
+                  <SectionTabs
+                    sections={sections}
+                    active={sectionId}
+                    onChange={(next) => {
+                      setSectionId(next);
+                      setLightboxIndex(null);
+                    }}
+                    counts={sectionCounts}
+                    allCount={matches.length}
+                  />
+                </div>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  {matches.map(({ photo }, i) => {
+                  {shown.map(({ photo }, i) => {
                     const isSelected = selectedIds.has(photo.id);
                     return (
                       <div key={photo.id} className="group relative aspect-square overflow-hidden rounded-xl bg-surface-alt">
@@ -501,7 +523,7 @@ export default function ScanDialog({ eventId, open, onClose, onCartChanged }: Sc
       {lightboxIndex !== null && (
         <div onClick={(e) => e.stopPropagation()}>
           <PhotoLightbox
-            photos={matches.map((m) => m.photo)}
+            photos={shown.map((m) => m.photo)}
             index={lightboxIndex}
             onClose={() => setLightboxIndex(null)}
             onNavigate={setLightboxIndex}

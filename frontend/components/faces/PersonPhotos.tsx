@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import PhotoLightbox from "@/components/gallery/PhotoLightbox";
+import SectionTabs, { useEventSections } from "@/components/gallery/SectionTabs";
 import { CheckIcon } from "@/components/icons";
 import type { FaceCluster, Photo } from "@/types/api";
 
@@ -10,7 +11,7 @@ import type { FaceCluster, Photo } from "@/types/api";
 export default function PersonPhotos({
   cluster,
   numero,
-  photos,
+  photos: allPhotos,
   onClose,
   selectedPhotoIds,
   onToggleSelect,
@@ -33,6 +34,17 @@ export default function PersonPhotos({
   zClass?: string;
 }) {
   const [index, setIndex] = useState<number | null>(null);
+  // Parties de l'evenement : la personne est cherchee partout, on filtre ensuite
+  const sections = useEventSections(eventId ?? "");
+  const [sectionId, setSectionId] = useState<string | null>(null);
+  const counts = useMemo(() => {
+    const c: Record<string, number> = {};
+    allPhotos.forEach((p) => {
+      if (p.section_id) c[p.section_id] = (c[p.section_id] ?? 0) + 1;
+    });
+    return c;
+  }, [allPhotos]);
+  const photos = sectionId ? allPhotos.filter((p) => p.section_id === sectionId) : allPhotos;
   const allSelected = photos.length > 0 && photos.every((p) => selectedPhotoIds.has(p.id));
 
   if (index === null) {
@@ -57,6 +69,17 @@ export default function PersonPhotos({
               &times;
             </button>
           </div>
+          {eventId && (
+            <div className="-mx-4 mb-3">
+              <SectionTabs
+                sections={sections}
+                active={sectionId}
+                onChange={setSectionId}
+                counts={counts}
+                allCount={allPhotos.length}
+              />
+            </div>
+          )}
           {onBulkSelect && (
             <button
               type="button"

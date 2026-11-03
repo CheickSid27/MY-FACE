@@ -16,10 +16,12 @@ from app.models.order import Order, OrderItem, OrderStatus
 from app.models.pack_purchase import PackPurchase, PackPurchaseStatus
 from app.models.photo import IndexingStatus, Photo
 from app.models.user import User
+from app.schemas.meta import MaintenanceAdminRead, MaintenanceUpdate
 from app.schemas.order import OrderConfirmRequest, OrderDetailRead, OrderItemRead, OrderRead
 from app.schemas.retention import RetentionExemptUpdate, RetentionReportRead
 from app.schemas.stats import DailySales, EventStats
 from app.schemas.user import AdminPayoutCode, UserAdminRead, UserAdminUpdate, UserCreate, UserRead
+from app.services import maintenance
 from app.services.access import can_manage_event, get_manageable_event
 from app.services.activity import log_activity
 from app.services.orders import EXPIRABLE_STATUSES, expire_stale_orders, set_order_status
@@ -490,3 +492,30 @@ async def set_event_retention_exempt(
     event.retention_exempt = payload.exempt
     await db.commit()
     return RetentionExemptUpdate(exempt=event.retention_exempt)
+
+
+@router.get("/settings/maintenance", response_model=MaintenanceAdminRead)
+async def get_maintenance(
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    maintenance.reset_cache()
+    return await maintenance.get_status(db)
+
+
+@router.put("/settings/maintenance", response_model=MaintenanceAdminRead)
+async def set_maintenance(
+    payload: MaintenanceUpdate,
+    current_user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Bouton du mode maintenance : les pages invites affichent le message
+    tant qu'il est actif ; l'espace des photographes aussi si l'admin les a
+    inclus. L'admin garde toujours l'acces."""
+    status_ = await maintenance.set_status(db, payload.active, payload.message, payload.photographers)
+    await log_activity(
+        db, "maintenance_activee" if payload.active else "maintenance_desactivee",
+        actor=current_user,
+        details={"message": status_["message"], "photographes": status_["photographers"]} if payload.active else None,
+    )
+    return status_

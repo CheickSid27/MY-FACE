@@ -21,6 +21,7 @@ from app.routers import (
     packs,
     payments,
     photos,
+    sections,
     workspace,
 )
 from app.services.face_clusters import face_cluster_cache, recent_event_ids
@@ -121,6 +122,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(events.router)
 app.include_router(photos.router)
+app.include_router(sections.router)
 app.include_router(faces.router)
 app.include_router(cart.router)
 app.include_router(payments.router)
