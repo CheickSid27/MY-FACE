@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import MyfaceLogo from "@/components/brand/Logo";
+import ProTour from "@/components/pro/ProTour";
 import UserAvatar from "@/components/pro/UserAvatar";
 import { useWorkspace } from "@/components/pro/WorkspaceProvider";
 import {
@@ -140,6 +141,7 @@ export default function ProShell({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           onClick={() => setAdding(true)}
+          data-tour="ajouter"
           className="mb-6 flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-brand-accent text-sm font-bold text-brand shadow-[0_8px_20px_rgba(242,106,27,0.3)] transition hover:bg-brand-accent-light"
         >
           <PlusIcon size={18} /> Ajouter
@@ -148,10 +150,10 @@ export default function ProShell({ children }: { children: React.ReactNode }) {
           <Link href="/admin" className={side("accueil")} aria-current={current === "accueil" ? "page" : undefined}>
             <HomeIcon size={20} /> Accueil
           </Link>
-          <Link href="/admin/events" className={side("evenements")}>
+          <Link href="/admin/events" className={side("evenements")} data-tour="evenements">
             <CalendarIcon size={20} /> Événements
           </Link>
-          <Link href="/admin/ventes" className={side("ventes")}>
+          <Link href="/admin/ventes" className={side("ventes")} data-tour="ventes">
             <ReceiptIcon size={20} /> Ventes
             {toConfirm > 0 && (
               <span className="ml-auto rounded-full bg-brand-accent px-2 py-0.5 text-[11px] font-bold text-brand">
@@ -159,10 +161,10 @@ export default function ProShell({ children }: { children: React.ReactNode }) {
               </span>
             )}
           </Link>
-          <Link href="/admin/statistiques" className={side("statistiques")}>
+          <Link href="/admin/statistiques" className={side("statistiques")} data-tour="statistiques">
             <ChartIcon size={20} /> Statistiques
           </Link>
-          <Link href="/admin/notifications" className={side("notifications")}>
+          <Link href="/admin/notifications" className={side("notifications")} data-tour="notifications">
             <BellIcon size={20} /> Notifications
             {unread > 0 && (
               <span className="ml-auto rounded-full bg-brand-accent px-2 py-0.5 text-[11px] font-bold text-brand">
@@ -170,7 +172,7 @@ export default function ProShell({ children }: { children: React.ReactNode }) {
               </span>
             )}
           </Link>
-          <Link href="/admin/account" className={side("compte")}>
+          <Link href="/admin/account" className={side("compte")} data-tour="compte">
             <UserIcon size={20} /> Compte
           </Link>
         </nav>
@@ -211,7 +213,7 @@ export default function ProShell({ children }: { children: React.ReactNode }) {
           <HomeIcon />
           Accueil
         </Link>
-        <Link href="/admin/events" className={tab("evenements")}>
+        <Link href="/admin/events" className={tab("evenements")} data-tour="evenements">
           <CalendarIcon />
           Événements
         </Link>
@@ -219,24 +221,26 @@ export default function ProShell({ children }: { children: React.ReactNode }) {
           type="button"
           onClick={() => setAdding(true)}
           aria-label="Ajouter des photos ou un événement"
+          data-tour="ajouter"
           className="-mt-9 flex h-14 w-14 items-center justify-center rounded-[18px] bg-brand-accent text-white shadow-[0_10px_22px_rgba(242,106,27,0.42)]"
         >
           <PlusIcon size={26} />
         </button>
-        <Link href="/admin/ventes" className={tab("ventes")}>
+        <Link href="/admin/ventes" className={tab("ventes")} data-tour="ventes">
           <span className="relative">
             <ReceiptIcon />
             <Badge count={toConfirm} />
           </span>
           Ventes
         </Link>
-        <Link href="/admin/account" className={tab("compte")}>
+        <Link href="/admin/account" className={tab("compte")} data-tour="compte">
           <UserIcon />
           Compte
         </Link>
       </nav>
 
       {adding && <AddSheet onClose={() => setAdding(false)} />}
+      <ProTour />
     </div>
   );
 }

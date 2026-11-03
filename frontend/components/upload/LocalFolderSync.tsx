@@ -129,6 +129,8 @@ export default function LocalFolderSync({ eventId, remaining, onUploaded, onLimi
   const [recent, setRecent] = useState<Recent[]>([]);
   const [lastCheck, setLastCheck] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Un autre onglet envoie deja ce dossier (verrou du navigateur, voir plus bas)
+  const [otherTab, setOtherTab] = useState(false);
 
   const sentRef = useRef<Set<string>>(new Set());
   const seenRef = useRef<Map<string, string>>(new Map()); // chemin -> taille|date au passage precedent
@@ -277,12 +279,51 @@ export default function LocalFolderSync({ eventId, remaining, onUploaded, onLimi
     }
   }, [handle, eventId, onUploaded, onLimitReached, persist]);
 
+  // Un seul onglet a la fois envoie le dossier d'un evenement : le dossier
+  // choisi est garde par le navigateur, donc chaque onglet ouvert sur
+  // l'evenement le reprenait et envoyait les memes photos en meme temps
+  // (970 copies le 03/11). Les autres onglets attendent et prennent le relais
+  // si celui qui envoie est ferme.
   useEffect(() => {
     if (!handle || needsPermission || paused) return;
-    scan();
-    const timer = setInterval(scan, SCAN_EVERY_MS);
-    return () => clearInterval(timer);
-  }, [handle, needsPermission, paused, scan]);
+    let stopped = false;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    let release: (() => void) | undefined;
+    const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
+
+    const run = () => {
+      setOtherTab(false);
+      scan();
+      timer = setInterval(scan, SCAN_EVERY_MS);
+    };
+
+    if (!locks) {
+      run();
+    } else {
+      const tryLock = () =>
+        locks
+          .request(`myface-dossier-${eventId}`, { ifAvailable: true }, (lock) => {
+            if (stopped) return;
+            if (!lock) {
+              setOtherTab(true);
+              timer = setTimeout(tryLock, SCAN_EVERY_MS * 2);
+              return;
+            }
+            run();
+            return new Promise<void>((resolve) => {
+              release = resolve;
+            });
+          })
+          .catch(() => {});
+      tryLock();
+    }
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+      clearTimeout(timer);
+      release?.();
+    };
+  }, [handle, needsPermission, paused, scan, eventId]);
 
   async function choose() {
     setError(null);
@@ -395,6 +436,12 @@ export default function LocalFolderSync({ eventId, remaining, onUploaded, onLimi
           )}
 
           {error && <p className="mb-3 text-xs text-red-600">{error}</p>}
+          {otherTab && !paused && (
+            <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Ce dossier s&apos;envoie déjà dans un autre onglet. Cet onglet attend, et prendra le relais si
+              l&apos;autre est fermé.
+            </p>
+          )}
 
           {recent.length > 0 && (
             <ul className="mb-3 flex flex-col gap-1.5">

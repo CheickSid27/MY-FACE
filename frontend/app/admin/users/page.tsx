@@ -9,6 +9,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { formatFcfa, whatsappLink } from "@/lib/packs";
 import { PASSWORD_HINT, passwordProblem } from "@/lib/password";
 import type { UserAdmin, UserRole } from "@/types/api";
+import PasswordInput from "@/components/auth/PasswordInput";
 
 function UsersContent() {
   const router = useRouter();
@@ -142,8 +143,7 @@ function UsersContent() {
             </div>
             <div className="mb-3">
               <label className="mb-1 block text-sm font-medium text-ink-700">Mot de passe</label>
-              <input
-                type="password"
+              <PasswordInput
                 required
                 minLength={8}
                 maxLength={128}

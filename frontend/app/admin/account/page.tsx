@@ -26,6 +26,8 @@ import { CheckIcon } from "@/components/icons";
 import { api, ApiError } from "@/lib/api-client";
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH, passwordProblem } from "@/lib/password";
 import { useAuthStore } from "@/store/auth-store";
+import PasswordInput from "@/components/auth/PasswordInput";
+import { startProTour } from "@/components/pro/ProTour";
 
 const inputClass =
   "w-full rounded-xl border border-ink-900/10 bg-white/70 px-3.5 py-2.5 outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20";
@@ -203,8 +205,7 @@ function PasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="px-4 pb-5 pt-1">
       <label className="mb-1 block text-sm font-medium text-ink-700">Mot de passe actuel</label>
-      <input
-        type="password"
+      <PasswordInput
         required
         autoComplete="current-password"
         value={current}
@@ -213,8 +214,7 @@ function PasswordForm() {
       />
 
       <label className="mb-1 block text-sm font-medium text-ink-700">Nouveau mot de passe</label>
-      <input
-        type="password"
+      <PasswordInput
         required
         minLength={PASSWORD_MIN_LENGTH}
         maxLength={128}
@@ -226,8 +226,7 @@ function PasswordForm() {
       <p className="mb-3 text-xs text-ink-500">{PASSWORD_HINT}</p>
 
       <label className="mb-1 block text-sm font-medium text-ink-700">Confirmer le nouveau mot de passe</label>
-      <input
-        type="password"
+      <PasswordInput
         required
         minLength={PASSWORD_MIN_LENGTH}
         maxLength={128}
@@ -329,6 +328,14 @@ function AccountContent() {
           </section>
 
           <SettingsSection />
+
+          <button
+            type="button"
+            onClick={startProTour}
+            className="flex min-h-[52px] items-center justify-center gap-2 rounded-3xl border border-[#E6DED0] bg-white px-4 text-[15px] font-semibold text-ink-900 transition hover:bg-[#FBF8F3]"
+          >
+            Revoir la visite guidée
+          </button>
 
           {!isAdmin && <PayoutCard />}
         </div>

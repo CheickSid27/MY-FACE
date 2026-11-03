@@ -105,3 +105,18 @@ async def test_same_file_name_allowed_in_another_section(auth_client: AsyncClien
     files = [("files", ("IMG_0001.jpg", _jpeg((9, 9, 9)), "image/jpeg"))]
     again = await auth_client.post(f"/photos/upload?event_id={event_id}&section_id={mairie['id']}", files=files)
     assert again.json()["uploaded"] == [] and len(again.json()["errors"]) == 1   # doublon dans la meme partie
+
+
+async def test_simultaneous_uploads_of_same_file_keep_one_copy(auth_client: AsyncClient):
+    """Deux onglets qui envoient le meme dossier en meme temps (vu le 03/11)."""
+    import asyncio
+
+    event_id = await _event(auth_client)
+
+    async def send():
+        files = [("files", ("IMG_0042.jpg", _jpeg((5, 5, 5)), "image/jpeg"))]
+        return await auth_client.post(f"/photos/upload?event_id={event_id}", files=files)
+
+    results = await asyncio.gather(*(send() for _ in range(4)))
+    assert sum(len(r.json()["uploaded"]) for r in results) == 1
+    assert (await auth_client.get(f"/events/{event_id}/photos")).json()["total"] == 1

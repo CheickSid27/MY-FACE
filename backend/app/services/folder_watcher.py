@@ -37,7 +37,7 @@ from app.models.photo import Photo
 from app.services.face_indexing import index_photos_faces
 from app.services.ingestion import InvalidImageError, ingest_photo
 from app.services.raw_images import RAW_EXTENSIONS
-from app.services.sections import find_or_create_section, same_section
+from app.services.sections import event_upload_lock, find_or_create_section, same_section
 from app.services.packs import (
     count_event_photos,
     effective_photo_limit,
@@ -230,7 +230,8 @@ class FolderWatcher:
         try:
             content_type = CONTENT_TYPES[os.path.splitext(filename)[1].lower()]
 
-            async with self.session_factory() as db:
+            # meme verrou que l'envoi depuis le navigateur (voir event_upload_lock)
+            async with event_upload_lock(found.event_id), self.session_factory() as db:
                 event = await db.get(Event, found.event_id)
                 if event is None:
                     self._recent_status[key] = WatchedFileStatus(shown, "error", "evenement inconnu")

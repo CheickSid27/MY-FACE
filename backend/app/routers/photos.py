@@ -37,7 +37,7 @@ from app.services.packs import (
     watermark_text_for,
 )
 from app.routers.sections import get_event_section
-from app.services.sections import same_section
+from app.services.sections import event_upload_lock, same_section
 from app.services.photo_urls import to_photo_reads
 from app.services.storage import StorageService, get_storage_service
 
@@ -73,60 +73,64 @@ async def upload_photos(
     # sont refuses un par un, avec un message qui propose le pack superieur.
     owner = await get_owner(db, event)
     limit = effective_photo_limit(event, owner)
-    remaining = None if limit is None else max(0, limit - await count_event_photos(db, event_id))
     watermark_text = watermark_text_for(event, owner)
-
     uploaded: list[Photo] = []
     errors: list[PhotoUploadError] = []
-    # Un nom de fichier par partie de l'evenement (majuscules et minuscules
-    # confondues) : le meme fichier envoye deux fois est refuse, dans le meme
-    # envoi comme dans un envoi precedent (5 doublons trouves le 23/10). Deux
-    # appareils numerotent pareil (IMG_0001 a la mairie et a la reception) :
-    # le meme nom est donc accepte dans une autre partie.
-    noms = {
-        n.lower()
-        for n in (
-            await db.execute(
-                select(Photo.original_filename).where(Photo.event_id == event_id, same_section(section_id))
-            )
-        ).scalars().all()
-    }
+    # Controle et enregistrement un envoi a la fois par evenement (voir event_upload_lock).
+    async with event_upload_lock(event_id):
+        remaining = None if limit is None else max(0, limit - await count_event_photos(db, event_id))
 
-    for file in files:
-        nom = file.filename or "photo.jpg"
-        if nom.lower() in noms:
-            errors.append(PhotoUploadError(filename=nom, error=DOUBLON))
-            continue
-        if remaining is not None and remaining <= 0:
-            errors.append(
-                PhotoUploadError(filename=file.filename or "unknown", error=limit_reached_message(event, limit))
-            )
-            continue
-        if file.size is not None and file.size > MAX_FILE_SIZE_BYTES:
-            # refuse avant lecture : un fichier enorme ne passe pas en memoire
-            errors.append(PhotoUploadError(filename=file.filename or "unknown", error="Fichier trop volumineux (max 70 Mo)"))
-            continue
-        try:
-            data = await file.read()
-            photo = await ingest_photo(
-                event_id,
-                file.filename or "photo.jpg",
-                file.content_type or "",
-                data,
-                db,
-                storage,
-                watermark_text=watermark_text,
-            )
-            photo.section_id = section_id
-            uploaded.append(photo)
-            noms.add(nom.lower())
-            if remaining is not None:
-                remaining -= 1
-        except (ValueError, InvalidImageError) as exc:
-            errors.append(PhotoUploadError(filename=file.filename or "unknown", error=str(exc)))
+        # Un nom de fichier par partie de l'evenement (majuscules et minuscules
+        # confondues) : le meme fichier envoye deux fois est refuse, dans le meme
+        # envoi comme dans un envoi precedent (5 doublons trouves le 23/10). Deux
+        # appareils numerotent pareil (IMG_0001 a la mairie et a la reception) :
+        # le meme nom est donc accepte dans une autre partie.
+        noms = {
+            n.lower()
+            for n in (
+                await db.execute(
+                    select(Photo.original_filename).where(Photo.event_id == event_id, same_section(section_id))
+                )
+            ).scalars().all()
+        }
+
+        for file in files:
+            nom = file.filename or "photo.jpg"
+            if nom.lower() in noms:
+                errors.append(PhotoUploadError(filename=nom, error=DOUBLON))
+                continue
+            if remaining is not None and remaining <= 0:
+                errors.append(
+                    PhotoUploadError(filename=file.filename or "unknown", error=limit_reached_message(event, limit))
+                )
+                continue
+            if file.size is not None and file.size > MAX_FILE_SIZE_BYTES:
+                # refuse avant lecture : un fichier enorme ne passe pas en memoire
+                errors.append(PhotoUploadError(filename=file.filename or "unknown", error="Fichier trop volumineux (max 70 Mo)"))
+                continue
+            try:
+                data = await file.read()
+                photo = await ingest_photo(
+                    event_id,
+                    file.filename or "photo.jpg",
+                    file.content_type or "",
+                    data,
+                    db,
+                    storage,
+                    watermark_text=watermark_text,
+                )
+                photo.section_id = section_id
+                uploaded.append(photo)
+                noms.add(nom.lower())
+                if remaining is not None:
+                    remaining -= 1
+            except (ValueError, InvalidImageError) as exc:
+                errors.append(PhotoUploadError(filename=file.filename or "unknown", error=str(exc)))
+
+        if uploaded:
+            await db.commit()
 
     if uploaded:
-        await db.commit()
         for photo in uploaded:
             await db.refresh(photo)
         # Un seul background task pour tout le lot, avec parallelisme borne

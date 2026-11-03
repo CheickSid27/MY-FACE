@@ -2,7 +2,9 @@
 « Mairie/ » du dossier surveille ou du dossier local du photographe), en la
 creant si elle n'existe pas encore."""
 
+import asyncio
 import uuid
+from collections import defaultdict
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,3 +48,14 @@ def same_section(section_id: uuid.UUID | None):
     from app.models.photo import Photo
 
     return Photo.section_id.is_(None) if section_id is None else Photo.section_id == section_id
+
+
+# Envois d'un meme evenement controles un par un (noms deja presents, place
+# restante dans le pack) : deux envois simultanes du meme fichier (deux
+# onglets qui synchronisent le meme dossier, vu le 03/11 : 970 copies)
+# passaient tous les deux le controle avant l'enregistrement de l'autre.
+_upload_locks: defaultdict[uuid.UUID, asyncio.Lock] = defaultdict(asyncio.Lock)
+
+
+def event_upload_lock(event_id: uuid.UUID) -> asyncio.Lock:
+    return _upload_locks[event_id]

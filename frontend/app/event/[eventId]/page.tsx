@@ -10,6 +10,7 @@ import { api, ApiError } from "@/lib/api-client";
 import { forgetGalleryAccess, rememberGalleryAccess } from "@/lib/gallery-access";
 import { forgetKioskToken, getKioskToken, rememberKioskToken } from "@/lib/kiosk";
 import type { EventPublicRead, Photo } from "@/types/api";
+import PasswordInput from "@/components/auth/PasswordInput";
 
 export default function EventHomePage() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -166,8 +167,8 @@ export default function EventHomePage() {
             Cette galerie est privée : saisissez le mot de passe donné par l&apos;organisateur.
           </p>
           <div className="flex gap-2">
-            <input
-              type="password"
+            <PasswordInput
+              tone="light"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}

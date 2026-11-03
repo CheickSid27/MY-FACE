@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import AuthCard, { authInputClass } from "@/components/auth/AuthCard";
 import { api, ApiError } from "@/lib/api-client";
 import { PASSWORD_HINT, passwordProblem } from "@/lib/password";
+import PasswordInput from "@/components/auth/PasswordInput";
 
 /** Lien recu par e-mail apres « mot de passe oublie » : choix du nouveau mot
  * de passe. Le lien ne sert qu'une fois et ferme les sessions ouvertes. */
@@ -59,8 +60,7 @@ function Reinitialiser() {
     <AuthCard subtitle="Nouveau mot de passe">
       <form onSubmit={handleSubmit}>
         <label className="mb-1 block text-sm font-medium text-ink-700">Nouveau mot de passe</label>
-        <input
-          type="password"
+        <PasswordInput
           required
           minLength={8}
           maxLength={128}
@@ -71,8 +71,7 @@ function Reinitialiser() {
         />
         <p className="mb-3 text-xs text-ink-500">{PASSWORD_HINT}</p>
         <label className="mb-1 block text-sm font-medium text-ink-700">Confirmer le mot de passe</label>
-        <input
-          type="password"
+        <PasswordInput
           required
           maxLength={128}
           value={confirmation}

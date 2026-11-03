@@ -8,6 +8,7 @@ import PhoneInput from "@/components/payments/PhoneInput";
 import { api, ApiError } from "@/lib/api-client";
 import { PASSWORD_HINT, passwordProblem } from "@/lib/password";
 import { useAuthStore } from "@/store/auth-store";
+import PasswordInput from "@/components/auth/PasswordInput";
 
 /** Inscription libre d'un photographe : compte cree et connecte tout de
  * suite, chaque evenement demarre au pack Decouverte (10 photos gratuites).
@@ -93,11 +94,11 @@ export default function InscriptionPhotographePage() {
         <input maxLength={120} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Abidjan" autoComplete="address-level2" className={`${authInputClass} mb-3`} />
 
         <label className="mb-1 block text-sm font-medium text-ink-700">Mot de passe</label>
-        <input type="password" required minLength={8} maxLength={128} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" className={`${authInputClass} mb-1`} />
+        <PasswordInput required minLength={8} maxLength={128} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" className={`${authInputClass} mb-1`} />
         <p className="mb-3 text-xs text-ink-500">{PASSWORD_HINT}</p>
 
         <label className="mb-1 block text-sm font-medium text-ink-700">Confirmer le mot de passe</label>
-        <input type="password" required maxLength={128} value={confirmation} onChange={(e) => setConfirmation(e.target.value)} autoComplete="new-password" className={`${authInputClass} mb-4`} />
+        <PasswordInput required maxLength={128} value={confirmation} onChange={(e) => setConfirmation(e.target.value)} autoComplete="new-password" className={`${authInputClass} mb-4`} />
 
         <label className="mb-4 flex items-start gap-3 text-sm text-ink-700">
           <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-0.5 h-4 w-4 accent-brand-accent" />

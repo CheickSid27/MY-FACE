@@ -15,6 +15,7 @@ import uuid
 from collections.abc import Callable
 
 from sqlalchemy import delete, select
+from sqlalchemy.exc import DBAPIError, InterfaceError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
@@ -68,11 +69,28 @@ def is_scheduled(photo_id: uuid.UUID) -> bool:
     return photo_id in _scheduled
 
 
+# Base injoignable un instant (Neon qui met trop de temps a ouvrir une
+# connexion : vu le 03/11 pendant un envoi de 1 313 photos) : la photo est
+# reessayee au lieu de rester « en attente » jusqu'au prochain redemarrage.
+RETRY_ATTEMPTS = 3
+RETRY_DELAY_S = 5.0
+
+
+def _is_transient(exc: BaseException) -> bool:
+    while exc is not None:
+        if isinstance(exc, (TimeoutError, asyncio.TimeoutError, ConnectionError, OperationalError, InterfaceError)):
+            return True
+        if isinstance(exc, DBAPIError) and exc.connection_invalidated:
+            return True
+        exc = exc.__cause__ or exc.__context__
+    return False
+
+
 async def index_photo_faces(
     photo_id: uuid.UUID | str,
     storage: StorageService | None = None,
     session_factory: Callable[[], AsyncSession] = AsyncSessionLocal,
-) -> None:
+) -> bool | None:
     """Traite une photo : detection de visages + embeddings + ecriture DB.
 
     Idempotent : les embeddings existants de la photo (re-indexation) sont
@@ -81,6 +99,8 @@ async def index_photo_faces(
     `storage` et `session_factory` sont injectables (au lieu d'etre codes en
     dur) pour que cette fonction reste testable directement, sans dependre
     des overrides FastAPI qui ne s'appliquent qu'aux requetes HTTP.
+
+    Renvoie False seulement si la base etait injoignable (a reessayer).
     """
     # Toute la fonction est protegee : une exception non rattrapee ici
     # remonterait dans le mecanisme BackgroundTasks de Starlette et casserait
@@ -169,8 +189,12 @@ async def index_photo_faces(
                 await storage.delete(key)
             except Exception:
                 logger.warning("Vignette orpheline non supprimee : %s", key)
-    except Exception:
+    except Exception as exc:
+        if _is_transient(exc):
+            logger.warning("Photo %s: base injoignable (%s), nouvel essai prevu", photo_id, type(exc).__name__)
+            return False
         logger.exception("Photo %s: echec critique du pipeline d'indexation", photo_id)
+    return True
 
 
 async def index_photos_faces(
@@ -199,7 +223,13 @@ async def index_photos_faces(
     async def _bounded(photo_id: uuid.UUID) -> None:
         try:
             async with semaphore:
-                await index_photo_faces(photo_id, storage, session_factory)
+                for attempt in range(1, RETRY_ATTEMPTS + 1):
+                    if await index_photo_faces(photo_id, storage, session_factory) is not False:
+                        break
+                    if attempt < RETRY_ATTEMPTS:
+                        await asyncio.sleep(RETRY_DELAY_S * attempt)
+                else:
+                    logger.error("Photo %s: base injoignable apres %d essais, reprise au prochain demarrage", photo_id, RETRY_ATTEMPTS)
         finally:
             _scheduled.discard(photo_id)
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AuthCard, { authInputClass } from "@/components/auth/AuthCard";
 import { useAuthStore } from "@/store/auth-store";
+import PasswordInput from "@/components/auth/PasswordInput";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -37,8 +38,7 @@ export default function AdminLoginPage() {
         />
 
         <label className="mb-1 block text-sm font-medium text-ink-700">Mot de passe</label>
-        <input
-          type="password"
+        <PasswordInput
           required
           maxLength={128}
           value={password}

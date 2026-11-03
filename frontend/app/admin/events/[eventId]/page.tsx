@@ -1049,16 +1049,14 @@ function AdminEventDetailContent() {
               />
             </div>
             {indexing && <IndexingCard summary={indexing} onReindex={handleReindex} />}
-            {/* Dossier choisi par le photographe sur son ordinateur */}
-            {!isAdmin && (
-              <LocalFolderSync
-                eventId={eventId}
-                sectionId={uploadSectionId}
-                remaining={eventPack && !eventPack.unlimited ? eventPack.remaining : null}
-                onUploaded={handleFolderUploaded}
-                onLimitReached={openLimit}
-              />
-            )}
+            {/* Dossier choisi sur son ordinateur (photographe et admin) */}
+            <LocalFolderSync
+              eventId={eventId}
+              sectionId={uploadSectionId}
+              remaining={eventPack && !eventPack.unlimited ? eventPack.remaining : null}
+              onUploaded={handleFolderUploaded}
+              onLimitReached={openLimit}
+            />
             {/* Dossier du PC de la borne MYFACE (equipe seulement) */}
             {isAdmin && watchedFolder && (
               <div className="glass mb-6 rounded-2xl p-5">

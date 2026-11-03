@@ -147,6 +147,12 @@ async def compute_event_clusters(event_id: uuid.UUID, db: AsyncSession, storage:
     if not rows:
         return EventClusters(clusters=(), photos={})
     event_photos = (await db.execute(select(Photo).where(Photo.event_id == event_id))).scalars().all()
+    # Photo supprimee entre les deux lectures (suppression pendant le calcul,
+    # vu le 03/11) : ses visages sont ignores.
+    present = {p.id for p in event_photos}
+    rows = [row for row in rows if row.photo_id in present]
+    if not rows:
+        return EventClusters(clusters=(), photos={})
     with_faces = {row.photo_id for row in rows}
     original_keys = {p.id: p.original_key for p in event_photos if p.id in with_faces}
 
