@@ -58,6 +58,7 @@ async def _startup_jobs() -> None:
     await run_startup_maintenance(AsyncSessionLocal)
     try:
         storage = get_storage_service()
+        face_cluster_cache.enable_warming(storage, AsyncSessionLocal)
         await recover_unfinished_indexing(storage, AsyncSessionLocal)
         await backfill_watermarks(storage, AsyncSessionLocal, on_event_updated=face_cluster_cache.invalidate)
         async with AsyncSessionLocal() as db:

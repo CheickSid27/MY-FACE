@@ -28,7 +28,7 @@ from dataclasses import dataclass, field
 import numpy as np
 import sklearn
 from sklearn.cluster import DBSCAN
-from sqlalchemy import func, select, update
+from sqlalchemy import ARRAY, REAL, cast, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -103,40 +103,59 @@ class EventClusters:
 # 512 Mo refuses par Windows, et Docker tombe avec). Avec 128 Mo : 89 Mo et
 # 0,5 s pour 6 435 visages, 141 Mo et 2,3 s pour 16 000, memes groupes.
 DBSCAN_WORKING_MEMORY_MB = 128
+# Calcul des distances reparti sur quelques coeurs (chacun avec ses blocs de
+# 128 Mo) : le reste du serveur garde de quoi repondre.
+DBSCAN_JOBS = 4
 
 
 def _dbscan_labels(vectors: np.ndarray) -> np.ndarray:
+    """Distance cosinus calculee en distance euclidienne sur des vecteurs
+    normalises (|a-b|^2 = 2 x distance cosinus, donc eps' = racine(2 x eps)) :
+    memes groupes, mais 2,4 fois plus rapide (mesure du 03/11 : 32 294
+    visages, 23 s en cosinus, 9,7 s ainsi, groupes identiques)."""
+    norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+    unit = vectors / np.where(norms == 0, 1, norms)
     with sklearn.config_context(working_memory=DBSCAN_WORKING_MEMORY_MB):
         return DBSCAN(
-            eps=settings.face_cluster_eps,
+            eps=float(np.sqrt(2 * settings.face_cluster_eps)),
             min_samples=settings.face_cluster_min_samples,
-            metric="cosine",
-        ).fit_predict(vectors)
+            metric="euclidean",
+            algorithm="brute",
+            n_jobs=DBSCAN_JOBS,
+        ).fit_predict(unit)
 
 
 async def compute_event_clusters(event_id: uuid.UUID, db: AsyncSession, storage: StorageService) -> EventClusters:
-    result = await db.execute(
-        select(
-            FaceEmbedding.id,
-            FaceEmbedding.vector,
-            FaceEmbedding.confidence,
-            FaceEmbedding.bounding_box,
-            FaceEmbedding.crop_key,
-            Photo,
+    # Vecteurs lus en tableau de reels (format binaire de Postgres) et non en
+    # texte « [0.12,...] » a decouper : la lecture de 32 000 visages etait
+    # l'essentiel du temps (environ 60 s sur 83 s, mesure du 03/11). Chaque
+    # photo n'est lue qu'une fois, pas une fois par visage.
+    rows = (
+        await db.execute(
+            select(
+                FaceEmbedding.id,
+                FaceEmbedding.photo_id,
+                cast(FaceEmbedding.vector, ARRAY(REAL)).label("vector"),
+                FaceEmbedding.confidence,
+                FaceEmbedding.bounding_box,
+                FaceEmbedding.crop_key,
+            )
+            .join(Photo, Photo.id == FaceEmbedding.photo_id)
+            .where(Photo.event_id == event_id)
         )
-        .join(Photo, Photo.id == FaceEmbedding.photo_id)
-        .where(Photo.event_id == event_id)
-    )
-    rows = result.all()
+    ).all()
     if not rows:
         return EventClusters(clusters=(), photos={})
+    event_photos = (await db.execute(select(Photo).where(Photo.event_id == event_id))).scalars().all()
+    with_faces = {row.photo_id for row in rows}
+    original_keys = {p.id: p.original_key for p in event_photos if p.id in with_faces}
 
     vectors = np.array([row.vector for row in rows], dtype=np.float32)
     # DBSCAN (calcul CPU, quelques centaines de ms sur des milliers de
     # visages) execute hors de la boucle d'evenements.
     labels = await asyncio.to_thread(_dbscan_labels, vectors)
 
-    photos = {row.Photo.id: PhotoSnapshot.from_photo(row.Photo) for row in rows}
+    photos = {p.id: PhotoSnapshot.from_photo(p) for p in event_photos if p.id in with_faces}
     groups: dict[int, dict] = {}
     face_clusters: dict[uuid.UUID, int] = {}
     next_singleton_id = -1
@@ -148,7 +167,7 @@ async def compute_event_clusters(event_id: uuid.UUID, db: AsyncSession, storage:
             cluster_id = int(label)
         face_clusters[row.id] = cluster_id
         group = groups.setdefault(cluster_id, {"photo_ids": set(), "best": None})
-        group["photo_ids"].add(row.Photo.id)
+        group["photo_ids"].add(row.photo_id)
         if group["best"] is None or row.confidence > group["best"].confidence:
             group["best"] = row
 
@@ -162,7 +181,7 @@ async def compute_event_clusters(event_id: uuid.UUID, db: AsyncSession, storage:
                 return await ensure_face_crop(
                     best_row.id,
                     event_id,
-                    best_row.Photo.original_key,
+                    original_keys[best_row.photo_id],
                     best_row.bounding_box,
                     best_row.crop_key,
                     storage,
@@ -191,8 +210,8 @@ async def compute_event_clusters(event_id: uuid.UUID, db: AsyncSession, storage:
             photo_ids=tuple(
                 sorted(group["photo_ids"], key=lambda pid: photos[pid].uploaded_at, reverse=True)
             ),
-            representative_photo_id=group["best"].Photo.id,
-            representative_image_key=key or group["best"].Photo.thumbnail_key,
+            representative_photo_id=group["best"].photo_id,
+            representative_image_key=key or photos[group["best"].photo_id].thumbnail_key,
         )
         for (cluster_id, group), key in zip(ordered, crop_keys)
     )
@@ -219,13 +238,30 @@ class FaceClusterCache:
       indexee invalide le cache. Plutot que de faire attendre un invite le
       temps d'un recalcul (plusieurs secondes, surtout latence Neon), on
       renvoie immediatement le dernier resultat et on recalcule en tache de
-      fond ; la nouvelle photo apparait quelques secondes plus tard."""
+      fond ; la nouvelle photo apparait quelques secondes plus tard.
+
+    Calcul a l'avance (`enable_warming`, au demarrage du backend) : chaque
+    changement (photo indexee, supprimee, rangee) relance le calcul en tache de
+    fond, des que les photos arretent d'arriver quelques secondes (au plus
+    toutes les WARM_MAX_WAIT_S pendant un long envoi). Un invite n'attend donc
+    plus le calcul, meme sur un tres gros evenement (83 s a 10 000 photos
+    avant les optimisations du 03/11)."""
+
+    WARM_QUIET_S = 5.0
+    WARM_MAX_WAIT_S = 60.0
 
     def __init__(self) -> None:
         self._entries: dict[uuid.UUID, _CacheEntry] = {}
         self._generations: dict[uuid.UUID, int] = defaultdict(int)
         self._locks: dict[uuid.UUID, asyncio.Lock] = defaultdict(asyncio.Lock)
         self._refreshing: dict[uuid.UUID, asyncio.Task] = {}
+        self._warming: dict[uuid.UUID, asyncio.Task] = {}
+        self._storage: StorageService | None = None
+        self._session_factory: Callable[[], AsyncSession] | None = None
+
+    def enable_warming(self, storage: StorageService, session_factory: Callable[[], AsyncSession]) -> None:
+        self._storage = storage
+        self._session_factory = session_factory
 
     def invalidate(self, event_id: uuid.UUID, *, drop: bool = False) -> None:
         """Marque le resultat de l'evenement comme perime. `drop` le retire
@@ -234,6 +270,38 @@ class FaceClusterCache:
         self._generations[event_id] += 1
         if drop:
             self._entries.pop(event_id, None)
+        self._schedule_warm(event_id)
+
+    def _schedule_warm(self, event_id: uuid.UUID) -> None:
+        if self._session_factory is None:
+            return
+        running = self._warming.get(event_id)
+        if running is not None and not running.done():
+            return  # la boucle en cours verra la nouvelle generation
+        try:
+            self._warming[event_id] = asyncio.get_running_loop().create_task(self._warm(event_id))
+        except RuntimeError:
+            pass  # appele hors boucle asyncio : le calcul se fera a la demande
+
+    async def _warm(self, event_id: uuid.UUID) -> None:
+        waiting_since = time.monotonic()
+        try:
+            while True:
+                generation = self._generations[event_id]
+                await asyncio.sleep(self.WARM_QUIET_S)
+                still_arriving = self._generations[event_id] != generation
+                if still_arriving and time.monotonic() - waiting_since < self.WARM_MAX_WAIT_S:
+                    continue
+                async with self._locks[event_id]:
+                    entry = self._entries.get(event_id)
+                    if entry is None or not self._is_fresh(event_id, entry):
+                        async with self._session_factory() as db:
+                            await self._compute_and_store(event_id, db, self._storage)
+                if self._generations[event_id] == self._entries[event_id].generation:
+                    return
+                waiting_since = time.monotonic()
+        except Exception:
+            logger.exception("Calcul a l'avance des groupes de %s : echec", event_id)
 
     def _is_fresh(self, event_id: uuid.UUID, entry: _CacheEntry) -> bool:
         return (
