@@ -73,7 +73,7 @@ export default function InscriptionPhotographePage() {
     <AuthCard subtitle="Créer mon compte photographe" wide>
       <form onSubmit={handleSubmit}>
         <p className="mb-5 rounded-xl bg-brand-accent/10 px-3 py-2 text-xs text-ink-700">
-          Gratuit pour commencer : 10 photos par événement. Packs Événement (10 000 F) et Pro (25 000 F) quand vous
+          Gratuit pour commencer : 10 photos par événement. Packs Essentiel (7 500 F), Événement (10 000 F) et Pro (25 000 F) quand vous
           voulez, paiement unique par événement.
         </p>
 

@@ -141,6 +141,9 @@ class EventRead(BaseModel):
     has_gallery_password: bool = False
     retention_exempt: bool = False
     photos_purged_at: datetime | None = None
+    # Le photographe autorise l'equipe MYFACE a gerer cet evenement
+    admin_access: bool = False
+    admin_access_since: datetime | None = None
 
     # Liens a partager, construits sur l'URL publique de l'app (APP_BASE_URL,
     # la meme que celle des SMS et du QR de telechargement) : lien invite a
@@ -235,6 +238,17 @@ class EventListItem(BaseModel):
     photo_limit: int | None = None
     # Un achat de pack attend la validation de MYFACE
     pack_pending: bool = False
+    # Vue admin : False = evenement d'un photographe sans autorisation, l'admin
+    # ne voit que ce resume et la galerie invite (voir services/access.py)
+    can_manage: bool = True
+    admin_access: bool = False
+    # Vue admin (resume) : ventes payees de l'evenement
+    paid_orders: int | None = None
+    revenue: float | None = None
+
+
+class AdminAccessUpdate(BaseModel):
+    granted: bool
 
 
 class EventIndexingSummary(BaseModel):

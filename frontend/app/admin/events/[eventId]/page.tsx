@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import RequireAuth from "@/components/admin/RequireAuth";
 import Pagination from "@/components/gallery/Pagination";
+import AdminAccessCard from "@/components/admin/AdminAccessCard";
 import EventRetentionCard from "@/components/admin/EventRetentionCard";
 import GalleryOptionsCard from "@/components/packs/GalleryOptionsCard";
 import PackCard from "@/components/packs/PackCard";
@@ -671,9 +672,11 @@ function IndexingCard({
     <div className="glass mb-6 rounded-2xl p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-ink-900">Reconnaissance faciale</h2>
-          <p className="text-xs text-ink-500">
-            {summary.done}/{total} photo(s) analysée(s) &middot; {summary.faces} visage(s) détecté(s)
+          <h2 className="text-base font-semibold text-ink-900">Reconnaissance faciale</h2>
+          <p className="mt-1 text-[15px] text-ink-700">
+            <b className="font-pro text-xl text-ink-900">{summary.done.toLocaleString("fr-FR")}</b> /{" "}
+            {total.toLocaleString("fr-FR")} photos analysées &middot;{" "}
+            <b className="font-pro text-xl text-ink-900">{summary.faces.toLocaleString("fr-FR")}</b> visages détectés
           </p>
         </div>
         {toRetry > 0 && (
@@ -687,12 +690,12 @@ function IndexingCard({
           </button>
         )}
       </div>
-      <div className="flex flex-wrap gap-2 text-xs">
-        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 font-semibold text-emerald-700">
+      <div className="flex flex-wrap gap-2 text-sm">
+        <span className="rounded-full bg-emerald-100 px-3 py-1 font-semibold text-emerald-700">
           {summary.done} analysée(s)
         </span>
         {unfinished > 0 && (
-          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 font-semibold text-amber-700">
+          <span className="rounded-full bg-amber-100 px-3 py-1 font-semibold text-amber-700">
             {unfinished} en cours / en attente
           </span>
         )}
@@ -790,8 +793,12 @@ function AdminEventDetailContent() {
       setEvent(eventData);
       setSections(sectionsData);
       setPackRefresh((n) => n + 1);
-    } catch {
-      setError("Impossible de charger l'événement.");
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.status === 403
+          ? "Cet événement appartient à un photographe : vous voyez son résumé dans « Événements », et sa galerie comme un invité. Il peut vous donner l'accès depuis son événement s'il a besoin d'aide."
+          : "Impossible de charger l'événement."
+      );
     }
   }, [eventId, loadPhotos]);
 
@@ -1307,6 +1314,7 @@ function AdminEventDetailContent() {
           <FrameCaptionEditor key={`frame-${event.updated_at}`} event={event} onSaved={setEvent} />
           <KioskCard event={event} />
           <EventRetentionCard event={event} isAdmin={isAdmin} onChanged={loadData} />
+          {event.organizer_id === user?.id && !isAdmin && <AdminAccessCard event={event} onSaved={setEvent} />}
           <button
             type="button"
             onClick={handleDelete}

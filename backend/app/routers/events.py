@@ -2,6 +2,7 @@ import asyncio
 import logging
 import secrets
 import uuid
+from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
@@ -21,6 +22,7 @@ from app.models.pack_purchase import PackPurchase, PackPurchaseStatus
 from app.models.photo import IndexingStatus, Photo
 from app.models.user import User, UserRole
 from app.schemas.event import (
+    AdminAccessUpdate,
     EventCreate,
     EventIndexingSummary,
     EventListItem,
@@ -39,7 +41,7 @@ from app.routers.sections import list_sections
 from app.services.activity import log_activity
 from app.services.short_codes import new_short_code, normalize_code
 from app.services import paystack
-from app.services.access import get_manageable_event, is_kiosk_request
+from app.services.access import can_manage_event, get_manageable_event, is_kiosk_request
 from app.services.face_clusters import build_cluster_response, face_cluster_cache
 from app.services.face_indexing import index_photos_faces, is_scheduled
 from app.services.folder_watcher import folder_watcher
@@ -52,7 +54,7 @@ from app.services.packs import (
     effective_photo_limit,
     event_has_feature,
     get_owner,
-    next_pack,
+    first_pack_with,
     watermark_text_for,
 )
 from app.services.phone import normalize_phone_or_ci
@@ -132,7 +134,9 @@ async def list_events(
     db: AsyncSession = Depends(get_db),
 ) -> list[EventListItem]:
     """Evenements de l'organisateur connecte ; TOUS les evenements pour un
-    admin (avec l'email de l'organisateur de chacun)."""
+    admin (avec l'email de l'organisateur et le resume des ventes de chacun) :
+    il ne gere que les siens et ceux ou le photographe l'a autorise
+    (`can_manage`)."""
     is_admin = current_user.role == UserRole.ADMIN
     query = (
         select(Event, func.count(Photo.id).label("photo_count"), User)
@@ -156,6 +160,18 @@ async def list_events(
             .distinct()
         )
         pending_ids = set(pending.scalars().all())
+    sales: dict[uuid.UUID, tuple[int, float]] = {}
+    if rows and is_admin:
+        sales = {
+            event_id: (count, float(total or 0))
+            for event_id, count, total in (
+                await db.execute(
+                    select(Order.event_id, func.count(Order.id), func.sum(Order.total_amount))
+                    .where(Order.status == OrderStatus.SUCCESS, Order.event_id.in_([event.id for event, _, _ in rows]))
+                    .group_by(Order.event_id)
+                )
+            ).all()
+        }
 
     return [
         EventListItem(
@@ -168,6 +184,10 @@ async def list_events(
             pack=event.pack,
             photo_limit=effective_photo_limit(event, organizer),
             pack_pending=event.id in pending_ids,
+            can_manage=can_manage_event(event, current_user),
+            admin_access=event.admin_access,
+            paid_orders=sales.get(event.id, (0, 0.0))[0] if is_admin else None,
+            revenue=sales.get(event.id, (0, 0.0))[1] if is_admin else None,
         )
         for event, photo_count, organizer in rows
     ]
@@ -284,15 +304,17 @@ async def update_event(
         update_data["pricing"] = payload.pricing.model_dump()
 
     # Options des packs payants (voir services/packs.py)
-    upgrade = next_pack(event.pack)
-    upgrade_hint = f" : disponible à partir du pack {upgrade.name}" if upgrade else ""
+    def upgrade_hint(feature: str) -> str:
+        upgrade = first_pack_with(feature)
+        return f" : disponible à partir du pack {upgrade.name}" if upgrade else ""
+
     old_watermark = watermark_text_for(event, owner)
     if "watermark_text" in update_data:
         text = (update_data.pop("watermark_text") or "").strip() or None
         if text and not event_has_feature(event, owner, FEATURE_CUSTOM_WATERMARK):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Filigrane personnalisé{upgrade_hint}",
+                detail=f"Filigrane personnalisé{upgrade_hint(FEATURE_CUSTOM_WATERMARK)}",
             )
         event.watermark_text = text
     if "gallery_password" in update_data:
@@ -300,7 +322,7 @@ async def update_event(
         if password and not event_has_feature(event, owner, FEATURE_GALLERY_PASSWORD):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Mot de passe de galerie{upgrade_hint}",
+                detail=f"Mot de passe de galerie{upgrade_hint(FEATURE_GALLERY_PASSWORD)}",
             )
         event.gallery_password_hash = hash_password(password) if password else None
 
@@ -616,3 +638,26 @@ async def delete_event(
     )
     # Apres le commit : si la base refuse la suppression, aucun fichier n'est perdu.
     background_tasks.add_task(_delete_event_files, event_id, storage)
+
+
+@router.put("/{event_id}/admin-access", response_model=EventRead)
+async def set_admin_access(
+    event_id: uuid.UUID,
+    payload: AdminAccessUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Event:
+    """Le photographe (lui seul) autorise l'equipe MYFACE a gerer son
+    evenement pour l'aider, ou retire cette autorisation."""
+    event = await db.get(Event, event_id)
+    if event is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Événement introuvable")
+    if event.organizer_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Seul le photographe de l'événement peut changer cet accès")
+    if payload.granted != event.admin_access:
+        event.admin_access = payload.granted
+        event.admin_access_since = datetime.now(timezone.utc) if payload.granted else None
+        await db.commit()
+        await log_activity(db, "acces_admin_accorde" if payload.granted else "acces_admin_retire", actor=current_user, event=event)
+    await db.refresh(event)
+    return event

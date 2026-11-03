@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -38,6 +38,15 @@ def _fmt(amount: float) -> str:
     return f"{amount:,.0f}".replace(",", " ")
 
 
+def _managed_by(user: User):
+    """Evenements de l'espace de travail : les siens, et pour un admin ceux
+    ou un photographe l'a autorise (voir services/access.py). L'admin ne
+    travaille plus dans les evenements des photographes sans autorisation."""
+    if user.role == UserRole.ADMIN:
+        return or_(Event.organizer_id == user.id, Event.admin_access.is_(True))
+    return Event.organizer_id == user.id
+
+
 async def _scope_events(db: AsyncSession, user: User) -> list[tuple[Event, int, User]]:
     query = (
         select(Event, func.count(Photo.id), User)
@@ -46,8 +55,7 @@ async def _scope_events(db: AsyncSession, user: User) -> list[tuple[Event, int, 
         .group_by(Event.id, User.id)
         .order_by(Event.date.desc())
     )
-    if user.role != UserRole.ADMIN:
-        query = query.where(Event.organizer_id == user.id)
+    query = query.where(_managed_by(user))
     return [tuple(row) for row in (await db.execute(query)).all()]
 
 
@@ -223,8 +231,7 @@ async def _orders(
         .order_by(Order.created_at.desc())
         .limit(limit)
     )
-    if user.role != UserRole.ADMIN:
-        query = query.where(Event.organizer_id == user.id)
+    query = query.where(_managed_by(user))
     if since is not None:
         query = query.where(Order.created_at >= since)
     return [

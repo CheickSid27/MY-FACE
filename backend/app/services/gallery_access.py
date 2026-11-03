@@ -22,7 +22,7 @@ from app.core.security import (
 )
 from app.models.event import Event
 from app.models.user import User
-from app.services.access import can_manage_event, is_kiosk_request
+from app.services.access import can_view_gallery, is_kiosk_request
 
 GALLERY_ACCESS_HOURS = 24 * 7
 PASSWORD_REQUIRED_DETAIL = "Mot de passe de la galerie requis"
@@ -47,7 +47,7 @@ def has_gallery_access(
         return True
     if is_kiosk_request(event, kiosk_token):
         return True
-    if user is not None and can_manage_event(event, user):
+    if user is not None and can_view_gallery(event, user):
         return True
     if access_token:
         try:

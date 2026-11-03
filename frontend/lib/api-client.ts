@@ -269,6 +269,10 @@ export const api = {
     return request<EventListItem[]>("/events");
   },
 
+  setAdminAccess(eventId: string, granted: boolean): Promise<Event> {
+    return request<Event>(`/events/${eventId}/admin-access`, { method: "PUT", body: JSON.stringify({ granted }) });
+  },
+
   getEvent(eventId: string): Promise<Event> {
     return request<Event>(`/events/${eventId}`);
   },

@@ -59,7 +59,7 @@ export interface ProfileUpdate {
 }
 
 // --- Service photographe : packs par evenement (memes tarifs que Fokevani)
-export type PackKey = "decouverte" | "evenement" | "pro" | "sur_mesure";
+export type PackKey = "decouverte" | "essentiel" | "evenement" | "pro" | "sur_mesure";
 
 export interface Pack {
   key: PackKey;
@@ -199,6 +199,9 @@ export interface Event {
   retention_exempt: boolean;
   photos_purged_at: string | null;
   photos_available_until: string | null;
+  /** Le photographe autorise l'equipe MYFACE a gerer cet evenement */
+  admin_access: boolean;
+  admin_access_since: string | null;
 }
 
 export interface EventPublicRead {
@@ -235,6 +238,13 @@ export interface EventListItem {
   pack: PackKey;
   photo_limit: number | null;
   pack_pending: boolean;
+  /** false = evenement d'un photographe sans autorisation : l'admin ne voit
+   * que ce resume et la galerie invite. */
+  can_manage: boolean;
+  admin_access: boolean;
+  /** Vue admin : ventes payees de l'evenement */
+  paid_orders: number | null;
+  revenue: number | null;
 }
 
 export interface EventIndexingSummary {

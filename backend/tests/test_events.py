@@ -115,20 +115,35 @@ async def _photographe_headers(create_user, email: str = "photog-events@myface-t
     return {"Authorization": f"Bearer {create_access_token(str(user.id))}"}
 
 
-async def test_admin_sees_and_manages_all_events(auth_client: AsyncClient, create_user):
+async def test_admin_sees_summary_and_manages_only_with_permission(auth_client: AsyncClient, create_user):
+    """Chacun son espace (03/11) : l'admin voit le resume des evenements des
+    photographes, et ne les gere que si le photographe l'y autorise."""
     photographe = await _photographe_headers(create_user)
     created = await auth_client.post("/events", json=_event_payload("Gala du photographe"), headers=photographe)
     event_id = created.json()["id"]
 
-    # L'admin voit l'evenement du photographe, avec l'email de son organisateur...
+    # L'admin voit le resume (organisateur, ventes), sans pouvoir le gerer...
     listing = (await auth_client.get("/events")).json()
     item = next(e for e in listing if e["id"] == event_id)
     assert item["organizer_email"] == "photog-events@myface-test.com"
+    assert item["can_manage"] is False and item["paid_orders"] == 0
+    assert (await auth_client.get(f"/events/{event_id}")).status_code == 403
+    assert (await auth_client.patch(f"/events/{event_id}", json={"location": "Grand-Bassam"})).status_code == 403
+    # ...ni donner l'acces a sa place
+    assert (await auth_client.put(f"/events/{event_id}/admin-access", json={"granted": True})).status_code == 403
+    # la galerie invite reste visible
+    assert (await auth_client.get(f"/events/{event_id}/photos")).status_code == 200
 
-    # ...et peut le gerer.
-    assert (await auth_client.get(f"/events/{event_id}")).status_code == 200
+    # Le photographe donne l'acces : l'admin peut l'aider
+    granted = await auth_client.put(f"/events/{event_id}/admin-access", json={"granted": True}, headers=photographe)
+    assert granted.json()["admin_access"] is True and granted.json()["admin_access_since"]
     patched = await auth_client.patch(f"/events/{event_id}", json={"location": "Grand-Bassam"})
     assert patched.json()["location"] == "Grand-Bassam"
+    assert next(e for e in (await auth_client.get("/events")).json() if e["id"] == event_id)["can_manage"] is True
+
+    # ...puis le retire
+    await auth_client.put(f"/events/{event_id}/admin-access", json={"granted": False}, headers=photographe)
+    assert (await auth_client.get(f"/events/{event_id}")).status_code == 403
 
 
 async def test_photographe_sees_only_own_events(auth_client: AsyncClient, create_user):

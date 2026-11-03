@@ -66,6 +66,21 @@ PACKS: dict[str, Pack] = {
         features=frozenset(),
         purchasable=False,
     ),
+    # Pack « leurre » (03/11) : 50 F la photo contre 20 F pour Evenement, qui
+    # donne 3 fois plus de photos pour 2 500 F de plus.
+    "essentiel": Pack(
+        key="essentiel",
+        name="Essentiel",
+        price=7_500,
+        photo_limit=150,
+        tagline="Soutenances, baptêmes, petites fêtes",
+        highlights=(
+            "150 photos par événement",
+            "Tout le pack Découverte",
+        ),
+        features=frozenset(),
+        purchasable=True,
+    ),
     "evenement": Pack(
         key="evenement",
         name="Événement",
@@ -111,7 +126,7 @@ PACKS: dict[str, Pack] = {
         purchasable=False,
     ),
 }
-PACK_ORDER = ("decouverte", "evenement", "pro", "sur_mesure")
+PACK_ORDER = ("decouverte", "essentiel", "evenement", "pro", "sur_mesure")
 
 
 def get_pack(key: str | None) -> Pack:
@@ -139,6 +154,15 @@ def event_has_feature(event: Event, owner: User | None, feature: str) -> bool:
     if is_unlimited_owner(owner):
         return True
     return feature in get_pack(event.pack).features
+
+
+def first_pack_with(feature: str) -> Pack | None:
+    """Premier pack achetable qui donne cette option (le pack Essentiel n'a
+    ni mot de passe ni filigrane : le conseil doit viser Evenement)."""
+    for candidate in PACK_ORDER:
+        if PACKS[candidate].purchasable and feature in PACKS[candidate].features:
+            return PACKS[candidate]
+    return None
 
 
 def next_pack(key: str | None) -> Pack | None:

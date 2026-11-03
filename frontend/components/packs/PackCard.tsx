@@ -9,7 +9,9 @@ import {
   PACK_NAMES,
   PURCHASE_STATUS_LABELS,
   formatFcfa,
+  packExtras,
   paymentMethodLabel,
+  pricePerPhoto,
 } from "@/lib/packs";
 import type { EventPack, PackKey, PackUpgradeOption } from "@/types/api";
 
@@ -208,7 +210,8 @@ export default function PackCard({ eventId, eventName, isAdmin, refreshKey, onLo
                   <p className="text-sm font-semibold text-ink-900">Pack {option.name}</p>
                   <p className="text-xs text-ink-500">
                     {option.photo_limit?.toLocaleString("fr-FR")} photos
-                    {option.key === "pro" ? " · assistance le jour J" : " · mot de passe · filigrane"}
+                    {packExtras(option.key)}
+                    {pricePerPhoto(option.price, option.photo_limit) && ` · ${pricePerPhoto(option.price, option.photo_limit)}`}
                   </p>
                   <p className="mt-2 text-lg font-bold text-ink-900">
                     {formatFcfa(option.amount_due)}

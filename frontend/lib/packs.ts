@@ -5,6 +5,7 @@ import type { PackKey, PackPaymentMethod, PackPurchaseStatus } from "@/types/api
 
 export const PACK_NAMES: Record<PackKey, string> = {
   decouverte: "Découverte",
+  essentiel: "Essentiel",
   evenement: "Événement",
   pro: "Pro",
   sur_mesure: "Sur mesure",
@@ -12,6 +13,7 @@ export const PACK_NAMES: Record<PackKey, string> = {
 
 export const PACK_BADGE_CLASSES: Record<PackKey, string> = {
   decouverte: "bg-ink-900/10 text-ink-700",
+  essentiel: "bg-sky-100 text-sky-800",
   evenement: "bg-brand-accent/15 text-brand-accent",
   pro: "bg-brand text-white",
   sur_mesure: "bg-emerald-100 text-emerald-800",
@@ -61,3 +63,17 @@ export function whatsappLink(phone: string | null | undefined, message?: string)
 
 /** Numero WhatsApp de MYFACE affiche quand l'admin n'en a pas encore saisi. */
 export const MYFACE_WHATSAPP_FALLBACK = "+2250758509403";
+
+/** Ce qu'apporte un pack en plus du nombre de photos (cartes d'achat). */
+export function packExtras(key: PackKey): string {
+  if (key === "pro") return " · assistance le jour J";
+  if (key === "evenement") return " · mot de passe · filigrane";
+  return "";
+}
+
+/** Prix d'une photo dans un pack (« 20 F la photo ») : rend visible l'interet
+ * du pack Evenement face au pack Essentiel. */
+export function pricePerPhoto(price: number | null, limit: number | null): string | null {
+  if (!price || !limit) return null;
+  return `${Math.round(price / limit).toLocaleString("fr-FR")} F la photo`;
+}

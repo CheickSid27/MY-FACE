@@ -410,17 +410,17 @@ export default function LocalFolderSync({ eventId, remaining, onUploaded, onLimi
             </button>
           ) : (
             <div className="mb-3 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-xl bg-white/70 p-2">
-                <p className="font-pro text-lg font-semibold">{sentCount.toLocaleString("fr-FR")}</p>
-                <p className="text-[11px] text-ink-500">envoyées</p>
+              <div className="rounded-xl bg-white/70 p-3">
+                <p className="font-pro text-2xl font-bold">{sentCount.toLocaleString("fr-FR")}</p>
+                <p className="text-sm font-medium text-ink-700">envoyées</p>
               </div>
-              <div className="rounded-xl bg-white/70 p-2">
-                <p className="font-pro text-lg font-semibold">{sending}</p>
-                <p className="text-[11px] text-ink-500">en cours</p>
+              <div className="rounded-xl bg-white/70 p-3">
+                <p className="font-pro text-2xl font-bold">{sending}</p>
+                <p className="text-sm font-medium text-ink-700">en cours</p>
               </div>
-              <div className="rounded-xl bg-white/70 p-2">
-                <p className="font-pro text-lg font-semibold">{waiting}</p>
-                <p className="text-[11px] text-ink-500">{full ? "bloquées" : "en attente"}</p>
+              <div className="rounded-xl bg-white/70 p-3">
+                <p className="font-pro text-2xl font-bold">{waiting}</p>
+                <p className="text-sm font-medium text-ink-700">{full ? "bloquées" : "en attente"}</p>
               </div>
             </div>
           )}

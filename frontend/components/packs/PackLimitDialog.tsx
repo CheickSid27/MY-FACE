@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import PackPurchaseDialog from "@/components/packs/PackPurchaseDialog";
-import { MYFACE_WHATSAPP_FALLBACK, PACK_NAMES, formatFcfa, whatsappLink } from "@/lib/packs";
+import { MYFACE_WHATSAPP_FALLBACK, PACK_NAMES, formatFcfa, packExtras, pricePerPhoto, whatsappLink } from "@/lib/packs";
 import type { EventPack, PackUpgradeOption } from "@/types/api";
 
 interface PackLimitDialogProps {
@@ -93,7 +93,8 @@ export default function PackLimitDialog({ eventId, eventName, pack, onClose, onP
                   </p>
                   <p className="text-xs text-ink-500">
                     {option.photo_limit?.toLocaleString("fr-FR")} photos
-                    {option.key === "pro" ? " · assistance le jour J" : " · mot de passe · filigrane"}
+                    {packExtras(option.key)}
+                    {pricePerPhoto(option.price, option.photo_limit) && ` · ${pricePerPhoto(option.price, option.photo_limit)}`}
                   </p>
                   <p className="mt-1 text-lg font-bold text-ink-900">
                     {formatFcfa(option.amount_due)}

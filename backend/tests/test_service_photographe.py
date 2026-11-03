@@ -149,7 +149,8 @@ async def test_photographer_event_starts_with_free_pack(make_client):
     assert pack["pack"]["key"] == "decouverte"
     assert pack["unlimited"] is False
     assert (pack["photo_limit"], pack["photo_count"], pack["remaining"]) == (10, 0, 10)
-    assert [(u["key"], u["amount_due"]) for u in pack["upgrades"]] == [("evenement", 10_000), ("pro", 25_000)]
+    assert [(u["key"], u["amount_due"]) for u in pack["upgrades"]] == [
+        ("essentiel", 7_500), ("evenement", 10_000), ("pro", 25_000)]
 
     listed = (await photographe.get("/events")).json()
     assert listed[0]["pack"] == "decouverte"
@@ -166,7 +167,7 @@ async def test_upload_stops_at_pack_limit(make_client):
     assert len(data["uploaded"]) == 10
     assert len(data["errors"]) == 2
     assert "Limite du pack Découverte atteinte (10 photos)" in data["errors"][0]["error"]
-    assert "pack Événement" in data["errors"][0]["error"]
+    assert "pack Essentiel" in data["errors"][0]["error"]
 
 
 async def test_admin_events_are_unlimited(make_client, create_user):

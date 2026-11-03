@@ -62,7 +62,7 @@
   footer a { color: #C9D6D7; }
   footer .liens { margin-left: auto; }
 
-  .tarifs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 26px 0 10px; }
+  .tarifs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 26px 0 10px; }
   .pack { background: #fff; border: 1px solid var(--line-light); border-radius: 22px; padding: 22px; display: flex; flex-direction: column; position: relative; }
   .pack.vedette { background: var(--ink); color: var(--sand); border-color: var(--ink); box-shadow: 0 18px 40px rgba(14,36,41,.25); }
   .pack .nom { font: 700 15px/1.2 var(--body); color: var(--orange-ink); margin: 0; }
@@ -128,6 +128,13 @@
       <p class="unite">pour essayer, sans carte</p>
       <ul><li>10 photos par événement</li><li>IA de reconnaissance faciale</li><li>QR code et page invités</li><li>Galerie, « Trouver mon visage » et selfie</li><li>Vente aux invités ou photos offertes</li><li>Photos en ligne 90 jours après l'événement</li></ul>
       <a class="btn clair" href="https://app.myfaceci.online/photographes/inscription">Commencer</a>
+    </div>
+    <div class="pack">
+      <p class="nom">Essentiel</p>
+      <p class="prix">Petit prix</p>
+      <p class="unite">par événement, affiché avant de payer</p>
+      <ul><li>150 photos par événement</li><li>Tout le pack Découverte</li></ul>
+      <a class="btn clair" href="https://app.myfaceci.online/photographes/inscription">Créer mon compte</a>
     </div>
     <div class="pack vedette">
       <span class="ruban">Le plus choisi</span>

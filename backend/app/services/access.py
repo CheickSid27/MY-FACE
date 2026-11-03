@@ -1,9 +1,12 @@
 """Regles d'acces partagees entre routers.
 
 - Un organisateur (role photographe) gere uniquement SES evenements.
-- Un admin gere TOUS les evenements (vue globale, y compris ceux crees par
-  un photographe) : auparavant il ne voyait que les siens, sans aucun moyen
-  de superviser l'activite des comptes photographes qu'il cree.
+- Un admin gere ses evenements, et ceux d'un photographe SEULEMENT si le
+  photographe l'y a autorise (bouton « Autoriser MYFACE », jusqu'a ce qu'il le
+  retire). Sinon l'admin ne voit que le resume (liste des evenements) et la
+  galerie invite : chacun son espace (demande du 03/11, apres des doublons
+  crees par la page de gestion ouverte en meme temps cote admin et cote
+  photographe).
 - Le mode borne est accorde uniquement sur presentation du vrai kiosk_token
   de l'evenement, compare cote serveur."""
 
@@ -18,7 +21,13 @@ from app.models.user import User, UserRole
 
 
 def can_manage_event(event: Event, user: User) -> bool:
-    return user.role == UserRole.ADMIN or event.organizer_id == user.id
+    return event.organizer_id == user.id or (user.role == UserRole.ADMIN and event.admin_access)
+
+
+def can_view_gallery(event: Event, user: User) -> bool:
+    """Galerie invite (sans mot de passe) : l'organisateur, l'admin autorise,
+    et l'equipe MYFACE en lecture."""
+    return user.role == UserRole.ADMIN or can_manage_event(event, user)
 
 
 async def get_manageable_event(event_id: uuid.UUID, user: User, db: AsyncSession) -> Event:

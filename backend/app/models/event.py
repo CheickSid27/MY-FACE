@@ -58,6 +58,11 @@ class Event(Base):
     retention_exempt: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
     photos_purged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     organizer_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    # Le photographe autorise l'equipe MYFACE a gerer son evenement (aide),
+    # jusqu'a ce qu'il retire l'autorisation. Sans elle, un admin ne voit que
+    # le resume et la galerie invite (voir services/access.py).
+    admin_access: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+    admin_access_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False

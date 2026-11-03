@@ -8,6 +8,7 @@ import PageHeader from "@/components/pro/PageHeader";
 import { useWorkspace } from "@/components/pro/WorkspaceProvider";
 import { CalendarIcon, FacesIcon, PlusIcon, SearchIcon } from "@/components/pro/icons";
 import { api, ApiError } from "@/lib/api-client";
+import { formatFcfa } from "@/lib/packs";
 import { useAuthStore } from "@/store/auth-store";
 import type { EventListItem } from "@/types/api";
 
@@ -119,6 +120,50 @@ function NewEventDialog({ onClose, onCreated }: { onClose: () => void; onCreated
   );
 }
 
+/** Evenements des photographes, cote admin : un resume seulement (chacun son
+ * espace). La gestion s'ouvre seulement si le photographe l'autorise. */
+function PhotographerEvents({ events }: { events: EventListItem[] }) {
+  if (events.length === 0) return null;
+  return (
+    <section className="mt-8">
+      <h2 className="mb-1 text-[13px] font-bold uppercase tracking-wider text-ink-500">Événements des photographes</h2>
+      <p className="mb-3 text-xs text-ink-500">
+        Résumé seulement : chaque photographe gère son événement dans son espace. Pour l&apos;aider, il peut vous
+        donner l&apos;accès depuis son événement.
+      </p>
+      <div className="overflow-hidden rounded-3xl border border-[#E6DED0] bg-white">
+        {events.map((event) => (
+          <div key={event.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-[#EFE8DC] px-4 py-3 last:border-0">
+            <div className="min-w-0 flex-1">
+              <b className="block truncate text-[15px]">{event.name}</b>
+              <span className="block truncate text-xs text-ink-500">
+                {new Date(event.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })} ·{" "}
+                {event.organizer_email}
+              </span>
+            </div>
+            <span className="text-[13px]">
+              {event.photo_count.toLocaleString("fr-FR")} photos
+            </span>
+            <span className="text-[13px]">
+              {event.paid_orders ?? 0} vente{(event.paid_orders ?? 0) > 1 ? "s" : ""}
+              {event.revenue ? ` · ${formatFcfa(event.revenue)}` : ""}
+            </span>
+            <PackBadge pack={event.pack} />
+            <a
+              href={`/event/${event.id}`}
+              target="_blank"
+              rel="noopener"
+              className="rounded-xl border border-[#E6DED0] px-3 py-1.5 text-xs font-semibold text-ink-900 hover:bg-[#FBF8F3]"
+            >
+              Voir la galerie
+            </a>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function ProEventsPage() {
   const router = useRouter();
   const { refresh } = useWorkspace();
@@ -205,11 +250,11 @@ export default function ProEventsPage() {
         </div>
       )}
 
-      {events && visible.length === 0 && (
+      {events && visible.filter((e) => e.can_manage).length === 0 && (
         <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-[#D9CFBF] bg-white p-8 text-center text-sm text-ink-500">
           <CalendarIcon size={28} />
-          {events.length === 0 ? "Aucun événement pour le moment." : "Aucun événement ne correspond."}
-          {events.length === 0 && (
+          {events.every((e) => !e.can_manage) ? "Aucun événement pour le moment." : "Aucun événement ne correspond."}
+          {events.every((e) => !e.can_manage) && (
             <button type="button" onClick={() => setCreating(true)} className="btn-accent !px-5 !py-2.5 text-sm">
               Créer mon premier événement
             </button>
@@ -218,7 +263,7 @@ export default function ProEventsPage() {
       )}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {visible.map((event) => {
+        {visible.filter((e) => e.can_manage).map((event) => {
           const moment = momentOf(event.date);
           const chip = CHIP[moment];
           return (
@@ -258,13 +303,18 @@ export default function ProEventsPage() {
                   )}
                 </span>
                 {isAdmin && event.organizer_email && event.organizer_email !== user?.email && (
-                  <span className="truncate text-xs text-ink-500">Photographe : {event.organizer_email}</span>
+                  <span className="truncate text-xs text-ink-500">
+                    Photographe : {event.organizer_email}
+                    {event.admin_access && <b className="ml-1 text-emerald-700">· accès accordé par le photographe</b>}
+                  </span>
                 )}
               </span>
             </Link>
           );
         })}
       </div>
+
+      {isAdmin && <PhotographerEvents events={visible.filter((e) => !e.can_manage)} />}
 
       {creating && (
         <NewEventDialog

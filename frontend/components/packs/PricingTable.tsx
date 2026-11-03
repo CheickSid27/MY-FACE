@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api-client";
-import { MYFACE_WHATSAPP_FALLBACK, formatFcfa, whatsappLink } from "@/lib/packs";
+import { MYFACE_WHATSAPP_FALLBACK, formatFcfa, pricePerPhoto, whatsappLink } from "@/lib/packs";
 import type { Pack } from "@/types/api";
 
 // Affiche tout de suite (avant la reponse du serveur, ou s'il ne repond pas) ;
@@ -25,6 +25,16 @@ const FALLBACK_PACKS: Pack[] = [
     ],
     features: [],
     purchasable: false,
+  },
+  {
+    key: "essentiel",
+    name: "Essentiel",
+    price: 7500,
+    photo_limit: 150,
+    tagline: "Soutenances, baptêmes, petites fêtes",
+    highlights: ["150 photos par événement", "Tout le pack Découverte"],
+    features: [],
+    purchasable: true,
   },
   {
     key: "evenement",
@@ -80,7 +90,7 @@ export default function PricingTable({ signupHref = "/photographes/inscription" 
   const contact = whatsappLink(MYFACE_WHATSAPP_FALLBACK, "Bonjour MYFACE, je souhaite une offre sur mesure pour mes événements.");
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {packs.map((pack) => {
         const featured = pack.key === "evenement";
         return (
@@ -99,6 +109,7 @@ export default function PricingTable({ signupHref = "/photographes/inscription" 
             <p className="mt-1 text-3xl font-bold">{formatFcfa(pack.price)}</p>
             <p className={`text-xs ${featured ? "text-white/70" : "text-ink-500"}`}>
               {pack.price ? "par événement, paiement unique" : pack.price === 0 ? "pour toujours" : "selon vos volumes"}
+              {pricePerPhoto(pack.price, pack.photo_limit) && ` · ${pricePerPhoto(pack.price, pack.photo_limit)}`}
             </p>
             <p className={`mt-3 text-sm ${featured ? "text-white/90" : "text-ink-700"}`}>{pack.tagline}</p>
             <ul className="mt-3 flex flex-1 flex-col gap-1.5 text-sm">

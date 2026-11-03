@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.models.pack_purchase import PackPurchaseStatus
 from app.services.phone import normalize_phone, normalize_phone_or_ci
 
-PackKey = Literal["decouverte", "evenement", "pro", "sur_mesure"]
+PackKey = Literal["decouverte", "essentiel", "evenement", "pro", "sur_mesure"]
 PackPaymentMethod = Literal["wave", "orange", "mtn", "moov", "djamo"]
 
 
