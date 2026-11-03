@@ -37,7 +37,13 @@ from app.models.photo import Photo
 from app.services.face_indexing import index_photos_faces
 from app.services.ingestion import InvalidImageError, ingest_photo
 from app.services.raw_images import RAW_EXTENSIONS
-from app.services.sections import event_upload_lock, find_or_create_section, same_section
+from app.services.sections import (
+    event_upload_lock,
+    find_or_create_section,
+    reserved_count,
+    reserved_names,
+    same_section,
+)
 from app.services.packs import (
     count_event_photos,
     effective_photo_limit,
@@ -254,7 +260,7 @@ class FolderWatcher:
                         Photo.event_id == found.event_id, Photo.original_filename == filename, same_section(section_id)
                     )
                 )
-                if existing.first() is not None:
+                if existing.first() is not None or filename.lower() in reserved_names(found.event_id, section_id):
                     await db.commit()  # garde la partie creee pour ce sous-dossier
                     self._recent_status[key] = WatchedFileStatus(shown, "ingested", "deja present")
                     return None
@@ -263,7 +269,7 @@ class FolderWatcher:
                 # voir services/packs.py) : meme regle que l'upload manuel.
                 owner = await get_owner(db, event)
                 limit = effective_photo_limit(event, owner)
-                if limit is not None and await count_event_photos(db, event.id) >= limit:
+                if limit is not None and await count_event_photos(db, event.id) + reserved_count(event.id) >= limit:
                     self._recent_status[key] = WatchedFileStatus(
                         shown, "error", limit_reached_message(event, limit)
                     )

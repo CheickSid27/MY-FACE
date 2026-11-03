@@ -37,12 +37,22 @@ from app.services.packs import (
     watermark_text_for,
 )
 from app.routers.sections import get_event_section
-from app.services.sections import event_upload_lock, same_section
+from app.services.sections import (
+    event_upload_lock,
+    release_names,
+    reserve_names,
+    reserved_count,
+    reserved_names,
+    same_section,
+)
 from app.services.photo_urls import to_photo_reads
 from app.services.storage import StorageService, get_storage_service
 
 logger = logging.getLogger("myface.photos")
 DOUBLON = "Une photo porte déjà ce nom dans cet événement"
+
+# Photos d'un envoi traitees en meme temps (apercus + stockage)
+INGEST_CONCURRENCY = 4
 
 router = APIRouter(tags=["photos"])
 
@@ -76,15 +86,21 @@ async def upload_photos(
     watermark_text = watermark_text_for(event, owner)
     uploaded: list[Photo] = []
     errors: list[PhotoUploadError] = []
-    # Controle et enregistrement un envoi a la fois par evenement (voir event_upload_lock).
-    async with event_upload_lock(event_id):
-        remaining = None if limit is None else max(0, limit - await count_event_photos(db, event_id))
+    accepted: list[UploadFile] = []
 
+    # 1. Controle un envoi a la fois par evenement (voir event_upload_lock) :
+    # les noms acceptes sont reserves avant de relacher le verrou.
+    async with event_upload_lock(event_id):
+        remaining = (
+            None
+            if limit is None
+            else max(0, limit - await count_event_photos(db, event_id) - reserved_count(event_id))
+        )
         # Un nom de fichier par partie de l'evenement (majuscules et minuscules
         # confondues) : le meme fichier envoye deux fois est refuse, dans le meme
-        # envoi comme dans un envoi precedent (5 doublons trouves le 23/10). Deux
-        # appareils numerotent pareil (IMG_0001 a la mairie et a la reception) :
-        # le meme nom est donc accepte dans une autre partie.
+        # envoi comme dans un envoi precedent ou en cours (5 doublons trouves le
+        # 23/10, 1 200 le 03/11). Deux appareils numerotent pareil (IMG_0001 a
+        # la mairie et a la reception) : le meme nom est accepte dans une autre partie.
         noms = {
             n.lower()
             for n in (
@@ -92,43 +108,57 @@ async def upload_photos(
                     select(Photo.original_filename).where(Photo.event_id == event_id, same_section(section_id))
                 )
             ).scalars().all()
-        }
-
+        } | reserved_names(event_id, section_id)
         for file in files:
             nom = file.filename or "photo.jpg"
             if nom.lower() in noms:
                 errors.append(PhotoUploadError(filename=nom, error=DOUBLON))
-                continue
-            if remaining is not None and remaining <= 0:
-                errors.append(
-                    PhotoUploadError(filename=file.filename or "unknown", error=limit_reached_message(event, limit))
-                )
-                continue
-            if file.size is not None and file.size > MAX_FILE_SIZE_BYTES:
+            elif remaining is not None and remaining <= 0:
+                errors.append(PhotoUploadError(filename=nom, error=limit_reached_message(event, limit)))
+            elif file.size is not None and file.size > MAX_FILE_SIZE_BYTES:
                 # refuse avant lecture : un fichier enorme ne passe pas en memoire
-                errors.append(PhotoUploadError(filename=file.filename or "unknown", error="Fichier trop volumineux (max 70 Mo)"))
-                continue
-            try:
-                data = await file.read()
-                photo = await ingest_photo(
+                errors.append(PhotoUploadError(filename=nom, error="Fichier trop volumineux (max 70 Mo)"))
+            else:
+                accepted.append(file)
+                noms.add(nom.lower())
+                if remaining is not None:
+                    remaining -= 1
+        reserved = [f.filename or "photo.jpg" for f in accepted]
+        reserve_names(event_id, section_id, reserved)
+
+    # 2. Traitement en parallele (apercus, filigrane, envoi au stockage) :
+    # auparavant une photo apres l'autre, ~1 s chacune (mesure du 03/11).
+    try:
+        limit_parallel = asyncio.Semaphore(INGEST_CONCURRENCY)
+
+        async def ingest(file: UploadFile) -> Photo:
+            async with limit_parallel:
+                return await ingest_photo(
                     event_id,
                     file.filename or "photo.jpg",
                     file.content_type or "",
-                    data,
+                    await file.read(),
                     db,
                     storage,
                     watermark_text=watermark_text,
                 )
-                photo.section_id = section_id
-                uploaded.append(photo)
-                noms.add(nom.lower())
-                if remaining is not None:
-                    remaining -= 1
-            except (ValueError, InvalidImageError) as exc:
-                errors.append(PhotoUploadError(filename=file.filename or "unknown", error=str(exc)))
 
+        results = await asyncio.gather(*(ingest(f) for f in accepted), return_exceptions=True)
+        unexpected: BaseException | None = None
+        for file, result in zip(accepted, results):
+            if isinstance(result, (ValueError, InvalidImageError)):
+                errors.append(PhotoUploadError(filename=file.filename or "unknown", error=str(result)))
+            elif isinstance(result, BaseException):
+                unexpected = unexpected or result
+            else:
+                result.section_id = section_id
+                uploaded.append(result)
+        if unexpected is not None:
+            raise unexpected
         if uploaded:
             await db.commit()
+    finally:
+        release_names(event_id, section_id, reserved)
 
     if uploaded:
         for photo in uploaded:

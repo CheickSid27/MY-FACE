@@ -53,6 +53,28 @@ export default function FindFacesDialog({
   // premieres photos de l'evenement.
   const clusterPhotos = selectedCluster?.photos ?? [];
 
+  const faceButton = (cluster: FaceCluster) => {
+    const i = clusters.indexOf(cluster);
+    return (
+      <button
+        key={cluster.cluster_id}
+        type="button"
+        onClick={() => setSelectedCluster(cluster)}
+        className="group relative overflow-hidden rounded-xl shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={cluster.representative_face_url}
+          alt={`Personne ${i + 1}`}
+          className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+        <span className="absolute bottom-1.5 right-1.5 glass-pill px-2 py-0.5 text-[10px] font-semibold text-white">
+          {cluster.photo_count}
+        </span>
+      </button>
+    );
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-brand/70 p-4 backdrop-blur-sm animate-fade-in"
@@ -97,26 +119,20 @@ export default function FindFacesDialog({
           )}
 
           {!loading && !error && clusters.length > 0 && (
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-              {clusters.map((cluster, i) => (
-                <button
-                  key={cluster.cluster_id}
-                  type="button"
-                  onClick={() => setSelectedCluster(cluster)}
-                  className="group relative overflow-hidden rounded-xl shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={cluster.representative_face_url}
-                    alt={`Personne ${i + 1}`}
-                    className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <span className="absolute bottom-1.5 right-1.5 glass-pill px-2 py-0.5 text-[10px] font-semibold text-white">
-                    {cluster.photo_count}
-                  </span>
-                </button>
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                {clusters.filter((c) => c.photo_count > 1).map((cluster) => faceButton(cluster))}
+              </div>
+              {/* Vus sur une seule photo (souvent au fond) : a la fin, a part. */}
+              {clusters.some((c) => c.photo_count <= 1) && (
+                <>
+                  <h3 className="mb-2 mt-5 text-sm font-semibold text-ink-700">Autres visages (sur une seule photo)</h3>
+                  <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+                    {clusters.filter((c) => c.photo_count <= 1).map((cluster) => faceButton(cluster))}
+                  </div>
+                </>
+              )}
+            </>
           )}
         </div>
       </div>

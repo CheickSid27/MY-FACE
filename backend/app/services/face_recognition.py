@@ -97,6 +97,8 @@ def detect_faces(image_bytes: bytes) -> list[DetectedFace]:
         if float(face.det_score) < settings.face_detection_min_confidence:
             continue
         bbox = [float(x) for x in face.bbox.tolist()]
+        if bbox[2] - bbox[0] < settings.face_min_width_px:
+            continue
         sharpness = _crop_sharpness(image, bbox)
         if sharpness < settings.face_min_sharpness:
             continue

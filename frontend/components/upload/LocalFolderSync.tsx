@@ -38,6 +38,8 @@ interface Recent {
 }
 
 const SCAN_EVERY_MS = 5000;
+const PARALLEL_UPLOADS = 2;
+const REFRESH_EVERY_MS = 10_000;
 const MAX_DEPTH = 3; // carte SD : DCIM/100CANON/...
 const SETTLED_AFTER_MS = 10_000; // fichier plus ancien : copie terminee
 
@@ -205,6 +207,18 @@ export default function LocalFolderSync({ eventId, remaining, onUploaded, onLimi
       }
       if (rejected.length) pushRecent(rejected);
 
+      // Toutes les parties tout de suite (un sous-dossier = une partie), avant
+      // l'envoi : les sous-dossiers sont envoyes l'un apres l'autre, et la
+      // partie du dernier n'apparaissait qu'une fois les autres finis.
+      const sectionNames = new Set(files.map(({ path }) => sectionNameOf(path)).filter((n): n is string => n !== null));
+      for (const name of Array.from(sectionNames)) {
+        try {
+          await sectionFor(name);
+        } catch {
+          // 20 parties au plus, ou serveur indisponible : reessaye a l'envoi
+        }
+      }
+
       // Regles du pack : rien au-dela de la limite.
       const budget = budgetRef.current;
       const batch = budget === null ? ready : ready.slice(0, Math.max(0, budget));
@@ -227,34 +241,48 @@ export default function LocalFolderSync({ eventId, remaining, onUploaded, onLimi
             work.push({ section: k || null, chunk, entries: items.filter((r) => chunk.includes(r.file)) });
           }
         });
-        for (const { section, chunk, entries } of work) {
-          try {
-            const result = await api.uploadPhotos(eventId, chunk, await sectionFor(section));
-            const failed = new Map(result.errors.map((e) => [e.filename, e.error]));
-            const done: Recent[] = [];
-            for (const { key, file } of entries) {
-              const err = failed.get(file.name);
-              if (err && isPackLimitError(err)) {
-                limitHit = true; // gardee pour apres le passage au pack superieur
-                limitRefused += 1;
-                continue;
+        // 2 lots envoyes en meme temps (le serveur traite aussi plusieurs
+        // photos a la fois) ; la page est prevenue au fil de l'envoi, au plus
+        // toutes les 10 s, pas seulement a la fin (1 300 photos = 1 h).
+        let next = 0;
+        let stop = false;
+        let lastRefresh = Date.now();
+        const worker = async () => {
+          while (!stop && next < work.length) {
+            const { section, chunk, entries } = work[next++];
+            try {
+              const result = await api.uploadPhotos(eventId, chunk, await sectionFor(section));
+              const failed = new Map(result.errors.map((e) => [e.filename, e.error]));
+              const done: Recent[] = [];
+              for (const { key, file } of entries) {
+                const err = failed.get(file.name);
+                if (err && isPackLimitError(err)) {
+                  limitHit = true; // gardee pour apres le passage au pack superieur
+                  limitRefused += 1;
+                  continue;
+                }
+                sentRef.current.add(key);
+                done.push(err ? { name: file.name, state: "error", detail: err } : { name: file.name, state: "ok" });
               }
-              sentRef.current.add(key);
-              done.push(err ? { name: file.name, state: "error", detail: err } : { name: file.name, state: "ok" });
+              pushRecent(done);
+              if (budgetRef.current !== null) budgetRef.current = Math.max(0, budgetRef.current - result.uploaded.length);
+              setSentCount(sentRef.current.size);
+              setSending((n) => Math.max(0, n - chunk.length));
+              await persist(handle);
+              if (Date.now() - lastRefresh > REFRESH_EVERY_MS) {
+                lastRefresh = Date.now();
+                onUploaded();
+              }
+            } catch (err) {
+              // Reseau ou serveur indisponible : on reessaiera au prochain passage.
+              sectionIdsRef.current = null; // une partie a pu etre supprimee : relue au prochain passage
+              setError(err instanceof Error ? err.message : "Envoi interrompu, nouvel essai dans un instant.");
+              stop = true;
             }
-            pushRecent(done);
-            if (budgetRef.current !== null) budgetRef.current = Math.max(0, budgetRef.current - result.uploaded.length);
-            setSentCount(sentRef.current.size);
-            setSending((n) => Math.max(0, n - chunk.length));
-            await persist(handle);
-          } catch (err) {
-            // Reseau ou serveur indisponible : on reessaiera au prochain passage.
-            sectionIdsRef.current = null; // une partie a pu etre supprimee : relue au prochain passage
-            setError(err instanceof Error ? err.message : "Envoi interrompu, nouvel essai dans un instant.");
-            break;
+            if (limitHit) stop = true;
           }
-          if (limitHit) break;
-        }
+        };
+        await Promise.all(Array.from({ length: PARALLEL_UPLOADS }, worker));
         setSending(0);
         onUploaded();
         if (limitHit) budgetRef.current = 0;

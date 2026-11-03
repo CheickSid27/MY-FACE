@@ -41,7 +41,12 @@ class Settings(BaseSettings):
 
     # Reconnaissance faciale (InsightFace / buffalo_l)
     face_recognition_providers: str = "CUDAExecutionProvider,CPUExecutionProvider"
-    face_detection_min_confidence: float = 0.5
+    # Sous 0,65, les detections sont surtout des voiles, des mains, des visages
+    # coupes ou des motifs (planche du 03/11 sur 3 481 visages d'un mariage).
+    face_detection_min_confidence: float = 0.65
+    # Visage de moins de 50 pixels de large : quelqu'un tout au fond, flou,
+    # inutile pour « Trouver mon visage » (meme planche).
+    face_min_width_px: float = 50.0
     # Variance du Laplacien sur le crop du visage (voir face_recognition.py) :
     # rejette les visages trop flous (photos en mode portrait/bokeh, mouvement)
     # AVANT de creer leur embedding, meme si InsightFace les detecte avec une

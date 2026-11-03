@@ -54,8 +54,29 @@ def same_section(section_id: uuid.UUID | None):
 # restante dans le pack) : deux envois simultanes du meme fichier (deux
 # onglets qui synchronisent le meme dossier, vu le 03/11 : 970 copies)
 # passaient tous les deux le controle avant l'enregistrement de l'autre.
+# Le verrou ne couvre que le controle : les noms acceptes sont RESERVES
+# (en cours d'envoi), puis les photos sont traitees en parallele hors verrou.
 _upload_locks: defaultdict[uuid.UUID, asyncio.Lock] = defaultdict(asyncio.Lock)
+_reserved: defaultdict[uuid.UUID, set[tuple[uuid.UUID | None, str]]] = defaultdict(set)
 
 
 def event_upload_lock(event_id: uuid.UUID) -> asyncio.Lock:
     return _upload_locks[event_id]
+
+
+def reserved_names(event_id: uuid.UUID, section_id: uuid.UUID | None) -> set[str]:
+    """Noms (en minuscules) en cours d'envoi dans cette partie."""
+    return {name for sid, name in _reserved[event_id] if sid == section_id}
+
+
+def reserved_count(event_id: uuid.UUID) -> int:
+    """Photos en cours d'envoi dans l'evenement (comptees dans la limite du pack)."""
+    return len(_reserved[event_id])
+
+
+def reserve_names(event_id: uuid.UUID, section_id: uuid.UUID | None, names: list[str]) -> None:
+    _reserved[event_id].update((section_id, n.lower()) for n in names)
+
+
+def release_names(event_id: uuid.UUID, section_id: uuid.UUID | None, names: list[str]) -> None:
+    _reserved[event_id].difference_update((section_id, n.lower()) for n in names)
