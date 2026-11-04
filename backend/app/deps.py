@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,6 +8,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import InvalidTokenError, TokenType, decode_token_payload, issued_before
 from app.models.user import User, UserRole
+from app.services.session_cookies import access_token_from
 
 bearer_scheme = HTTPBearer()
 optional_bearer_scheme = HTTPBearer(auto_error=False)
@@ -37,26 +38,35 @@ async def _user_from_access_token(token: str, db: AsyncSession) -> User:
 
 
 async def get_optional_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(optional_bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User | None:
     """Utilisateur connecte s'il y en a un, sinon None (jamais d'erreur) :
-    pour les routes accessibles soit a l'organisateur, soit a la borne."""
-    if credentials is None:
+    pour les routes accessibles soit a l'organisateur, soit a la borne.
+    Jeton : en-tete Authorization ou cookie de session (session_cookies)."""
+    token = access_token_from(request)
+    if token is None:
         return None
     try:
-        user = await _user_from_access_token(credentials.credentials, db)
+        user = await _user_from_access_token(token, db)
     except InvalidTokenError:
         return None
     return user if user.is_active else None
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(optional_bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
+    token = access_token_from(request)
+    if token is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Non connecté", headers={"WWW-Authenticate": "Bearer"}
+        )
     try:
-        user = await _user_from_access_token(credentials.credentials, db)
+        user = await _user_from_access_token(token, db)
     except InvalidTokenError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
     if not user.is_active:

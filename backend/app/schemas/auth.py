@@ -31,7 +31,8 @@ class TokenResponse(BaseModel):
 
 
 class RefreshRequest(BaseModel):
-    refresh_token: str
+    # absent : le site envoie le cookie de session (voir session_cookies)
+    refresh_token: str | None = None
 
 
 class AccessTokenResponse(BaseModel):

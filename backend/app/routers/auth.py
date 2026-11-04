@@ -48,6 +48,7 @@ from app.services.email import (
 )
 from app.services.phone import normalize_phone_or_ci
 from app.services.rate_limit import client_ip, limiter
+from app.services.session_cookies import REFRESH_COOKIE, clear_session_cookies, set_session_cookies
 from app.services.storage import StorageService, get_storage_service
 from app.services.thumbnails import InvalidImageError
 
@@ -72,12 +73,15 @@ INVALID_LINK_DETAIL = "Lien invalide ou expiré : redemandez-en un nouveau"
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-def _tokens_for(user: User) -> TokenResponse:
+def _tokens_for(user: User, response: Response) -> TokenResponse:
+    """Nouveaux jetons, poses aussi en cookies proteges (voir session_cookies)."""
     subject = str(user.id)
-    return TokenResponse(
+    tokens = TokenResponse(
         access_token=create_access_token(subject),
         refresh_token=create_refresh_token(subject),
     )
+    set_session_cookies(response, tokens.access_token, tokens.refresh_token)
+    return tokens
 
 
 async def _send_verification(user: User, email_service: EmailService) -> None:
@@ -99,7 +103,9 @@ async def _user_from_link(token: str, token_type: TokenType, db: AsyncSession) -
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+async def login(
+    payload: LoginRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)
+) -> TokenResponse:
     email = payload.email.lower()
     limiter.check("login-ip", client_ip(request), LOGIN_LIMIT_PER_IP, LOGIN_WINDOW_SECONDS)
     limiter.check("login-email", email, LOGIN_LIMIT_PER_EMAIL, LOGIN_WINDOW_SECONDS, record=False)
@@ -116,13 +122,22 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ACCOUNT_SUSPENDED_DETAIL)
 
     await log_activity(db, "connexion", actor=user)
-    return _tokens_for(user)
+    return _tokens_for(user, response)
 
 
 @router.post("/refresh", response_model=AccessTokenResponse)
-async def refresh(payload: RefreshRequest, db: AsyncSession = Depends(get_db)) -> AccessTokenResponse:
+async def refresh(
+    request: Request,
+    response: Response,
+    payload: RefreshRequest | None = None,
+    db: AsyncSession = Depends(get_db),
+) -> AccessTokenResponse:
+    """Jeton de renouvellement : dans le corps (scripts) ou dans le cookie de session (site)."""
+    raw = payload.refresh_token if payload and payload.refresh_token else request.cookies.get(REFRESH_COOKIE)
+    if not raw:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expirée : reconnectez-vous")
     try:
-        token_payload = decode_token_payload(payload.refresh_token, TokenType.REFRESH)
+        token_payload = decode_token_payload(raw, TokenType.REFRESH)
         user_id = uuid.UUID(token_payload["sub"])
     except InvalidTokenError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
@@ -137,13 +152,22 @@ async def refresh(payload: RefreshRequest, db: AsyncSession = Depends(get_db)) -
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ACCOUNT_SUSPENDED_DETAIL)
 
-    return AccessTokenResponse(access_token=create_access_token(str(user.id)))
+    access = create_access_token(str(user.id))
+    set_session_cookies(response, access)
+    return AccessTokenResponse(access_token=access)
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(response: Response) -> None:
+    """Deconnexion : efface les cookies de session de ce navigateur."""
+    clear_session_cookies(response)
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     payload: RegisterRequest,
     request: Request,
+    response: Response,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     email_service: EmailService = Depends(get_email_service),
@@ -179,7 +203,7 @@ async def register(
 
     background_tasks.add_task(_send_verification, user, email_service)
     await log_activity(db, "inscription", actor=user)
-    return _tokens_for(user)
+    return _tokens_for(user, response)
 
 
 @router.post("/verify-email")
@@ -426,6 +450,7 @@ async def update_me(
 @router.post("/password", response_model=TokenResponse)
 async def change_password(
     payload: PasswordChangeRequest,
+    response: Response,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
@@ -440,4 +465,4 @@ async def change_password(
     current_user.password_changed_at = datetime.now(timezone.utc)
     await db.commit()
     await log_activity(db, "mot_de_passe_change", actor=current_user)
-    return _tokens_for(current_user)
+    return _tokens_for(current_user, response)

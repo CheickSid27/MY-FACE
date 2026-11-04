@@ -1,10 +1,4 @@
-import {
-  clearTokens,
-  getAccessToken,
-  getRefreshToken,
-  setAccessToken,
-  setTokens,
-} from "@/lib/auth";
+import { clearSession, markLoggedIn } from "@/lib/auth";
 import { getGalleryAccess } from "@/lib/gallery-access";
 import { remember } from "@/lib/visit-cache";
 import type {
@@ -79,24 +73,24 @@ export interface PricingPayload {
   offert?: boolean;
 }
 
-async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return null;
+// Session en cookies proteges (voir lib/auth.ts) : le serveur renouvelle le
+// cookie d'acces a partir du cookie de renouvellement. Un seul renouvellement
+// a la fois, meme si plusieurs requetes recoivent 401 en meme temps.
+let refreshing: Promise<boolean> | null = null;
 
-  const resp = await fetch(`${API_URL}/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh_token: refreshToken }),
-  });
-
-  if (!resp.ok) {
-    clearTokens();
-    return null;
+function refreshSession(): Promise<boolean> {
+  if (!refreshing) {
+    refreshing = fetch(`${API_URL}/auth/refresh`, { method: "POST", credentials: "include" })
+      .then((resp) => {
+        if (!resp.ok) clearSession();
+        return resp.ok;
+      })
+      .catch(() => false)
+      .finally(() => {
+        refreshing = null;
+      });
   }
-
-  const data = await resp.json();
-  setAccessToken(data.access_token);
-  return data.access_token as string;
+  return refreshing;
 }
 
 // Erreurs de validation (422) : FastAPI renvoie une LISTE de details
@@ -117,18 +111,15 @@ function errorMessage(body: unknown, fallback: string): string {
 }
 
 async function rawRequest(path: string, options: RequestInit = {}, retry = true): Promise<Response> {
-  const token = getAccessToken();
   const headers = new Headers(options.headers);
-  if (token) headers.set("Authorization", `Bearer ${token}`);
   if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  const resp = await fetch(`${API_URL}${path}`, { ...options, headers });
+  const resp = await fetch(`${API_URL}${path}`, { ...options, headers, credentials: "include" });
 
-  if (resp.status === 401 && retry) {
-    const newToken = await refreshAccessToken();
-    if (newToken) {
+  if (resp.status === 401 && retry && !path.startsWith("/auth/login")) {
+    if (await refreshSession()) {
       return rawRequest(path, options, false);
     }
   }
@@ -166,12 +157,14 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
-    setTokens(data.access_token, data.refresh_token);
+    markLoggedIn();
     return data;
   },
 
+  /** Efface les cookies de session cote serveur, puis l'indicateur local. */
   logout(): void {
-    clearTokens();
+    clearSession();
+    fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" }).catch(() => {});
   },
 
   /** Code court d'un evenement (« K7M2QX9P ») -> son identifiant. */
@@ -189,7 +182,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     });
-    setTokens(data.access_token, data.refresh_token);
+    markLoggedIn();
     return data;
   },
 
@@ -242,7 +235,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
     });
-    setTokens(data.access_token, data.refresh_token);
+    markLoggedIn();
   },
 
   /** Lien de confirmation recu par e-mail (sans connexion). */

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { clearTokens, isAuthenticated } from "@/lib/auth";
+import { isAuthenticated } from "@/lib/auth";
 import { api } from "@/lib/api-client";
 import type { User } from "@/types/api";
 
@@ -36,7 +36,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   // detecte le changement et renvoie vers /admin/login. Avant, l'ecran admin
   // restait affiche apres deconnexion.
   logout: () => {
-    clearTokens();
+    api.logout();
     set({ isLoggedIn: false, user: null });
   },
 
