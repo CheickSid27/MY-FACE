@@ -4,15 +4,17 @@
 # defaut). L'acces public passe par le tunnel Cloudflare, qui joint nginx a
 # l'interieur du reseau Docker.
 services:
+  # Base locale (04/11) : PostgreSQL 18 comme Neon, sur ce PC a cote du serveur
+  # (un aller-retour < 1 ms au lieu de 200 ms vers Neon aux Etats-Unis).
   db:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg18
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-myface}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-myface}
       POSTGRES_DB: ${POSTGRES_DB:-myface}
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres18-data:/var/lib/postgresql
       - ./backend/docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql
     ports:
       - "127.0.0.1:5433:5432"
@@ -21,6 +23,23 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  # Sauvegarde de la base chaque nuit vers 3 h (04/11) : copie dans
+  # ./sauvegardes (14 jours), envoyee ensuite dans R2 par le serveur.
+  db-sauvegarde:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-myface}
+      POSTGRES_DB: ${POSTGRES_DB:-myface}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-myface}
+    volumes:
+      - ./sauvegardes:/sauvegardes
+      - ./backend/docker/sauvegarde-db.sh:/sauvegarde-db.sh:ro
+    entrypoint: ["sh", "/sauvegarde-db.sh"]
 
   minio:
     # Version epinglee (pas "latest") : une release recente (2025-09) avait un
@@ -62,6 +81,8 @@ services:
       - "127.0.0.1:8000:8000"
     volumes:
       - ./backend:/app
+      # Sauvegardes nocturnes de la base, envoyees dans R2 (services/db_backup.py)
+      - ./sauvegardes:/sauvegardes:ro
       - insightface-models:/root/.insightface
       # Dossier surveille (ingestion auto) : ./watched-photos/<event_id>/ sur
       # le PC hote = /watched/<event_id>/ dans le conteneur. Copier les photos
@@ -143,5 +164,6 @@ services:
 
 volumes:
   postgres-data:
+  postgres18-data:
   minio-data:
   insightface-models:

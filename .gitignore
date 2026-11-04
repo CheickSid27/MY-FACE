@@ -110,3 +110,6 @@ marketing/motion-design/higgsfield-pub/plans/v1/
 # Surveillance : journal et etat du gardien (sur ce PC seulement)
 surveillance/gardien.log
 surveillance/gardien-etat.json
+
+# Sauvegardes de la base (copies completes : jamais sur GitHub)
+sauvegardes/

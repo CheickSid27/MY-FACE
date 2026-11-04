@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
+from app.services.db_backup import backup_upload_loop
 from app.services.request_log import RequestLogMiddleware
 from app.core.database import AsyncSessionLocal
 from app.routers import (
@@ -101,10 +102,13 @@ async def lifespan(app: FastAPI):
     retention_task = asyncio.create_task(retention_loop(get_storage_service(), AsyncSessionLocal))
     # Inscriptions non confirmees dans le delai : annulees (voir services/unverified_accounts.py)
     unverified_task = asyncio.create_task(unverified_accounts_loop(get_storage_service(), AsyncSessionLocal))
+    # Copies nocturnes de la base locale envoyees dans R2 (services/db_backup.py)
+    backup_task = asyncio.create_task(backup_upload_loop(get_storage_service()))
     yield
     startup_task.cancel()
     retention_task.cancel()
     unverified_task.cancel()
+    backup_task.cancel()
     if eveil_task:
         eveil_task.cancel()
     await folder_watcher.stop()
