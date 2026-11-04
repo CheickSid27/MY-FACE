@@ -272,7 +272,7 @@ export default function PaymentStatusPage() {
           </h1>
           <p className="max-w-sm text-sm text-ink-300">
             Un membre de l&apos;équipe va recevoir votre paiement en espèces et valider votre
-            commande. Ne fermez pas cette page : vous serez redirige automatiquement des
+            commande. Ne fermez pas cette page : vous serez redirigé automatiquement dès
             confirmation.
           </p>
           {error && <p className="text-sm text-red-200">{error}</p>}
@@ -289,7 +289,7 @@ export default function PaymentStatusPage() {
         <h1 className="text-xl font-bold">Paiement en cours de vérification...</h1>
         <p className="max-w-sm text-sm text-ink-300">
           L&apos;organisateur vérifie la réception de votre paiement. Ne fermez pas cette page :
-          vous serez redirige automatiquement des confirmation.
+          vous serez redirigé automatiquement dès confirmation.
         </p>
         {error && <p className="text-sm text-red-200">{error}</p>}
       </main>

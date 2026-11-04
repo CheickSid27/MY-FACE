@@ -282,6 +282,20 @@ export default function GalleryPage() {
     return flushChainRef.current;
   }, [eventId]);
 
+  // En quittant la galerie autrement que par « Voir le panier » (retour,
+  // autre lien, onglet ferme) juste apres avoir coche des photos, les ajouts
+  // encore en attente partent quand meme (constate le 04/11 : panier vide).
+  useEffect(() => {
+    const flush = () => {
+      flushPendingAdds();
+    };
+    window.addEventListener("pagehide", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      flush();
+    };
+  }, [flushPendingAdds]);
+
   // useCallback avec une identite stable (ne depend que de eventId, qui ne
   // change jamais pour une page donnee) : sans ca, PhotoGrid recevait une
   // nouvelle fonction a chaque frappe, ce qui invalidait le memo() de chaque

@@ -88,6 +88,10 @@ export default function PhotoLightbox({
   // en arriere-plan et prend le relais en fondu des qu'elle est prete
   // aucun spinner, aucune latence percue, juste une nettete qui s'ameliore.
   const [previewLoaded, setPreviewLoaded] = useState(false);
+  // Proportions de la photo : la miniature (400 px) fixait la taille du
+  // cadre, d'ou une photo minuscule sur l'ecran d'une borne (04/11). La photo
+  // occupe maintenant la place disponible, quel que soit l'ecran.
+  const [ratio, setRatio] = useState<number | null>(null);
 
   const resetZoom = useCallback(() => {
     scale.set(1);
@@ -338,8 +342,21 @@ export default function PhotoLightbox({
               <FramedPhoto caption={frameCaption}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
+                  key={photo.id}
                   src={photo.thumbnail_url}
                   alt={`Photo ${index + 1} sur ${photos.length}`}
+                  ref={(img) => {
+                    if (img?.complete && img.naturalWidth) setRatio(img.naturalWidth / img.naturalHeight);
+                  }}
+                  onLoad={(e) => setRatio(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)}
+                  style={
+                    ratio
+                      ? {
+                          width: `min(${frameCaption ? 84 : 92}vw, calc(${frameCaption ? 60 : 70}vh * ${ratio.toFixed(4)}))`,
+                          height: "auto",
+                        }
+                      : undefined
+                  }
                   className={`max-h-[70vh] max-w-full select-none object-contain ${frameCaption ? "" : "rounded-2xl shadow-elevated"}`}
                   draggable={false}
                 />
