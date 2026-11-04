@@ -11,7 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.photo import IndexingStatus, Photo
 from app.services.storage import StorageService
 from app.services.raw_images import is_raw_filename, raw_to_jpeg
-from app.services.thumbnails import InvalidImageError, generate_preview, generate_thumbnail
+from app.services.thumbnails import (
+    PREVIEW_CONTENT_TYPE,
+    PREVIEW_EXTENSION,
+    InvalidImageError,
+    generate_preview,
+    generate_thumbnail,
+)
 from app.services.watermark import WATERMARK_TEXT, apply_watermark, watermarked_preview_key
 
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
@@ -81,8 +87,8 @@ async def ingest_photo(
         filename = f"{(filename or 'photo').rsplit('.', 1)[0]}.jpg"
     extension = (filename or "photo.jpg").rsplit(".", 1)[-1].lower()
     original_key = f"events/{event_id}/originals/{photo_id}.{extension}"
-    thumbnail_key = f"events/{event_id}/thumbnails/{photo_id}.jpg"
-    preview_key = f"events/{event_id}/previews/{photo_id}.jpg"
+    thumbnail_key = f"events/{event_id}/thumbnails/{photo_id}.{PREVIEW_EXTENSION}"
+    preview_key = f"events/{event_id}/previews/{photo_id}.{PREVIEW_EXTENSION}"
     preview_wm_key = watermarked_preview_key(event_id, photo_id)
 
     # Les 4 envois sont independants : en parallele, le temps d'ingestion
@@ -94,9 +100,9 @@ async def ingest_photo(
     await asyncio.gather(
         *uploads,
         storage.upload(original_key, data, content_type),
-        storage.upload(thumbnail_key, derivatives.thumbnail, "image/jpeg"),
-        storage.upload(preview_key, derivatives.preview, "image/jpeg"),
-        storage.upload(preview_wm_key, derivatives.preview_watermarked, "image/jpeg"),
+        storage.upload(thumbnail_key, derivatives.thumbnail, PREVIEW_CONTENT_TYPE),
+        storage.upload(preview_key, derivatives.preview, PREVIEW_CONTENT_TYPE),
+        storage.upload(preview_wm_key, derivatives.preview_watermarked, PREVIEW_CONTENT_TYPE),
     )
 
     photo = Photo(

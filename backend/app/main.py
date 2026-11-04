@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
+from app.services.request_log import RequestLogMiddleware
 from app.core.database import AsyncSessionLocal
 from app.routers import (
     activity,
@@ -46,6 +47,9 @@ if not _app_logger.handlers:
     _app_logger.addHandler(_handler)
     _app_logger.setLevel(logging.INFO)
     _app_logger.propagate = False
+# Le journal d'acces d'uvicorn fait doublon avec « myface.requetes » (qui
+# donne en plus la duree et regroupe les routes) : coupe pour garder des journaux lisibles.
+logging.getLogger("uvicorn.access").disabled = True
 
 logger = logging.getLogger("myface.startup")
 
@@ -111,6 +115,9 @@ async def lifespan(app: FastAPI):
 _docs = {} if not settings.is_production else {"docs_url": None, "redoc_url": None, "openapi_url": None}
 
 app = FastAPI(title="MYFACE API", version="0.1.0", lifespan=lifespan, **_docs)
+
+# Journal lisible : une ligne par requete avec sa duree, « LENT » au-dela de 2 s
+app.add_middleware(RequestLogMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

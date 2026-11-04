@@ -24,7 +24,7 @@ from app.services import maintenance
 from app.services.access import get_manageable_event, is_kiosk_request
 from app.services.activity import log_activity
 from app.schemas.face import PhotoFace, PhotoFacesResponse
-from app.services.face_clusters import FACE_CROP_URL_TTL_SECONDS, face_cluster_cache
+from app.services.face_clusters import face_cluster_cache
 from app.services.face_crops import ensure_photo_face_crops, face_crop_key
 from app.services.face_indexing import index_photos_faces
 from app.services.gallery_access import require_gallery_access
@@ -369,7 +369,7 @@ async def get_photo_faces(
         faces.append(
             PhotoFace(
                 id=fid,
-                face_url=await storage.get_presigned_url(keys[fid], expires_in=FACE_CROP_URL_TTL_SECONDS),
+                face_url=await storage.get_cacheable_url(keys[fid]),
                 cluster_id=snapshot.face_clusters.get(fid),
             )
         )

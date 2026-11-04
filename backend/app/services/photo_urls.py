@@ -43,10 +43,9 @@ def preview_key_for(photo: PhotoLike, clean_preview: bool) -> str:
 
 
 async def to_photo_read(photo: PhotoLike, storage: StorageService, *, clean_preview: bool = False) -> PhotoRead:
-    thumbnail_url = await storage.get_presigned_url(photo.thumbnail_key, expires_in=THUMBNAIL_URL_TTL_SECONDS)
-    preview_url = await storage.get_presigned_url(
-        preview_key_for(photo, clean_preview), expires_in=THUMBNAIL_URL_TTL_SECONDS
-    )
+    # Liens stables 12 h : le telephone garde les images en cache (voir storage.get_cacheable_url)
+    thumbnail_url = await storage.get_cacheable_url(photo.thumbnail_key)
+    preview_url = await storage.get_cacheable_url(preview_key_for(photo, clean_preview))
     return PhotoRead(
         id=photo.id,
         event_id=photo.event_id,

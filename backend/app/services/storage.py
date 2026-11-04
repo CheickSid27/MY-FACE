@@ -16,12 +16,16 @@ expiration courte").
 """
 
 import asyncio
+import time
 from abc import ABC, abstractmethod
 from functools import lru_cache
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 import boto3
+from botocore.auth import S3SigV4QueryAuth
+from botocore.awsrequest import AWSRequest
 from botocore.client import Config as BotoConfig
+from botocore.credentials import Credentials
 from botocore.exceptions import ClientError
 
 from app.core.config import get_settings
@@ -67,10 +71,38 @@ class StorageService(ABC):
         `download_filename`, le navigateur telecharge le fichier sous ce nom
         au lieu de l'afficher (lien "Telecharger" d'une photo achetee)."""
 
+    async def get_cacheable_url(self, key: str) -> str:
+        """URL signee STABLE pendant une periode (voir LocalS3StorageService) :
+        le telephone garde l'image en cache au lieu de la retelecharger a
+        chaque visite. Par defaut : URL signee ordinaire."""
+        return await self.get_presigned_url(key, expires_in=CACHE_WINDOW_SECONDS * 2)
+
     @abstractmethod
     async def exists(self, key: str) -> bool:
         """True si `key` existe deja (evite de regenerer un fichier derive,
         ex: crop de visage, deja calcule lors d'un appel precedent)."""
+
+
+# Apercus, miniatures et vignettes de visages : leur URL signee ne change que
+# toutes les 12 h (signature datee du debut de la periode), au lieu de changer
+# a chaque requete. Avant (mesure du 04/11), chaque visite retelechargeait
+# toutes les images : l'URL etait nouvelle, le cache du navigateur inutile.
+CACHE_WINDOW_SECONDS = 12 * 3600
+
+
+class _FixedTimeQueryAuth(S3SigV4QueryAuth):
+    """Signature SigV4 en parametres d'URL, datee d'un instant fixe."""
+
+    def __init__(self, credentials, region: str, expires: int, timestamp: str) -> None:
+        super().__init__(credentials, "s3", region, expires=expires)
+        self._fixed_timestamp = timestamp
+
+    def add_auth(self, request) -> None:
+        request.context["timestamp"] = self._fixed_timestamp
+        self._modify_request_before_signing(request)
+        canonical_request = self.canonical_request(request)
+        string_to_sign = self.string_to_sign(request, canonical_request)
+        self._inject_signature_to_request(request, self.signature(string_to_sign, request))
 
 
 class LocalS3StorageService(StorageService):
@@ -114,6 +146,7 @@ class LocalS3StorageService(StorageService):
             config=boto_config,
         )
         self._bucket = settings.s3_bucket
+        self._credentials = Credentials(settings.s3_access_key, settings.s3_secret_key)
         self._ensure_bucket()
 
     def _ensure_bucket(self) -> None:
@@ -164,6 +197,19 @@ class LocalS3StorageService(StorageService):
         if download_filename:
             params["ResponseContentDisposition"] = content_disposition_attachment(download_filename)
         return self._presign_client.generate_presigned_url("get_object", Params=params, ExpiresIn=expires_in)
+
+    async def get_cacheable_url(self, key: str) -> str:
+        now = int(time.time())
+        start = now - now % CACHE_WINDOW_SECONDS
+        timestamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime(start))
+        # Lien valable 2 periodes ; le navigateur garde l'image au plus une
+        # periode : elle n'est jamais gardee au-dela de la validite du lien.
+        # La duree est fixe, sinon l'URL changerait a chaque requete.
+        query = urlencode({"response-cache-control": f"private, max-age={CACHE_WINDOW_SECONDS}"}, quote_via=quote)
+        url = f"{settings.s3_public_url.rstrip('/')}/{self._bucket}/{quote(key, safe='/~')}?{query}"
+        request = AWSRequest(method="GET", url=url)
+        _FixedTimeQueryAuth(self._credentials, settings.s3_region, 2 * CACHE_WINDOW_SECONDS, timestamp).add_auth(request)
+        return request.url
 
     def _exists_sync(self, key: str) -> bool:
         try:

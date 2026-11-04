@@ -424,9 +424,7 @@ async def build_cluster_response(
                 cluster_id=cluster.cluster_id,
                 photo_count=len(cluster.photo_ids),
                 representative_photo=await _read(cluster.representative_photo_id),
-                representative_face_url=await storage.get_presigned_url(
-                    cluster.representative_image_key, expires_in=FACE_CROP_URL_TTL_SECONDS
-                ),
+                representative_face_url=await storage.get_cacheable_url(cluster.representative_image_key),
                 photos=[await _read(photo_id) for photo_id in cluster.photo_ids],
             )
         )

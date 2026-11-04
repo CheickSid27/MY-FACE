@@ -26,12 +26,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.photo import Photo
 from app.services.storage import StorageService
-from app.services.thumbnails import generate_preview, open_oriented
+from app.services.thumbnails import PREVIEW_CONTENT_TYPE, PREVIEW_EXTENSION, PREVIEW_FORMAT, generate_preview, open_oriented
 
 logger = logging.getLogger("myface.watermark")
 
 WATERMARK_TEXT = "MYFACE"
-WATERMARK_QUALITY = 85
+WATERMARK_QUALITY = 80
 # Opacite (0-255) du texte blanc et de son contour sombre : le contour garde
 # le motif lisible sur les zones claires (robe blanche, ciel...).
 _TEXT_ALPHA = 70
@@ -41,7 +41,7 @@ BACKFILL_CONCURRENCY = 4
 
 
 def watermarked_preview_key(event_id, photo_id) -> str:
-    return f"events/{event_id}/previews-wm/{photo_id}.jpg"
+    return f"events/{event_id}/previews-wm/{photo_id}.{PREVIEW_EXTENSION}"
 
 
 # Police libre avec toutes les lettres accentuees (paquet fonts-dejavu-core de
@@ -67,7 +67,7 @@ def _label(text: str) -> str:
 
 
 def apply_watermark(image_bytes: bytes, text: str = WATERMARK_TEXT) -> bytes:
-    """Renvoie une copie JPEG de l'image avec le filigrane incruste."""
+    """Renvoie une copie WebP de l'image avec le filigrane incruste."""
     base = open_oriented(image_bytes).convert("RGBA")
     width, height = base.size
 
@@ -106,7 +106,7 @@ def apply_watermark(image_bytes: bytes, text: str = WATERMARK_TEXT) -> bytes:
 
     out = Image.alpha_composite(base, layer).convert("RGB")
     buffer = io.BytesIO()
-    out.save(buffer, format="JPEG", quality=WATERMARK_QUALITY)
+    out.save(buffer, format=PREVIEW_FORMAT, quality=WATERMARK_QUALITY, method=4)
     return buffer.getvalue()
 
 
@@ -149,15 +149,15 @@ async def backfill_watermarks(
                         # genere l'apercu net depuis l'original au passage.
                         original = await storage.download(photo.original_key)
                         preview_bytes = await asyncio.to_thread(generate_preview, original)
-                        preview_key = f"events/{photo.event_id}/previews/{photo.id}.jpg"
-                        await storage.upload(preview_key, preview_bytes, "image/jpeg")
+                        preview_key = f"events/{photo.event_id}/previews/{photo.id}.{PREVIEW_EXTENSION}"
+                        await storage.upload(preview_key, preview_bytes, PREVIEW_CONTENT_TYPE)
                         photo.preview_key = preview_key
                     else:
                         preview_bytes = await storage.download(photo.preview_key)
 
                     watermarked = await asyncio.to_thread(apply_watermark, preview_bytes)
                     wm_key = watermarked_preview_key(photo.event_id, photo.id)
-                    await storage.upload(wm_key, watermarked, "image/jpeg")
+                    await storage.upload(wm_key, watermarked, PREVIEW_CONTENT_TYPE)
                     photo.preview_watermarked_key = wm_key
                     await db.commit()
                     touched_events.add(photo.event_id)
@@ -203,7 +203,7 @@ async def regenerate_event_watermarks(
                 preview_bytes = await storage.download(preview_key)
                 watermarked = await asyncio.to_thread(apply_watermark, preview_bytes, text)
                 wm_key = watermarked_preview_key(photo_event_id, photo_id)
-                await storage.upload(wm_key, watermarked, "image/jpeg")
+                await storage.upload(wm_key, watermarked, PREVIEW_CONTENT_TYPE)
                 async with session_factory() as db:
                     photo = await db.get(Photo, photo_id)
                     if photo is not None and photo.preview_watermarked_key != wm_key:

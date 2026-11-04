@@ -127,8 +127,8 @@ async def test_upload_generates_watermarked_preview(auth_client: AsyncClient, st
     files = [("files", ("photo1.jpg", _make_jpeg_bytes(), "image/jpeg"))]
     photo = (await auth_client.post(f"/photos/upload?event_id={event_id}", files=files)).json()["uploaded"][0]
 
-    wm_key = f"events/{event_id}/previews-wm/{photo['id']}.jpg"
-    clean_key = f"events/{event_id}/previews/{photo['id']}.jpg"
+    wm_key = f"events/{event_id}/previews-wm/{photo['id']}.webp"
+    clean_key = f"events/{event_id}/previews/{photo['id']}.webp"
     assert wm_key in storage_service.objects
     assert clean_key in storage_service.objects
     # Meme dimensions que l'apercu net, contenu different (filigrane incruste).
@@ -264,7 +264,7 @@ async def test_watermark_handles_accents():
     from app.services import watermark
 
     data = watermark.apply_watermark(_make_jpeg_bytes(), "SIDIBÉ")
-    assert Image.open(io.BytesIO(data)).format == "JPEG"
+    assert Image.open(io.BytesIO(data)).format == "WEBP"
     if watermark.DEJAVU_BOLD.exists():
         assert "DejaVu" in watermark._font(40).getname()[0]
         assert watermark._label("SIDIBÉ") == "SIDIBÉ"

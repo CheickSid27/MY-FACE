@@ -2,15 +2,22 @@ import io
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+# Miniatures et apercus en WebP (04/11) : sur les photos d'un vrai mariage,
+# apercu 289 Ko en JPEG -> 146 Ko en WebP, miniature 22 -> 16 Ko, pour une
+# image aussi nette. Les originaux (vendus) ne sont jamais reencodes.
+PREVIEW_FORMAT = "WEBP"
+PREVIEW_CONTENT_TYPE = "image/webp"
+PREVIEW_EXTENSION = "webp"
+
 THUMBNAIL_MAX_SIZE = (400, 400)
-THUMBNAIL_QUALITY = 80
+THUMBNAIL_QUALITY = 78
 
 # Format intermediaire pour la vue plein ecran/zoom (voir Photo.preview_key) :
 # largement plus net que la miniature de grille, mais toujours pas
 # l'original (reserve au post-achat) et assez leger pour charger vite meme
 # en arriere-plan pendant que la miniature s'affiche deja.
 PREVIEW_MAX_SIZE = (1600, 1600)
-PREVIEW_QUALITY = 88
+PREVIEW_QUALITY = 80
 
 
 class InvalidImageError(Exception):
@@ -45,17 +52,17 @@ def is_valid_image(image_bytes: bytes) -> bool:
         return False
 
 
-def _resize_jpeg(image_bytes: bytes, max_size: tuple[int, int], quality: int) -> bytes:
+def _resize(image_bytes: bytes, max_size: tuple[int, int], quality: int) -> bytes:
     img = open_oriented(image_bytes).convert("RGB")
     img.thumbnail(max_size)
     buffer = io.BytesIO()
-    img.save(buffer, format="JPEG", quality=quality)
+    img.save(buffer, format=PREVIEW_FORMAT, quality=quality, method=4)
     return buffer.getvalue()
 
 
 def generate_thumbnail(image_bytes: bytes) -> bytes:
-    return _resize_jpeg(image_bytes, THUMBNAIL_MAX_SIZE, THUMBNAIL_QUALITY)
+    return _resize(image_bytes, THUMBNAIL_MAX_SIZE, THUMBNAIL_QUALITY)
 
 
 def generate_preview(image_bytes: bytes) -> bytes:
-    return _resize_jpeg(image_bytes, PREVIEW_MAX_SIZE, PREVIEW_QUALITY)
+    return _resize(image_bytes, PREVIEW_MAX_SIZE, PREVIEW_QUALITY)
